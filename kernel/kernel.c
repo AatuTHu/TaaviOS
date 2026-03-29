@@ -20,7 +20,9 @@ void init_x86() {
 }
 
 void kernel_main(uint32_t *mboot_info) {
+    klog(1,"--INIT DRIVERS--\n");
     init_drivers();
+    klog(1,"--INIT X86 SPECIFIC CODE\n");
     init_x86();
 
     __asm__ __volatile__("sti");

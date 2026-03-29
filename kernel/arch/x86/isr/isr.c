@@ -5,9 +5,11 @@
 //POISTA KUN SCHDULER JA SYSCALSSIT TOIMIVAT
 void scheduler_tick(struct registers *r) { (void)r; }
 
+
 irq_callback_t irq_callbacks[16] = {0};
 
 void irq_register_handler(int index, irq_callback_t cb) {
+    klog(1,"Registering callback %x\n", cb);
     irq_callbacks[index] = cb; 
 }
   
