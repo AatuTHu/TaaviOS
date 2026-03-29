@@ -1,5 +1,5 @@
-#ifndef KPRINTF_H
-#define KPRINTF_H
+#ifndef KLOG_H
+#define KLOG_H
 
 #include <stdint.h>
 

@@ -1,0 +1,55 @@
+#include "idt.h"
+#include "io.h"
+#include "vga.h"
+
+struct idt_entry idt[256];
+struct idt_ptr idt_pointer;
+void syscall_dispatch(struct registers *r) { (void)r; }
+
+
+void pic_remap() {
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
+
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
+
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
+
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
+
+    outb(0x21, 0x0);
+    outb(0xA1, 0x0);
+}
+
+void idt_set_gate(int n, uint32_t handler, uint8_t dpl) {
+    idt[n].base_low = handler & 0xFFFF;
+    idt[n].base_high = (handler >> 16) & 0xFFFF;
+    idt[n].selector = 0x08;
+    idt[n].zero = 0;
+    idt[n].flags = 0x8E | (dpl << 5);
+}
+
+
+
+void idt_init() {
+    idt_pointer.limit = sizeof(idt) - 1;
+    idt_pointer.base = (uint32_t)&idt;
+
+    pic_remap();
+
+    for(int i = 0; i <= 31; i++) {
+        idt_set_gate(i, (uint32_t)isr_stub_table[i], 0);
+    }
+
+    for(int i = 32; i <= 47; i++) {
+        idt_set_gate(i, (uint32_t)irq_stub_table[i-32], 0);
+    }
+
+    //set syscalls to be at 0x80 exception
+    //idt_set_gate(0x80, (uint32_t)syscall_handler, 3);
+
+    idt_flush((uint32_t)&idt_pointer);
+}

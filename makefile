@@ -2,43 +2,47 @@ AS = nasm
 CC = gcc
 LD = ld
 ASFLAGS = -f elf32
-
 CFLAGS = -m32 -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel \
          -fno-pic -fno-stack-protector \
-         -fno-asynchronous-unwind-tables -fno-exceptions
-
+         -fno-asynchronous-unwind-tables -fno-exceptions \
+		 -mno-sse -mno-sse2 -mno-mmx
 LDFLAGS = -melf_i386 -T boot/linker.ld -z noexecstack
 
-C_SRCS = $(shell find kernel -name '*.c')
+BUILD = build
+
+C_SRCS   = $(shell find kernel -name '*.c')
 ASM_SRCS = $(shell find kernel boot -name '*.asm')
-C_OBJS = $(C_SRCS:.c=.o)
-ASM_OBJS = $(ASM_SRCS:.asm=.o)
-OBJS = $(ASM_OBJS) $(C_OBJS)
 
-all: carrots.bin
+C_OBJS   = $(patsubst %.c,   $(BUILD)/%.o, $(C_SRCS))
+ASM_OBJS = $(patsubst %.asm, $(BUILD)/%.o, $(ASM_SRCS))
+OBJS     = $(ASM_OBJS) $(C_OBJS)
 
-%.o: %.c
+all: $(BUILD)/carrots.bin
+
+$(BUILD)/%.o: %.c
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o: %.asm
+$(BUILD)/%.o: %.asm
+	mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) $< -o $@
 
-carrots.bin: $(OBJS)
-	$(LD) $(LDFLAGS) -o carrots.bin $(OBJS)
+$(BUILD)/carrots.bin: $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
-iso: carrots.bin
+iso: $(BUILD)/carrots.bin
 	mkdir -p isodir/boot/grub
-	cp carrots.bin isodir/boot/
+	cp $(BUILD)/carrots.bin isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
-	grub-mkrescue -o carrots.iso isodir
+	grub-mkrescue -o $(BUILD)/carrots.iso isodir
 
 run: iso
-	qemu-system-i386 -cdrom carrots.iso -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>qemu_log.txt
+	qemu-system-i386 -cdrom $(BUILD)/carrots.iso -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
 
 clean:
 	find . -name '*.o' -delete
 	rm -f carrots.bin carrots.iso
-	rm -rf isodir
+	rm -rf $(BUILD) isodir
 
 .PHONY: all iso run clean
