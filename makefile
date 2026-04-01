@@ -1,9 +1,9 @@
 AS = nasm
-CC = gcc
-LD = ld
+CC = i686-elf-gcc
+LD = i686-elf-ld
 ASFLAGS = -f elf32
-CFLAGS = -m32 -ffreestanding -O2 -nostdlib -Wall -Wextra \
-         -Ikernel/include -Ikernel \
+CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
+         -Ikernel/include -Ikernel/include/arch -Ikernel \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
 		 -mno-sse -mno-sse2 -mno-mmx
