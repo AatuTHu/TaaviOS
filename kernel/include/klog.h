@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 
-void klog(uint8_t level,const char* fmt, ...);
+void klog(const char* fmt, ...);
+void set_debug_mode(uint8_t level);
 
 #endif

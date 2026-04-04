@@ -25,7 +25,7 @@ static uint32_t ticks_per_second = 0;
  * from (1193182 / 100) to zero, then fire an interrupt and reset.
  */
 void pit_init(uint32_t frequency) {
-    klog(1,"Initializing PIT with frequency %d\n",frequency);
+    klog("Initializing PIT with frequency %d\n",frequency);
     ticks_per_second = frequency;
 
     // Calculate the 16-bit divisor.
@@ -48,7 +48,7 @@ void pit_init(uint32_t frequency) {
 
     /* Bind the PIT to the IDT through IRQ 0 */
     irq_register_handler(0, pit_irq_handler);
-    klog(1,"PIT INITIALIZED SUCCESFULLY\n");
+    klog("PIT INITIALIZED SUCCESFULLY\n");
 }
 
 /**

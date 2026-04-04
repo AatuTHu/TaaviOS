@@ -5,7 +5,7 @@
 static struct tss_entry tss;
 
 void tss_set_kernel_stack(uint32_t esp) {
-    klog(1,"Setting tss.espo0 to %d\n", esp);
+    klog("Setting tss.espo0 to %d\n", esp);
     tss.esp0 = esp;
 }
 
@@ -19,7 +19,7 @@ void tss_init(void) {
     
     gdt_set_gate(5, (uint32_t)&tss, sizeof(struct tss_entry) - 1, 0x89, 0x00);
     
-    klog(1,"TSS FLUSH BEGINS\n");
+    klog("TSS FLUSH BEGINS\n");
     tss_flush();
-    klog(1,"TSS INITIALIZED SUCCESFULLY\n");
+    klog("TSS INITIALIZED SUCCESFULLY\n");
 }

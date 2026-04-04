@@ -87,11 +87,14 @@ static void kwrite (const char* fmt, va_list args) {
         }
     }
 }
-//level 0 for vga and serial, level 1 for only serial, level 2 for only vga
-void klog(uint8_t level, const char* fmt, ...) {
-    LOG_LEVEL = level;
+void klog(const char* fmt, ...) {
     va_list args; //not important
     va_start(args, fmt); //not important
     kwrite(fmt,args); //main writer function call ->
     va_end(args); //not important
+}
+
+//level 0 for vga and serial, level 1 for only serial, level 2 for only vga
+void set_debug_mode(uint8_t level) {
+    LOG_LEVEL = level;
 }
