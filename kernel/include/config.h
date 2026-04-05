@@ -28,5 +28,4 @@
 
 #define HEAP_MAGIC 0xDEADBEEF
 
-
 #endif

@@ -6,6 +6,7 @@
 //start from zero dunno where go. Zero is the level where write to both vga and serial.
 //Level one is for serial only
 uint8_t LOG_LEVEL = 0;
+uint8_t debug_mode = 0; //0 = false, 1 = true;
 
 static void kputchar(char c) {
     if(LOG_LEVEL == 0 || LOG_LEVEL == 2) vga_putchar(c); 
@@ -94,7 +95,27 @@ void klog(const char* fmt, ...) {
     va_end(args); //not important
 }
 
+void DEBUG(const char* fmt, ...) {
+    if(debug_mode == 1) {
+        set_log_level(1);
+        va_list args; //not important
+        va_start(args, fmt); //not important
+        kwrite(fmt,args); //main writer function call ->
+        va_end(args); //not important
+        set_log_level(2);
+    }
+}
+
 //level 0 for vga and serial, level 1 for only serial, level 2 for only vga
-void set_debug_mode(uint8_t level) {
+void set_log_level(uint8_t level) {
     LOG_LEVEL = level;
+}
+
+
+void set_debug_mode() {
+    if(debug_mode == 0) {
+        debug_mode = 1;
+    } else {
+        debug_mode = 0;
+    }
 }

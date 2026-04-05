@@ -54,11 +54,11 @@ void paging_switch(page_directory_t *dir) {
 }
 
 void paging_init() {
-    klog("Starting to initialize PAGING\n");
+    DEBUG("Starting to initialize PAGING\n");
     for(int i = 0; i < 1024; i++) {
         kernel_page_dir[i] = 0;
     }
-    klog("PAGE DIRECTORY INITIALIZED\n");
+    DEBUG("PAGE DIRECTORY INITIALIZED\n");
 
     for (uint32_t i = 0; i < 1024; i++) {
     paging_map(&kernel_page_dir,
@@ -68,10 +68,10 @@ void paging_init() {
     }
 
     paging_map(&kernel_page_dir, VGA_MEMORY_ADDRESS, VGA_PHYSICAL_ADDRESS, PAGE_PRESENT | PAGE_RW);
-    klog("VGA page created\n");
-    klog("SWITCHING TO KERNEL PAGE DIRECTORY\n");
+    DEBUG("VGA page created\n");
+    DEBUG("SWITCHING TO KERNEL PAGE DIRECTORY\n");
     paging_switch(&kernel_page_dir);
-    klog("PAGING INITIALIZED SUCCESFULLY\n");
+    DEBUG("PAGING INITIALIZED SUCCESFULLY\n");
 }
 
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {

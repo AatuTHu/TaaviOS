@@ -22,7 +22,7 @@ void pic_remap() {
     
     outb(0x21, 0x0);
     outb(0xA1, 0x0);
-    klog("Remapping complete\n");
+    DEBUG("Remapping complete\n");
 }
 
 void idt_set_gate(int n, uint32_t handler, uint8_t dpl) {
@@ -39,23 +39,23 @@ void idt_init() {
     idt_pointer.limit = sizeof(idt) - 1;
     idt_pointer.base = (uint32_t)&idt;
 
-    klog("Remapping PIC\n");
+    DEBUG("Remapping PIC\n");
     pic_remap();
 
-    klog("Mapping 32 cpu exception stubs\n");
+    DEBUG("Mapping 32 cpu exception stubs\n");
     for(int i = 0; i <= 31; i++) {
         idt_set_gate(i, (uint32_t)isr_stub_table[i], 0);
     }
 
-    klog("Mapping 16 hardware intterrupt stubs\n");
+    DEBUG("Mapping 16 hardware intterrupt stubs\n");
     for(int i = 32; i <= 47; i++) {
         idt_set_gate(i, (uint32_t)irq_stub_table[i-32], 0);
     }
 
-    //klog("Setting system call gate to 0x80\n");
+    //DEBUG("Setting system call gate to 0x80\n");
     //idt_set_gate(0x80, (uint32_t)syscall_handler, 3);
 
-    klog("IDT FLUSH BEGINS\n");
+    DEBUG("IDT FLUSH BEGINS\n");
     idt_flush((uint32_t)&idt_pointer);
-    klog("IDT INITIALIZED SUCCESFULLY\n");
+    DEBUG("IDT INITIALIZED SUCCESFULLY\n");
 }

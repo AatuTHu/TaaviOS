@@ -9,7 +9,7 @@
 #include "mm.h"
 #include "paging.h"
 #include "vmm.h"
-#include "kmalloc.h"
+#include "kmalloc.h"d
 
 void init_serial_and_vga() {
     vga_init();
@@ -36,12 +36,16 @@ void init_mm(uint32_t *mboot_info) {
 
 void kernel_main(uint32_t *mboot_info) {
     
-    set_debug_mode(1);
+    set_debug_mode();
+    set_log_level(0);
+
     init_serial_and_vga();
-    klog("--INIT SERIAL & VGA--\n");
-    klog("--INIT MEMORY MANAGEMENT--\n");
+    DEBUG("--INIT SERIAL & VGA--\n");
+    DEBUG("--INIT MEMORY MANAGEMENT--\n");
+
     init_mm(mboot_info);
-    klog("--INIT X86 SPECIFIC CODE--\n");
+
+    DEBUG("--INIT ARCH SPECIFIC CODE--\n");
     init_arch();
 
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
@@ -49,10 +53,10 @@ void kernel_main(uint32_t *mboot_info) {
     
     void *a = kmalloc(64);
     void *b = kmalloc(128);
-    klog("a: %x, b: %x\n", a, b);
+    DEBUG("a: %x, b: %x\n", a, b);
     kfree(a);
     void *c = kmalloc(32);
-    klog("c: %x\n", c);
+    DEBUG("c: %x\n", c);
 
     __asm__ __volatile__("sti");
     pit_init(PIT_FREQUENCY);
