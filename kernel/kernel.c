@@ -9,14 +9,21 @@
 #include "mm.h"
 #include "paging.h"
 #include "vmm.h"
-#include "kmalloc.h"d
+#include "kmalloc.h"
+#include "proc.h"
+
+void proc1() {
+    klog("PROC1 RULES!\n");
+}
 
 void init_serial_and_vga() {
     vga_init();
     serial_init();
+    DEBUG("--INIT SERIAL & VGA--\n");
 }
 
 void init_arch() {
+    DEBUG("--INIT ARCH--\n");
     gdt_init();
     tss_init();
     idt_init();
@@ -27,6 +34,7 @@ void init_arch() {
 }
 
 void init_mm(uint32_t *mboot_info) {
+    DEBUG("--INIT MEMORY MANAGEMENT--\n");
     struct multiboot_info *mboot = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
     
@@ -40,12 +48,9 @@ void kernel_main(uint32_t *mboot_info) {
     set_log_level(0);
 
     init_serial_and_vga();
-    DEBUG("--INIT SERIAL & VGA--\n");
-    DEBUG("--INIT MEMORY MANAGEMENT--\n");
 
     init_mm(mboot_info);
 
-    DEBUG("--INIT ARCH SPECIFIC CODE--\n");
     init_arch();
 
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
@@ -58,10 +63,14 @@ void kernel_main(uint32_t *mboot_info) {
     void *c = kmalloc(32);
     DEBUG("c: %x\n", c);
 
-    __asm__ __volatile__("sti");
+    process_create((uint32_t)proc1);
+
+
+
     pit_init(PIT_FREQUENCY);
+    __asm__ __volatile__("sti");
     
-    set_debug_mode(2);
+    set_log_level(2);
     uint32_t ticks = pit_get_ticks();
     klog("Ticks from pit before sleep %d\n", ticks);
     pit_sleep_ms(5000);
