@@ -8,7 +8,4 @@ void DEBUG(const char* fmt, ...);
 void set_debug_mode();
 void set_log_level(uint8_t level);
 
-extern uint8_t debug_mode;
-
-
 #endif

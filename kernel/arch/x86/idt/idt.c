@@ -1,5 +1,6 @@
 #include "idt.h"
 #include "io.h"
+#include "config.h"
 #include "klog.h"
 
 struct idt_entry idt[256];
@@ -8,20 +9,20 @@ void syscall_dispatch(struct registers *r) { (void)r; }
 
 
 void pic_remap() {
-    outb(0x20, 0x11);
-    outb(0xA0, 0x11);
+    outb(PIC1_COMMAND, 0x11);
+    outb(PIC2_COMMAND, 0x11);
     
-    outb(0x21, 0x20);
-    outb(0xA1, 0x28);
+    outb(PIC1_DATA, 0x28);
+    outb(PIC2_DATA, 0x28);
     
-    outb(0x21, 0x04);
-    outb(0xA1, 0x02);
+    outb(PIC1_DATA, 0x04);
+    outb(PIC2_DATA, 0x02);
     
-    outb(0x21, 0x01);
-    outb(0xA1, 0x01);
+    outb(PIC1_DATA, 0x01);
+    outb(PIC2_DATA, 0x01);
     
-    outb(0x21, 0x0);
-    outb(0xA1, 0x0);
+    outb(PIC1_DATA, 0x0);
+    outb(PIC2_DATA, 0x0);
     DEBUG("Remapping complete\n");
 }
 

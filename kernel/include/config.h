@@ -7,6 +7,39 @@
 #define SEG_KERNEL_DATA 0x10
 #define SEG_USER_CODE   0x1B
 #define SEG_USER_DATA   0x23
+#define GDT_TSS_SEL     0x2B
+
+/* IDT Attribuutit */
+#define IDT_ATTR_INTERRUPT  0x8E // Present, Ring 0, 32-bit Interrupt Gate
+#define IDT_ATTR_SYSCALL    0xEE // Present, Ring 3, 32-bit Interrupt Gate
+
+/* PIC Portit ja komennot */
+#define PIC1_COMMAND    0x20
+#define PIC1_DATA       0x21
+#define PIC2_COMMAND    0xA0
+#define PIC2_DATA       0xA1
+#define PIC_EOI         0x20
+
+/* PIT Portit ja komennot */
+#define clock_frequency 1193182
+#define PIT_COMMAND_PORT 0x43
+#define PIT_CHANNEL0_PORT 0x40
+#define PIT_MODE_SQUARE_WAVE 0x36
+
+/* Prosessien oletusarvot */
+#define EFLAGS_DEFAULT_RESERVED 0x002
+#define EFLAGS_INTERRUPTS_ENABLED 0x200
+#define USER_PROCESS_EFLAGS (EFLAGS_DEFAULT_RESERVED | EFLAGS_INTERRUPTS_ENABLED)
+
+/* GDT Access ja Flags (niille funktioille jotka rakentavat GDT:tä) */
+#define GDT_ACCESS_PRESENT   0x80
+#define GDT_ACCESS_RING0     0x00
+#define GDT_ACCESS_RING3     0x60
+#define GDT_ACCESS_CODE_DATA 0x10
+#define GDT_ACCESS_EXECUTABLE 0x08
+#define GDT_ACCESS_READWRITE 0x02
+#define GDT_FLAGS_32BIT      0x04
+#define GDT_FLAGS_4K_GRAN    0x08
 
 #define PIT_FREQUENCY 1000
 #define MAX_PROCESSES 256

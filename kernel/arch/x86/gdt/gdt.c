@@ -1,6 +1,6 @@
 #include "gdt.h"
-#include "klog.h"
 #include "config.h"
+#include "klog.h"
 
 struct gdt_entry gdt[GDT_ENTRIES];
 struct gdt_ptr gdt_pointer;

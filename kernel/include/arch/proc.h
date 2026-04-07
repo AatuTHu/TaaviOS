@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "paging.h"
+#include "idt.h"
 
 typedef enum {
     PROCESS_READY,
@@ -12,12 +13,6 @@ typedef enum {
     PROCESS_DEAD
 } process_state_t;
 
-typedef struct {
-    uint32_t edi, esi, ebx, edx, ecx, eax;
-    uint32_t ebp, esp, eip;
-    uint32_t eflags;
-    uint32_t cs, ss;
-} context_t;
 
 typedef struct proc_t {
     uint32_t                pid;
@@ -25,8 +20,8 @@ typedef struct proc_t {
     process_state_t         state;
     page_directory_t        *page_dir;
     uint32_t                kernel_stack;
-    uint32_t                user_stack;
-    context_t               context;
+    uint32_t                useresp;
+    struct registers        context;
     struct proc_t           *next;
 } proc_t;
 

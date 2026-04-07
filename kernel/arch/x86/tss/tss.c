@@ -1,7 +1,7 @@
 #include "tss.h"
 #include "gdt.h"
-#include "klog.h"
 #include "config.h"
+#include "klog.h"
 
 static struct tss_entry tss;
 

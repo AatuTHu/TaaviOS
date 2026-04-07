@@ -1,7 +1,7 @@
 #include "vmm.h"
+#include "pmm.h"
 #include "config.h"
 #include "klog.h"
-#include "pmm.h"
 
 int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flags) {
     if (!dir) {

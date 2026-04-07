@@ -1,7 +1,7 @@
 #include "pmm.h"
 #include "kstring.h"
-#include "klog.h"
 #include "config.h"
+#include "klog.h"
 
 static uint32_t bitmap[MAX_PAGES / 32];
 static uint32_t used_pages = 0;

@@ -1,5 +1,6 @@
 #include "isr.h"
 #include "io.h"
+#include "config.h"
 #include "klog.h"
 
 //POISTA KUN SCHDULER JA SYSCALSSIT TOIMIVAT

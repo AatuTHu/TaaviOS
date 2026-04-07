@@ -1,7 +1,7 @@
 #include "proc.h"
+#include "config.h"
 #include "kmalloc.h"
 #include "vmm.h"
-#include "config.h"
 #include "kstring.h"
 
 static proc_t *process_table[MAX_PROCESSES];
@@ -41,13 +41,12 @@ proc_t *process_create(uint32_t entry,const char *name) {
      * kernel_stack: Used by the TSS to land the CPU safely when a 
      * syscall or interrupt occurs while the process is running.
      */
-    proc->user_stack     = USER_STACK_TOP;
     proc->kernel_stack   = kernel_stack;
     
     /* Initial Execution Context */
     proc->context.eip    = entry;
-    proc->context.esp    = proc->user_stack;
-    proc->context.ebp    = proc->user_stack;
+    proc->useresp        = USER_STACK_TOP;
+    proc->context.ebp    = proc->useresp;
     proc->context.eflags = EFLAGS_DEFAULT; /* Interrupts enabled (IF=1), reserved bit 1 always set */
 
     /* Segment Selectors — ring 3 (RPL=3) */
@@ -62,7 +61,7 @@ proc_t *process_create(uint32_t entry,const char *name) {
 void process_destroy(proc_t *proc) {
     if(proc == NULL) return;
     process_table[proc->pid] = NULL;
-    vmm_free(proc->page_dir, proc->user_stack, USER_STACK_SIZE);
+    vmm_free(proc->page_dir, proc->useresp, USER_STACK_SIZE);
     kfree(proc->kernel_stack);
     kfree(proc->page_dir);
     kfree(proc);

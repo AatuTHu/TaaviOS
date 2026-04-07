@@ -1,7 +1,7 @@
 #include "paging.h"
+#include "config.h"
 #include "pmm.h"
 #include "kstring.h"
-#include "config.h"
 #include "mm.h"
 #include "klog.h"
 

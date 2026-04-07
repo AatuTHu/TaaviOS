@@ -96,13 +96,17 @@ void klog(const char* fmt, ...) {
 }
 
 void DEBUG(const char* fmt, ...) {
+    uint8_t last_level = LOG_LEVEL;
     if(debug_mode == 1) {
         set_log_level(1);
         va_list args; //not important
         va_start(args, fmt); //not important
+        vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+        kputs("[DEBUG] ");
+        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
         kwrite(fmt,args); //main writer function call ->
         va_end(args); //not important
-        set_log_level(2);
+        set_log_level(last_level);
     }
 }
 
@@ -110,7 +114,6 @@ void DEBUG(const char* fmt, ...) {
 void set_log_level(uint8_t level) {
     LOG_LEVEL = level;
 }
-
 
 void set_debug_mode() {
     if(debug_mode == 0) {
