@@ -10,4 +10,4 @@
 3. hide dir creation from proc? Does proc need to make it?
 4. vga assigns itselft to a memory addrres without using vmm. paging inits vga tho. Not good.
 
-5. 
+5. NO MAGIC NUMBERS FIX IMMEDIATELY
