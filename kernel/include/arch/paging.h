@@ -14,4 +14,5 @@ void paging_switch(page_directory_t *dir);
 page_directory_t *paging_create_directory(void);
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt);
 
+
 #endif

@@ -23,6 +23,24 @@ int strlen(char *s) {
   return len;
 }
 
+void strcpy(char *dest, char *src) {
+  while(*src != '\0') {
+    *dest = *src;
+    src++;
+    dest++;
+  }
+  *dest = '\0';
+}
+
+void strncpy(char *dest, char *src, uint8_t size) {
+  uint8_t i;
+  for(i = 0; i < size-1; i++) {
+    if(src[i] == '\0') break;
+    dest[i] = src[i];
+  }
+  dest[i] = '\0';
+}
+
 int strcmp(const char *a, const char *b) {
     while (*a && *a == *b) { a++; b++; }
     return *a - *b;

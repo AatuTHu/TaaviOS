@@ -1,7 +1,15 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define GDT_ENTRIES 6
+
+#define SEG_KERNEL_CODE 0x08
+#define SEG_KERNEL_DATA 0x10
+#define SEG_USER_CODE   0x1B
+#define SEG_USER_DATA   0x23
+
 #define PIT_FREQUENCY 1000
+#define MAX_PROCESSES 256
 
 #define HEAP_PAGES 256
 #define HEAP_START 0xD0000000
@@ -14,6 +22,9 @@
 #define PAGE_PRESENT  (1 << 0)
 #define PAGE_RW       (1 << 1)
 #define PAGE_USER     (1 << 2)
+#define PAGE_USER_RW  (PAGE_PRESENT | PAGE_RW | PAGE_USER)
+#define EFLAGS_IF (1 << 9)
+#define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
 
 #define KERNEL_STACK_SIZE 4096
 #define USER_STACK_SIZE (4096 * 4)

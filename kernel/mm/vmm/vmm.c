@@ -1,7 +1,7 @@
 #include "vmm.h"
-#include "paging.h"
 #include "config.h"
 #include "klog.h"
+#include "pmm.h"
 
 int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flags) {
     if (!dir) {
@@ -55,4 +55,8 @@ void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
 
 void vmm_switch(page_directory_t *dir) {
     paging_switch(dir);
+}
+
+page_directory_t *vmm_create_directory(void) {
+    return paging_create_directory();
 }

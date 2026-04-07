@@ -56,25 +56,9 @@ void kernel_main(uint32_t *mboot_info) {
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
     kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
     
-    void *a = kmalloc(64);
-    void *b = kmalloc(128);
-    DEBUG("a: %x, b: %x\n", a, b);
-    kfree(a);
-    void *c = kmalloc(32);
-    DEBUG("c: %x\n", c);
-
-    process_create((uint32_t)proc1);
-
-
-
+    process_create((uint32_t)proc1, "proc1");
+    
     pit_init(PIT_FREQUENCY);
     __asm__ __volatile__("sti");
-    
-    set_log_level(2);
-    uint32_t ticks = pit_get_ticks();
-    klog("Ticks from pit before sleep %d\n", ticks);
-    pit_sleep_ms(5000);
-    ticks = pit_get_ticks();
-    klog("Ticks after sleep: %d\n", ticks);
     
 }

@@ -36,14 +36,13 @@ void paging_unmap(page_directory_t *dir, uint32_t virt) {
 }
 
 page_directory_t *paging_create_directory() {
-    page_directory_t *page_dir = (page_directory_t*)pmm_alloc();
-    uint32_t page_virt = phys_to_virt((uint32_t)page_dir);
+    page_directory_t *page_dir = (page_directory_t*)pmm_alloc(); //ask pmm to allocate a physical page dir
+    uint32_t page_virt = phys_to_virt((uint32_t)page_dir); //elevate it to virtual addr
     memset((void*)page_virt, 0, PAGE_SIZE);
 
     page_directory_t *virt_dir = (page_directory_t*)page_virt;
-    for (int i = 768; i < 1024; i++) {
-        (*virt_dir)[i] = kernel_page_dir[i];
-    }   
+   
+    memcpy(&(*virt_dir)[768], &kernel_page_dir[768], 256 * sizeof(uint32_t));
 
     return (page_directory_t*)(phys_to_virt((uint32_t)page_dir));
 }
@@ -62,8 +61,8 @@ void paging_init() {
 
     for (uint32_t i = 0; i < 1024; i++) {
     paging_map(&kernel_page_dir,
-               0xC0100000 + i * PAGE_SIZE,
-               0x00100000 + i * PAGE_SIZE,
+               KERNEL_VIRTUAL_START + i * PAGE_SIZE,
+               KERNEL_PHYSICAL_ADDRESS + i * PAGE_SIZE,
                PAGE_PRESENT | PAGE_RW);
     }
 
