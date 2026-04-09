@@ -3,7 +3,7 @@ CC = i686-elf-gcc
 LD = i686-elf-ld
 ASFLAGS = -f elf32
 CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
-         -Ikernel/include -Ikernel/include/arch -Ikernel \
+         -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries -Ikernel/include/mm -Ikernel/include/proc -Ikernel \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
 		 -mno-sse -mno-sse2 -mno-mmx
