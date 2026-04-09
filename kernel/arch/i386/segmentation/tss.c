@@ -6,7 +6,7 @@
 static struct tss_entry tss;
 
 void tss_set_kernel_stack(uint32_t esp) {
-    DEBUG("Setting tss.espo0 to %d\n", esp);
+    DEBUG("Setting tss.esp0 to 0x%x\n", esp);
     tss.esp0 = esp;
 }
 

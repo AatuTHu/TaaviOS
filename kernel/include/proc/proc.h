@@ -21,6 +21,7 @@ typedef struct proc_t {
     page_directory_t        *page_dir;
     uint32_t                kernel_stack;
     uint32_t                useresp;
+    uint8_t                 started;
     struct registers        context;
     struct proc_t           *next;
 } proc_t;

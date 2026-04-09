@@ -2,9 +2,7 @@
 #include "io.h"
 #include "config.h"
 #include "klog.h"
-
-//POISTA KUN SCHDULER JA SYSCALSSIT TOIMIVAT
-void scheduler_tick(struct registers *r) { (void)r; }
+#include "sched.h"
 
 
 irq_callback_t irq_callbacks[16] = {0};

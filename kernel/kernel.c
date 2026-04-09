@@ -11,11 +11,28 @@
 #include "vmm.h"
 #include "kmalloc.h"
 #include "proc.h"
+#include "stddef.h"
 
 void proc1() {
-    klog("PROC1 RULES!\n");
+    while(1) {
+        klog("PROC1 RUNNING\n");
+        pit_sleep_ms(1000);
+    }
 }
 
+void proc2() {
+    while(1) {
+        klog("PROC2 RUNNING\n");
+        pit_sleep_ms(1000);
+    }
+}
+
+void proc3() {
+    while(1) {
+        klog("PROC3 RUNNING\n");
+        pit_sleep_ms(1000);
+    }
+}
 void init_serial_and_vga() {
     vga_init();
     serial_init();
@@ -57,17 +74,26 @@ void kernel_main(uint32_t *mboot_info) {
     kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
 
     vga_set_color(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
-    klog("  |=====|    |====|    |====|     |====|      |====|  |=======|  |=====|      \n");
-    klog(" |=|   |=|  |=|  |=|  |=|  |=|   |=|  |=|    |=|  |=|    |=|    |=|   |=|     \n");
-    klog(" |=|       |=|    |=| |=----=|   |=----=|    |=|  |=|    |=|    |=|___        \n");
-    klog(" |=|       |=------=| |=|===|    |=|===|     |=|  |=|    |=|          |=|     \n");
-    klog(" |=|   |=| |=|    |=| |=|  |==|  |=|  |==|   |=|  |=|    |=|    |=|   |=|     \n");
-    klog("  |=====|  |=|    |=| |=|   |==| |=|   |==|   |====|     |=|     |=====|      \n");
-    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-
-    process_create((uint32_t)proc1, "proc1");
+    klog("  |=====|    |====|    |====|     |====|     |====|  |=======|  |=====|       \n");
+    klog(" |=|   |=|  |=|  |=|  |=|  |=|   |=|  |=|   |=|  |=|    |=|    |=|   |=|      \n");
+    klog(" |=|       |=|    |=| |=----=|   |=----=|   |=|  |=|    |=|    |=|___         \n");
+    klog(" |=|       |=------=| |=|===|    |=|===|    |=|  |=|    |=|          |=|      \n");
+    klog(" |=|   |=| |=|    |=| |=|  |==|  |=|  |==|  |=|  |=|    |=|    |=|   |=|      \n");
+    klog("  |=====|  |=|    |=| |=|   |==| |=|   |==|  |====|     |=|     |=====|       \n");
+    vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 
     pit_init(PIT_FREQUENCY);
+
+    process_create((uint32_t)proc1, "proc1");
+    process_create((uint32_t)proc2, "proc2");
+    process_create((uint32_t)proc3, "proc3");
+    scheduler_init();
+    scheduler_add(process_get(0));
+    scheduler_add(process_get(1));
+    scheduler_add(process_get(2));
+
+
     __asm__ __volatile__("sti");
 
+    
 }

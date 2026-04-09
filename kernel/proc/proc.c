@@ -36,22 +36,17 @@ proc_t *process_create(uint32_t entry,const char *name) {
     proc->state          = PROCESS_READY;
     proc->page_dir       = virt_dir;
     
-    /* * Stack Pointers:
-     * esp: Points to the User Mode stack.
-     * kernel_stack: Used by the TSS to land the CPU safely when a 
-     * syscall or interrupt occurs while the process is running.
-     */
-    proc->kernel_stack   = kernel_stack;
-    
-    /* Initial Execution Context */
+
+    proc->kernel_stack   = kernel_stack + KERNEL_STACK_SIZE; //kernel stack is bottom of stack so add the stack on top of it
+
     proc->context.eip    = entry;
     proc->useresp        = USER_STACK_TOP;
     proc->context.ebp    = proc->useresp;
-    proc->context.eflags = EFLAGS_DEFAULT; /* Interrupts enabled (IF=1), reserved bit 1 always set */
+    proc->context.eflags = EFLAGS_DEFAULT;
 
-    /* Segment Selectors — ring 3 (RPL=3) */
-    proc->context.cs     = SEG_USER_CODE;  /* GDT index 3 */
-    proc->context.ss     = SEG_USER_DATA;  /* GDT index 4 */
+    //for now before usermode
+    proc->context.cs     = SEG_KERNEL_CODE; //SEG_USER_CODE;
+    proc->context.ss     = SEG_KERNEL_DATA; //SEG_USER_DATA;
     
     process_table[slot]  = proc;
 

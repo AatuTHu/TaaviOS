@@ -12,7 +12,7 @@ void pic_remap() {
     outb(PIC1_COMMAND, 0x11);
     outb(PIC2_COMMAND, 0x11);
     
-    outb(PIC1_DATA, 0x28);
+    outb(PIC1_DATA, 0x20);
     outb(PIC2_DATA, 0x28);
     
     outb(PIC1_DATA, 0x04);
