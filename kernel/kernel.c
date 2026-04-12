@@ -59,6 +59,29 @@ void init_mm(uint32_t *mboot_info) {
     //klog("FREE_PAGES %d\n", pmm_get_free_pages());
 }
 
+void check_for_modules (uint32_t mboot_info) {
+    DEBUG("--CHECKING FOR MODULES--\n");
+    struct multiboot_info *mbi = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
+
+    uint32_t mod_start = 0;
+    uint32_t mod_end = 0;
+
+    if(mbi->mods_count > 0) {
+        DEBUG("Modules found\n");
+        struct multiboot_mod *mod = (struct multiboot_mod *)mbi->mods_addr;
+        mod_start = mod->mod_start;
+        mod_end   = mod->mod_end;
+        uint32_t start_page = mod_start / PAGE_SIZE;
+        DEBUG("mod start_page: %d\n", start_page);
+        uint32_t end_page   = (mod_end + PAGE_SIZE-1) / PAGE_SIZE;
+        DEBUG("mod page_end: %d\n", end_page);
+        // for(uint32_t i = start_page; i < end_page; i++) {
+       //     pmm_set_bit(i);
+       // }
+    }
+    DEBUG("MODULES NOT FOUND\n");
+}
+
 void kernel_main(uint32_t *mboot_info) {
 
     set_debug_mode();

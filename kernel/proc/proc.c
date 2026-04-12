@@ -3,6 +3,7 @@
 #include "kmalloc.h"
 #include "vmm.h"
 #include "kstring.h"
+#include "klog.h"
 
 static proc_t *process_table[MAX_PROCESSES];
 
@@ -31,6 +32,8 @@ proc_t *process_create(uint32_t entry,const char *name) {
 
     if(kernel_stack == NULL) return NULL;
 
+    memset(&proc->context, 0, sizeof(struct registers));
+    
     proc->pid            = slot;
     strncpy(proc->name, name, sizeof(proc->name));
     proc->state          = PROCESS_READY;

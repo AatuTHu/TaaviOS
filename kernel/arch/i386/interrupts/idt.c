@@ -53,8 +53,8 @@ void idt_init() {
         idt_set_gate(i, (uint32_t)irq_stub_table[i-32], 0);
     }
 
-    //DEBUG("Setting system call gate to 0x80\n");
-    //idt_set_gate(0x80, (uint32_t)syscall_handler, 3);
+    DEBUG("Setting system call gate to 0x80\n");
+    idt_set_gate(0x80, (uint32_t)syscall_handler, 3);
 
     DEBUG("IDT FLUSH BEGINS\n");
     idt_flush((uint32_t)&idt_pointer);

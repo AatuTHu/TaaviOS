@@ -26,5 +26,6 @@ void idt_init(void);
 extern uint32_t isr_stub_table[];
 extern uint32_t irq_stub_table[];
 extern void idt_flush(uint32_t idt_ptr_address);
+extern void syscall_handler(void);
 
 #endif              
