@@ -55,7 +55,6 @@ void init_mm(uint32_t *mboot_info) {
     DEBUG("--INIT MEMORY MANAGEMENT--\n");
     struct multiboot_info *mboot = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
-
     //klog("USED_PAGES %d\n", pmm_get_used_pages());
     //klog("FREE_PAGES %d\n", pmm_get_free_pages());
 }
@@ -67,18 +66,18 @@ void check_for_modules (uint32_t mboot_info) {
     uint32_t mod_start = 0;
     uint32_t mod_end = 0;
 
-    if(mbi->mods_count > 0) {
+    if((mbi->mods_count) > 0) {
         DEBUG("Modules found\n");
-        struct multiboot_mod *mod = (struct multiboot_mod *)mbi->mods_addr;
+        struct multiboot_mod *mod = (struct multiboot_mod *)phys_to_virt(mbi->mods_addr);
         mod_start = mod->mod_start;
         mod_end   = mod->mod_end;
         uint32_t start_page = mod_start / PAGE_SIZE;
         DEBUG("mod start_page: %d\n", start_page);
         uint32_t end_page   = (mod_end + PAGE_SIZE-1) / PAGE_SIZE;
         DEBUG("mod page_end: %d\n", end_page);
-        // for(uint32_t i = start_page; i < end_page; i++) {
-       //     pmm_set_bit(i);
-       // }
+        for(uint32_t i = start_page; i < end_page; i++) {
+            pmm_set_bit(i);
+        }
     }
     DEBUG("MODULES NOT FOUND\n");
 }
@@ -91,21 +90,33 @@ void kernel_main(uint32_t *mboot_info) {
     init_serial_and_vga();
 
     init_mm(mboot_info);
+    check_for_modules(mboot_info);
 
     init_arch();
 
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
     kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
 
-    vga_set_color(VGA_COLOR_MAGENTA, VGA_COLOR_BLACK);
-    klog("  |=====|    |====|    |====|     |====|     |====|  |=======|  |=====|       \n");
-    klog(" |=|   |=|  |=|  |=|  |=|  |=|   |=|  |=|   |=|  |=|    |=|    |=|   |=|      \n");
-    klog(" |=|       |=|    |=| |=----=|   |=----=|   |=|  |=|    |=|    |=|___         \n");
-    klog(" |=|       |=------=| |=|===|    |=|===|    |=|  |=|    |=|          |=|      \n");
-    klog(" |=|   |=| |=|    |=| |=|  |==|  |=|  |==|  |=|  |=|    |=|    |=|   |=|      \n");
-    klog("  |=====|  |=|    |=| |=|   |==| |=|   |==|  |====|     |=|     |=====|       \n");
-    vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-
+    vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
+    klog("----------------------------------------------------------------------------\n");
+    vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+    klog("  |=====|    |====|    |====|                                               \n");
+    klog(" |=|   |=|  |=|  |=|  |=|  |=|                                              \n");
+    klog(" |=|       |=|    |=| |=----=|                                              \n");
+    klog(" |=|       |=------=| |=|===|                                               \n");
+    klog(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
+    klog("  |=====|  |=|    |=| |=|   |==|                                            \n");
+    vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+    klog("                              |====|     |====|  |=======|  |=====|        \n");
+    klog("                              |=|  |=|   |=|  |=|    |=|    |=|   |=|      \n");
+    klog("                              |=----=|   |=|  |=|    |=|    |=|___         \n");
+    klog("                              |=|===|    |=|  |=|    |=|          |=|      \n");
+    klog("                              |=|  |==|  |=|  |=|    |=|    |=|   |=|      \n");
+    klog("                              |=|   |==|  |====|     |=|     |=====|       \n");
+    vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
+    klog("---------------------------------------------------------------------------\n");
+                
+                vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     pit_init(PIT_FREQUENCY);
 
     process_create((uint32_t)proc1, "proc1");
