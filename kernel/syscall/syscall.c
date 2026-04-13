@@ -15,7 +15,7 @@
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
-    vmm_switch(&kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
+    vmm_switch(kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
     scheduler_remove();
     
     int remaining_tasks = scheduler_get_task_count();
