@@ -11,6 +11,7 @@
 #include "vmm.h"
 #include "kmalloc.h"
 #include "proc.h"
+#include "sched.h"
 #include "stddef.h"
 
 void proc1() {

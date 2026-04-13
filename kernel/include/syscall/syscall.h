@@ -12,12 +12,6 @@
 
 #define MAX_SYSCALLS 128
 
-
-typedef struct {
-    int used;
-    int free;
-} meminfo_t;
-
 typedef int32_t (*syscall_fn_t)(struct registers *r);
 void syscall_init();
 void syscall_dispatch(struct registers *r);

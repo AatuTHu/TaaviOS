@@ -13,6 +13,7 @@ int y_pos = 0;
 #define terminal_width 80
 #define terminal_height 25
 
+
 // Helper to get a "blank" character with the current color
 static uint16_t get_blank_char() {
     return (uint16_t)terminal_attribute << 8 | ' ';
@@ -34,6 +35,16 @@ void update_cursor() {
     outb(0x3D5, pos & 0xFF);
 }
 
+void clear_terminal() {
+    x_pos = 0;
+    y_pos = 0;
+    uint16_t blank = get_blank_char();
+    for (int i = 0; i < terminal_width * terminal_height; i++) {
+        vga[i] = blank;
+    }
+    update_cursor();
+}
+
 // Helper to pack color bits
 static uint8_t vga_create_attribute(enum vga_color fg, enum vga_color bg) {
     return (bg << 4) | (fg & 0x0F);
@@ -48,16 +59,6 @@ void vga_init() {
     y_pos = 0;
     vga = (volatile unsigned short *)VGA_MEMORY_ADDRESS;
     clear_terminal();
-}
-
-void clear_terminal() {
-    x_pos = 0;
-    y_pos = 0;
-    uint16_t blank = get_blank_char();
-    for (int i = 0; i < terminal_width * terminal_height; i++) {
-        vga[i] = blank;
-    }
-    update_cursor();
 }
 
 void lift_texts_up() {

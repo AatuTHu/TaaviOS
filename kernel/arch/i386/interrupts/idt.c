@@ -5,7 +5,6 @@
 
 struct idt_entry idt[256];
 struct idt_ptr idt_pointer;
-void syscall_dispatch(struct registers *r) { (void)r; }
 
 
 void pic_remap() {
