@@ -4,33 +4,33 @@
 #include "kstring.h"
 #include <stddef.h>
 
-static proc_t *procs[MAX_PROCESSES];
-static int proc_count = 0;
+static proc_t *tasks[MAX_PROCESSES];
+static int task_count = 0;
 static int current_idx = -1;
 
 
 void scheduler_tick(struct registers *r) {
-    if(proc_count == 0) {
-        //DEBUG("[SCHEDULER] No processes added");
+    if(task_count == 0) {
+        //DEBUG("[SCHEDULER] No tasks added");
         return;
     } 
     if(current_idx == -1) {
-        //DEBUG("[SCHEDULER] No processes added");
+        //DEBUG("[SCHEDULER] No tasks added");
         return;
     }
 
-    if(procs[current_idx]->started) {
-        memcpy(&procs[current_idx]->context, r, sizeof(struct registers));
-        procs[current_idx]->useresp = r->esp;
+    if(tasks[current_idx]->started) {
+        memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
+        tasks[current_idx]->useresp = r->esp;
     }
 
-    procs[current_idx]->started = 1;
-    procs[current_idx]->state = PROCESS_READY;
+    tasks[current_idx]->started = 1;
+    tasks[current_idx]->state = PROCESS_READY;
 
     int next_idx = -1;
-    for (int i = 1; i <= proc_count; i++) {
-        int candidate = (current_idx + i) % proc_count;
-        if (procs[candidate]->state == PROCESS_READY) {
+    for (int i = 1; i <= task_count; i++) {
+        int candidate = (current_idx + i) % task_count;
+        if (tasks[candidate]->state == PROCESS_READY) {
             next_idx = candidate;
             break;
         }
@@ -39,7 +39,7 @@ void scheduler_tick(struct registers *r) {
     if (next_idx == -1) return;
     
     current_idx = next_idx;
-    proc_t *next = procs[current_idx];
+    proc_t *next = tasks[current_idx];
     next->state = PROCESS_RUNNING;
     
     /* Update CPU state for the new process */
@@ -48,16 +48,16 @@ void scheduler_tick(struct registers *r) {
 
      
     memcpy(r, &next->context, sizeof(struct registers));
-    r->esp = procs[current_idx]->useresp;
+    r->esp = tasks[current_idx]->useresp;
 }
 
-void scheduler_add(proc_t *proc) {
-    if(proc_count >= MAX_PROCESSES) {
-        ERROR("[SCHEDULER] : too many processes added to scheduler\n");
+void scheduler_add(proc_t *task) {
+    if(task_count >= MAX_PROCESSES) {
+        ERROR("[SCHEDULER] : too many tasks added to scheduler\n");
         return;
     }
-    procs[proc_count] = proc;
-    proc_count++;
+    tasks[task_count] = task;
+    task_count++;
 
     if(current_idx == -1) {
         current_idx = 0;
@@ -66,10 +66,18 @@ void scheduler_add(proc_t *proc) {
 
 proc_t *scheduler_get_current() {
     if(current_idx == -1) {
-        ERROR("[SCHEDULER] : no processes added to scheduler yet\n");
+        ERROR("[SCHEDULER] : no tasks added to scheduler yet\n");
         return NULL;
     }
-    return procs[current_idx];
+    return tasks[current_idx];
+}
+
+void scheduler_remove() {
+    tasks[current_idx] = NULL;
+}
+
+int scheduler_get_task_count() {
+    return task_count;
 }
 
 void scheduler_init() {

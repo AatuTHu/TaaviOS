@@ -7,20 +7,46 @@
 #include "pit.h"
 #include "klog.h"
 #include "elf.h"
+#include "vmm.h"
+#include "config.h"
+#include "kernel_idle.h"
 
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
-
 static int32_t sys_exit(struct registers *r) {
+    vmm_switch(&kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
+    scheduler_remove();
+    
+    int remaining_tasks = scheduler_get_task_count();
 
+    if(remaining_tasks == 0) {
+        //NOW I GET IT!!!!! WE SET REGISTER TO SAFE VALUES 
+        r->eip  = (uint32_t)kernel_idle;
+        r->useresp = 0; 
+        r->cs      = SEG_KERNEL_CODE;
+        r->ss      = SEG_KERNEL_DATA;
+        return 0;
+    }
+
+    /* TODO: move this to sheduler */
+    proc_t *next = scheduler_get_current();
+    tss_set_kernel_stack(next->kernel_stack);
+    vmm_switch(next->page_dir);
+    r->eip     = next->context.eip; //next starting point
+    r->useresp = next->context.esp; //next userstack
+    r->eflags  = next->context.eflags; //flags
+    r->cs      = next->context.cs; //segment code
+    r->ss      = next->context.ss; //segment data
+    
+    return 0;
 }
 
 
 static int32_t sys_write(struct registers *r) {
     int fd       = r->ebx;
-    char *buf    = (char *)r->ecx;
-    uint32_t len = r->edx;
+    char *buf    = (char *)r->ecx; //ecx has the params?
+    uint32_t len = r->edx; //irrelevant in our case. but it would hold the lenght of the message
     
     if (fd == 1 || fd == 2) { // STDOUT or STDERR
         vga_write(buf);
@@ -29,7 +55,6 @@ static int32_t sys_write(struct registers *r) {
 }
 
 static int32_t sys_getpid(struct registers *r) {
-    (void)r;
     proc_t *proc = scheduler_get_current();
     return (proc) ? (int32_t)proc->pid : -1;
 }

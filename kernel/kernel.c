@@ -46,17 +46,12 @@ void init_arch() {
     tss_init();
     idt_init();
     paging_init();
-
-    //klog("USED_PAGES %d\n", pmm_get_used_pages());
-    //klog("FREE_PAGES %d\n", pmm_get_free_pages());
 }
 
 void init_mm(uint32_t *mboot_info) {
     DEBUG("--INIT MEMORY MANAGEMENT--\n");
     struct multiboot_info *mboot = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
-    //klog("USED_PAGES %d\n", pmm_get_used_pages());
-    //klog("FREE_PAGES %d\n", pmm_get_free_pages());
 }
 
 void check_for_modules (uint32_t mboot_info) {
@@ -116,7 +111,7 @@ void kernel_main(uint32_t *mboot_info) {
     vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
     klog("---------------------------------------------------------------------------\n");
                 
-                vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+    vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     pit_init(PIT_FREQUENCY);
 
     process_create((uint32_t)proc1, "proc1");
