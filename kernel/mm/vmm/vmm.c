@@ -5,46 +5,46 @@
 
 int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flags) {
     if (!dir) {
-        DEBUG("DIRECTORY NOT GIVEN ABORTING ALLOCATION\n");
+        ERROR("[VMM] DIRECTORY NOT GIVEN ABORTING ALLOCATION\n");
         return -1;
     }
     
-    DEBUG("ALLOCATING VIRTUAL MEMORY\n");
-    DEBUG("Virtual address: %x\n", virt);
-    DEBUG("Size: %d\n", size);
-    DEBUG("Flags: %d\n", flags);
+    DEBUG("[VMM] ALLOCATING VIRTUAL MEMORY\n");
+    DEBUG("[VMM] Virtual address: %x\n", virt);
+    DEBUG("[VMM] Size: %d\n", size);
+    DEBUG("[VMM] Flags: %d\n", flags);
 
     uint32_t n_pages = size / PAGE_SIZE;
-    DEBUG("Number of pages to be allocated: %d\n", n_pages);
+    DEBUG("[VMM] Number of pages to be allocated: %d\n", n_pages);
     uint32_t virt_start = virt;
     for(int i = 0; i < n_pages; i++) {
         uint32_t addr = pmm_alloc();
         if(addr == 0) {
-            DEBUG("NO PHYSICAL MEMORY LEFT FOR THE ALLOCATION\n");
-            DEBUG("STARTING ROLLBACK\n");
+            DEBUG("[VMM] NO PHYSICAL MEMORY LEFT FOR THE ALLOCATION\n");
+            DEBUG("[VMM] STARTING ROLLBACK\n");
             uint32_t rollback = virt_start;
             for(int j = i; j >= 0; j--) {
                 paging_unmap(dir, virt);
                 rollback -= PAGE_SIZE;
             }
-            DEBUG("ROLLBACK SUCCESSFUL\n");
+            DEBUG("[VMM] ROLLBACK SUCCESSFUL\n");
             return -1;
         }
         paging_map(dir, virt, addr, flags);
         virt += PAGE_SIZE;
     }
-    DEBUG("ALLOCATION SUCCESSFULL\n");
+    DEBUG("[VMM] ALLOCATION SUCCESSFULL\n");
     return 0;
 }
 
 void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
     if (!dir) {
-        DEBUG("DIRECTORY NOT GIVEN ABORTING\n");
+        ERROR("[VMM] DIRECTORY NOT GIVEN ABORTING\n");
         return;
     }
 
     uint32_t n_pages = size / PAGE_SIZE;
-    DEBUG("Number of pages to be freed: %d\n", n_pages);
+    DEBUG("[VMM] Number of pages to be freed: %d\n", n_pages);
     for(int i = 0; i < n_pages; i++) {
         uint32_t phys_addr = paging_get_phys(dir, virt);
         pmm_free(phys_addr);

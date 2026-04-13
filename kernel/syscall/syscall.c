@@ -21,10 +21,6 @@ static int32_t sys_write(struct registers *r) {
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx;
     uint32_t len = r->edx;
-
-    proc_t *proc = scheduler_get_current();
-    if (!proc || !buf) return -1;
-
     
     if (fd == 1 || fd == 2) { // STDOUT or STDERR
         vga_write(buf);
@@ -39,6 +35,7 @@ static int32_t sys_getpid(struct registers *r) {
 }
 
 void syscall_init() {
+    DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
     for(uint8_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
     
     syscall_table[SYS_EXIT]     = sys_exit;

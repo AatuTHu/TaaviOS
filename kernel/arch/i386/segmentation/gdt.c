@@ -19,18 +19,18 @@ void gdt_init(void) {
     gdt_pointer.limit = sizeof(struct gdt_entry) * GDT_ENTRIES - 1;
     gdt_pointer.base = (uint32_t)&gdt;
     
-    DEBUG("Setting gdt gate for NULL DESCRIPTOR\n");
+    DEBUG("[GDT] Setting gdt gate for NULL DESCRIPTOR\n");
     gdt_set_gate(0, 0x00000000, 0x00000, 0x00, 0x0);
-    DEBUG("Setting gdt gate for KERNEL CODE SEGMENT\n");
+    DEBUG("[GDT] Setting gdt gate for KERNEL CODE SEGMENT\n");
     gdt_set_gate(1, 0x00000000, 0xFFFFF, 0x9A, 0xC);
-    DEBUG("Setting gdt gate for KERNER DATA SEGMENT\n");
+    DEBUG("[GDT] Setting gdt gate for KERNER DATA SEGMENT\n");
     gdt_set_gate(2, 0x00000000, 0xFFFFF, 0x92, 0xC);
-    DEBUG("Setting gdt gate for USER CODE SEGMENT\n");
+    DEBUG("[GDT] Setting gdt gate for USER CODE SEGMENT\n");
     gdt_set_gate(3, 0x00000000, 0xFFFFF, 0xFA, 0xC);
-    DEBUG("Setting gdt gate for USER DATA SEGMENT\n");
+    DEBUG("[GDT] Setting gdt gate for USER DATA SEGMENT\n");
     gdt_set_gate(4, 0x00000000, 0xFFFFF, 0xF2, 0xC);
     
-    DEBUG("GDT FLUSH BEGINS\n");
+    DEBUG("[GDT] GDT FLUSH BEGINS\n");
     gdt_flush((uint32_t)&gdt_pointer);
-    DEBUG("GDT INITIALIZED SUCCESFULLY\n");
+    DEBUG("[GDT] GDT INITIALIZED SUCCESFULLY\n");
 }

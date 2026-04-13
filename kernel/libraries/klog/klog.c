@@ -110,6 +110,21 @@ void DEBUG(const char* fmt, ...) {
     }
 }
 
+void ERROR(const char* fmt, ...) {
+    uint8_t last_level = LOG_LEVEL;
+    if(debug_mode == 1) {
+        set_log_level(0);
+        va_list args; //not important
+        va_start(args, fmt); //not important
+        vga_set_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
+        kputs("[ERROR] ");
+        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+        kwrite(fmt,args); //main writer function call ->
+        va_end(args); //not important
+        set_log_level(last_level);
+    }
+}
+
 //level 0 for vga and serial, level 1 for only serial, level 2 for only vga
 void set_log_level(uint8_t level) {
     LOG_LEVEL = level;

@@ -1,9 +1,13 @@
 #include "kmalloc.h"
 #include "config.h"
+#include "klog.h"
 
 static block_header_t* free_list = NULL;
 
 void kmalloc_init(void* heap_start, uint32_t heap_size) {
+    DEBUG("[KMALLOC] Initialzing kmalloc with heap_start: %x\n", heap_start);
+    DEBUG("[KMALLOC] Heap_size: %d\n", heap_size);
+    
     free_list = (block_header_t*)heap_start;
     
     free_list->size = (heap_size - sizeof(block_header_t));

@@ -5,6 +5,7 @@
 
 void klog(const char* fmt, ...);
 void DEBUG(const char* fmt, ...);
+void ERROR(const char* fmt, ...);
 void set_debug_mode();
 void set_log_level(uint8_t level);
 

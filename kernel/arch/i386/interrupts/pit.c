@@ -8,7 +8,7 @@ volatile static uint32_t tick_count = 0;
 static uint32_t ticks_per_second = 0;
 
 void pit_init(uint32_t frequency) {
-    DEBUG("Initializing PIT with frequency %d\n",frequency);
+    DEBUG("[PIT] Initializing PIT with frequency %d\n",frequency);
     ticks_per_second = frequency;
 
     uint32_t divisor = clock_frequency / frequency;
@@ -20,7 +20,7 @@ void pit_init(uint32_t frequency) {
     outb(PIT_CHANNEL0_PORT, hi);
 
     irq_register_handler(0, pit_irq_handler);
-    DEBUG("PIT INITIALIZED SUCCESFULLY\n");
+    DEBUG("[PIT] PIT INITIALIZED SUCCESFULLY\n");
 }
 
 void pit_irq_handler(void) {
@@ -36,7 +36,6 @@ uint32_t pit_get_uptime_s(void) {
 }
 
 void pit_sleep_ms(uint32_t ms) {
-    DEBUG("Going to sleep\n");
     uint32_t tick_count_start = tick_count;
     
     // Convert target milliseconds to the equivalent number of ticks
@@ -47,5 +46,4 @@ void pit_sleep_ms(uint32_t ms) {
         // We could add 'hlt' or 'pause' here to save power/cycles
         __asm__ __volatile__("pause");
     }
-    DEBUG("Wake up!\n");
 }

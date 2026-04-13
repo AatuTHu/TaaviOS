@@ -112,9 +112,7 @@ void kernel_main(uint32_t *mboot_info) {
     process_create((uint32_t)proc2, "proc2");
     process_create((uint32_t)proc3, "proc3");
     scheduler_init();
-    scheduler_add(process_get(0));
-    scheduler_add(process_get(1));
-    scheduler_add(process_get(2));
+    
 
 
     __asm__ __volatile__("sti");

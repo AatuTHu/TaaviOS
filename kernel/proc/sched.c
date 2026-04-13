@@ -11,11 +11,11 @@ static int current_idx = -1;
 
 void scheduler_tick(struct registers *r) {
     if(proc_count == 0) {
-        //DEBUG("No processes added");
+        //DEBUG("[SCHEDULER] No processes added");
         return;
     } 
     if(current_idx == -1) {
-        //DEBUG("No processes added");
+        //DEBUG("[SCHEDULER] No processes added");
         return;
     }
 
@@ -53,7 +53,7 @@ void scheduler_tick(struct registers *r) {
 
 void scheduler_add(proc_t *proc) {
     if(proc_count >= MAX_PROCESSES) {
-        DEBUG("[ERROR] : too many processes added to scheduler\n");
+        ERROR("[SCHEDULER] : too many processes added to scheduler\n");
         return;
     }
     procs[proc_count] = proc;
@@ -66,12 +66,12 @@ void scheduler_add(proc_t *proc) {
 
 proc_t *scheduler_get_current() {
     if(current_idx == -1) {
-        DEBUG("[ERROR] : no processes added to scheduler yet\n");
+        ERROR("[SCHEDULER] : no processes added to scheduler yet\n");
         return NULL;
     }
     return procs[current_idx];
 }
 
 void scheduler_init() {
-    DEBUG("SCHEDULER INITIALIZED\n");
+    DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");
 }
