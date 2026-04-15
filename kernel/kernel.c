@@ -102,16 +102,18 @@ void kernel_main(uint32_t *mboot_info) {
     klog(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
     klog("  |=====|  |=|    |=| |=|   |==|                                            \n");
     vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-    klog("                              |====|     |====|  |=======|  |=====|        \n");
-    klog("                              |=|  |=|   |=|  |=|    |=|    |=|   |=|      \n");
-    klog("                              |=----=|   |=|  |=|    |=|    |=|___         \n");
-    klog("                              |=|===|    |=|  |=|    |=|          |=|      \n");
-    klog("                              |=|  |==|  |=|  |=|    |=|    |=|   |=|      \n");
-    klog("                              |=|   |==|  |====|     |=|     |=====|       \n");
+    klog("                               |====|     |====| |=======|  |=====|        \n");
+    klog("                              |=|  |=|   |=|  |=|   |=|    |=|   |=|       \n");
+    klog("                              |=----=|   |=|  |=|   |=|    |=|___          \n");
+    klog("                              |=|===|    |=|  |=|   |=|          |=|       \n");
+    klog("                              |=|  |==|  |=|  |=|   |=|    |=|   |=|       \n");
+    klog("                              |=|   |==|  |====|    |=|     |=====|        \n");
     vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
     klog("---------------------------------------------------------------------------\n");
-                
+    
+    
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+    klog("Carrots >");
     pit_init(PIT_FREQUENCY);
 
     process_create((uint32_t)proc1, "proc1");

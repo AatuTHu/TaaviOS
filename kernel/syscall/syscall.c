@@ -28,16 +28,6 @@ static int32_t sys_exit(struct registers *r) {
         r->ss      = SEG_KERNEL_DATA;
         return 0;
     }
-
-    /* TODO: move this to sheduler */
-    proc_t *next = scheduler_get_current();
-    tss_set_kernel_stack(next->kernel_stack);
-    vmm_switch(next->page_dir);
-    r->eip     = next->context.eip; //next starting point
-    r->useresp = next->context.esp; //next userstack
-    r->eflags  = next->context.eflags; //flags
-    r->cs      = next->context.cs; //segment code
-    r->ss      = next->context.ss; //segment data
     
     return 0;
 }

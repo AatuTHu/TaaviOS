@@ -42,14 +42,14 @@ proc_t *process_create(uint32_t entry,const char *name) {
 
     proc->kernel_stack   = kernel_stack + KERNEL_STACK_SIZE; //kernel stack is bottom of stack so add the stack on top of it
 
-    proc->context.eip    = entry;
-    proc->useresp        = USER_STACK_TOP;
-    proc->context.ebp    = proc->useresp;
+    proc->context.eip    = entry; //Begining of the proc like the main function
+    proc->useresp        = USER_STACK_TOP; //stack pointer?
+    proc->context.ebp    = proc->useresp; //stack bottom. Same as top in the begining. No plate you know
     proc->context.eflags = EFLAGS_DEFAULT;
 
     //for now before usermode
-    proc->context.cs     = SEG_KERNEL_CODE; //SEG_USER_CODE;
-    proc->context.ss     = SEG_KERNEL_DATA; //SEG_USER_DATA;
+    proc->context.cs     = SEG_USER_CODE;
+    proc->context.ss     = SEG_USER_DATA;
     
     process_table[slot]  = proc;
 

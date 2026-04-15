@@ -55,8 +55,8 @@
 #define PAGE_PRESENT  (1 << 0)
 #define PAGE_RW       (1 << 1)
 #define PAGE_USER     (1 << 2)
-#define PAGE_USER_RW  (PAGE_PRESENT | PAGE_RW | PAGE_USER)
-#define EFLAGS_IF (1 << 9)
+#define PAGE_USER_RW  (PAGE_PRESENT | PAGE_RW | PAGE_USER) //previous flags in one
+#define EFLAGS_IF (1 << 9) //interrupts flag
 #define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
 
 #define KERNEL_STACK_SIZE 4096

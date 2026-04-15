@@ -11,11 +11,16 @@ static int current_idx = -1;
 
 void scheduler_tick(struct registers *r) {
     if(task_count == 0) {
-        //DEBUG("[SCHEDULER] No tasks added");
+        //DEBUG("[SCHEDULER] No tasks added\n");
         return;
     } 
     if(current_idx == -1) {
-        //DEBUG("[SCHEDULER] No tasks added");
+        //DEBUG("[SCHEDULER] No tasks added\n");
+        return;
+    }
+
+    if(tasks[current_idx]->state == PROCESS_DEAD) {
+        //DEBUG("[SCHEDULER] Task is dead\n");
         return;
     }
 
@@ -53,7 +58,7 @@ void scheduler_tick(struct registers *r) {
 
 void scheduler_add(proc_t *task) {
     if(task_count >= MAX_PROCESSES) {
-        ERROR("[SCHEDULER] : too many tasks added to scheduler\n");
+        ERROR("[SCHEDULER]: too many tasks added to scheduler\n");
         return;
     }
     tasks[task_count] = task;
@@ -66,14 +71,16 @@ void scheduler_add(proc_t *task) {
 
 proc_t *scheduler_get_current() {
     if(current_idx == -1) {
-        ERROR("[SCHEDULER] : no tasks added to scheduler yet\n");
+        ERROR("[SCHEDULER]: no tasks added to scheduler yet\n");
         return NULL;
     }
     return tasks[current_idx];
 }
 
-void scheduler_remove() {
-    tasks[current_idx] = NULL;
+void scheduler_remove() { //this is not right
+    tasks[current_idx]->state = PROCESS_DEAD;
+    tasks[current_idx]->started = 0;
+    task_count--;
 }
 
 int scheduler_get_task_count() {
