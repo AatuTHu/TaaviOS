@@ -12,28 +12,9 @@
 #include "kmalloc.h"
 #include "proc.h"
 #include "sched.h"
+#include "usermode.h"
 #include "stddef.h"
 
-void proc1() {
-    while(1) {
-        klog("PROC1 RUNNING\n");
-        pit_sleep_ms(1000);
-    }
-}
-
-void proc2() {
-    while(1) {
-        klog("PROC2 RUNNING\n");
-        pit_sleep_ms(1000);
-    }
-}
-
-void proc3() {
-    while(1) {
-        klog("PROC3 RUNNING\n");
-        pit_sleep_ms(1000);
-    }
-}
 void init_serial_and_vga() {
     vga_init();
     serial_init();
@@ -114,16 +95,19 @@ void kernel_main(uint32_t *mboot_info) {
     
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     klog("Carrots >");
+
     pit_init(PIT_FREQUENCY);
+    scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
 
-    process_create((uint32_t)proc1, "proc1");
-    process_create((uint32_t)proc2, "proc2");
-    process_create((uint32_t)proc3, "proc3");
-    scheduler_init();
+   
+
+    pit_init(PIT_FREQUENCY); 
+
     
+    _set_scheduler_on();
 
-
+    //enter_usermode(first_proc->context.eip, first_proc->useresp, first_proc->kernel_stack);
+    
+    // Code here is unreachable
     __asm__ __volatile__("sti");
-
-    
 }

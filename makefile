@@ -4,7 +4,8 @@ LD = i686-elf-ld
 ASFLAGS = -f elf32
 CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
-		-Ikernel/include/mm -Ikernel/include/proc -Ikernel/include/loader -Ikernel -Ikernel/include/syscall \
+		 -Ikernel/include/mm -Ikernel/include/proc -Ikernel/include/loader -Ikernel -Ikernel/include/syscall \
+		 -Ikernel/include/usermode \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
 		 -mno-sse -mno-sse2 -mno-mmx
@@ -33,8 +34,10 @@ $(BUILD)/carrots.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
 iso: $(BUILD)/carrots.bin
+	$(MAKE) -C userspace/test
 	mkdir -p isodir/boot/grub
 	cp $(BUILD)/carrots.bin isodir/boot/
+	cp userspace/test/test.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/carrots.iso isodir
 
@@ -42,6 +45,7 @@ run: iso
 	qemu-system-i386 -cdrom $(BUILD)/carrots.iso -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
 
 clean:
+	$(MAKE) -C userspace/test clean
 	find . -name '*.o' -delete
 	rm -f carrots.bin carrots.iso
 	rm -rf $(BUILD) isodir

@@ -18,6 +18,7 @@ static int32_t sys_exit(struct registers *r) {
     vmm_switch(kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
     scheduler_remove();
     
+    //This should be in the scheduler tick? Like maeby if scheduler cant find any tasks t orun then go to idle
     int remaining_tasks = scheduler_get_task_count();
 
     if(remaining_tasks == 0) {

@@ -7,9 +7,14 @@
 static proc_t *tasks[MAX_PROCESSES];
 static int task_count = 0;
 static int current_idx = -1;
-
+static uint8_t scheduler_on = 0;
 
 void scheduler_tick(struct registers *r) {
+
+    if(scheduler_on == 0) {
+        return;
+    }
+
     if(task_count == 0) {
         //DEBUG("[SCHEDULER] No tasks added\n");
         return;
@@ -23,6 +28,10 @@ void scheduler_tick(struct registers *r) {
         //DEBUG("[SCHEDULER] Task is dead\n");
         return;
     }
+
+    //if current task is in blocked state then try and clean another dead task away?
+    //cold have a static int of dead tasks counter so that we check if it is higher than 0 and if current task is on block we go to clean dead task
+
 
     if(tasks[current_idx]->started) {
         memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
@@ -41,7 +50,7 @@ void scheduler_tick(struct registers *r) {
         }
     }
     
-    if (next_idx == -1) return;
+    if (next_idx == -1) return; //this if could put kernel in to a idle state
     
     current_idx = next_idx;
     proc_t *next = tasks[current_idx];
@@ -89,4 +98,8 @@ int scheduler_get_task_count() {
 
 void scheduler_init() {
     DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");
+}
+
+void _set_scheduler_on() {
+    scheduler_on = 1;
 }
