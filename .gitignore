@@ -3,4 +3,5 @@
 *.bin
 *.iso
 *.txt
+*.elf
 .vscode

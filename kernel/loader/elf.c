@@ -9,19 +9,19 @@
 bool elf_check_file(Elf32_Ehdr *hdr) {
 	if(!hdr) return false;
 	if(hdr->e_ident[EI_MAG0] != ELFMAG0) {
-		ERROR("[ELF] ELF Header EI_MAG0 incorrect.\n");
+		ERROR("[ELF]: ELF Header EI_MAG0 incorrect.\n");
 		return false;
 	}
 	if(hdr->e_ident[EI_MAG1] != ELFMAG1) {
-		ERROR("[ELF] ELF Header EI_MAG1 incorrect.\n");
+		ERROR("[ELF]: ELF Header EI_MAG1 incorrect.\n");
 		return false;
 	}
 	if(hdr->e_ident[EI_MAG2] != ELFMAG2) {
-		ERROR("[ELF] ELF Header EI_MAG2 incorrect.\n");
+		ERROR("[ELF]: ELF Header EI_MAG2 incorrect.\n");
 		return false;
 	}
 	if(hdr->e_ident[EI_MAG3] != ELFMAG3) {
-		ERROR("[ELF] ELF Header EI_MAG3 incorrect.\n");
+		ERROR("[ELF]: ELF Header EI_MAG3 incorrect.\n");
 		return false;
 	}
 	return true;
@@ -29,27 +29,27 @@ bool elf_check_file(Elf32_Ehdr *hdr) {
 
 bool elf_check_supported(Elf32_Ehdr *hdr) {
 	if(!elf_check_file(hdr)) {
-		ERROR("[ELF] Invalid ELF File.\n");
+		ERROR("[ELF]: Invalid ELF File.\n");
 		return false;
 	}
 	if(hdr->e_ident[EI_CLASS] != ELFCLASS32) {
-		ERROR("[ELF] Unsupported ELF File Class.\n");
+		ERROR("[ELF]: Unsupported ELF File Class.\n");
 		return false;
 	}
 	if(hdr->e_ident[EI_DATA] != ELFDATA2LSB) {
-		ERROR("[ELF] Unsupported ELF File byte order.\n");
+		ERROR("[ELF]: Unsupported ELF File byte order.\n");
 		return false;
 	}
 	if(hdr->e_machine != EM_386) {
-		ERROR("[ELF] Unsupported ELF File target.\n");
+		ERROR("[ELF]: Unsupported ELF File target.\n");
 		return false;
 	}
 	if(hdr->e_ident[EI_VERSION] != EV_CURRENT) {
-		ERROR("[ELF] Unsupported ELF File version.\n");
+		ERROR("[ELF]: Unsupported ELF File version.\n");
 		return false;
 	}
 	if(hdr->e_type != ET_REL && hdr->e_type != ET_EXEC) {
-		ERROR("[ELF] Unsupported ELF File type.\n");
+		ERROR("[ELF]: Unsupported ELF File type.\n");
 		return false;
 	}
 	return true;
@@ -57,7 +57,9 @@ bool elf_check_supported(Elf32_Ehdr *hdr) {
 
 uint32_t elf_load(void *data, page_directory_t *page_dir) {
 
-    Elf32_Ehdr *header_data = (Elf32_Ehdr *) data;
+	DEBUG("[ELF]: starting load\n");
+    Elf32_Ehdr *header_data = (Elf32_Ehdr *)data;
+
 
     if(!elf_check_file(header_data)) {     
         return 0;
@@ -76,8 +78,8 @@ uint32_t elf_load(void *data, page_directory_t *page_dir) {
 
         for(uint32_t j = 0; j < pages; j++) {
             uint32_t phys = pmm_alloc();
-
-            paging_map(page_dir, phdr->p_vaddr + j * PAGE_SIZE, phys, PAGE_USER_RW);
+			DEBUG("[ELF] PT_LOAD vaddr=0x%x filesz=%d memsz=%d\n", phdr->p_vaddr, phdr->p_filesz, phdr->p_memsz);
+            paging_map(page_dir, phdr->p_vaddr + j * PAGE_SIZE, phys, PAGE_USER);
 
             uint32_t file_offset = phdr->p_offset + j * PAGE_SIZE;
             uint32_t copied = j * PAGE_SIZE;

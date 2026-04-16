@@ -16,17 +16,23 @@ void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t fl
     //DEBUG("[PAGING] Mapping to page directory index: %d\n", pd_index);
     uint32_t pt_index = (virt >> 12) & 0x3FF;
     //DEBUG("[PAGING] Page Table index: %d\n", pt_index);
+    
+    uint32_t pd_flags = PAGE_PRESENT | PAGE_RW;
+    if (flags & PAGE_USER) {
+        pd_flags |= PAGE_USER;
+    }
 
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {
         uint32_t page_addr = pmm_alloc();
         uint32_t page_virt = phys_to_virt(page_addr);
         memset((void*)page_virt, 0, PAGE_SIZE);
-        (*dir)[pd_index] = page_addr | PAGE_PRESENT | PAGE_RW;
+
+        (*dir)[pd_index] = page_addr | pd_flags;
     }
 
     uint32_t pt_phys = (*dir)[pd_index] & ~0xFFF;
     uint32_t *page_table = (uint32_t *)(phys_to_virt(pt_phys));
-    page_table[pt_index] = phys | flags;
+    page_table[pt_index] = phys | pd_flags;
 }
 
 void paging_unmap(page_directory_t *dir, uint32_t virt) {

@@ -34,10 +34,10 @@ $(BUILD)/carrots.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
 iso: $(BUILD)/carrots.bin
-	$(MAKE) -C userspace/test
+	$(MAKE) -C userspace/init
 	mkdir -p isodir/boot/grub
 	cp $(BUILD)/carrots.bin isodir/boot/
-	cp userspace/test/test.elf isodir/boot/
+	cp userspace/init/init.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/carrots.iso isodir
 
@@ -45,7 +45,7 @@ run: iso
 	qemu-system-i386 -cdrom $(BUILD)/carrots.iso -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
 
 clean:
-	$(MAKE) -C userspace/test clean
+	$(MAKE) -C userspace/init clean
 	find . -name '*.o' -delete
 	rm -f carrots.bin carrots.iso
 	rm -rf $(BUILD) isodir

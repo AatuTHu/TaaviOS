@@ -7,7 +7,7 @@
 
 static proc_t *process_table[MAX_PROCESSES];
 
-proc_t *process_create(uint32_t entry,const char *name) {
+proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_dir) {
 
     int slot = -1;
 
@@ -23,7 +23,13 @@ proc_t *process_create(uint32_t entry,const char *name) {
 
     if(proc == NULL) return NULL;
 
-    page_directory_t *virt_dir = vmm_create_directory();
+    page_directory_t *virt_dir = NULL;
+
+    if(page_dir == NULL) {
+        virt_dir = paging_create_directory();
+    } else {
+        virt_dir = page_dir;
+    }
 
     int response = vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW);
     if(response != 0) return NULL;
@@ -43,8 +49,9 @@ proc_t *process_create(uint32_t entry,const char *name) {
     proc->kernel_stack   = kernel_stack + KERNEL_STACK_SIZE; //kernel stack is bottom of stack so add the stack on top of it
 
     proc->context.eip    = entry; //Begining of the proc like the main function
-    proc->useresp        = USER_STACK_TOP; //stack pointer?
+    proc->useresp        = USER_STACK_TOP + USER_STACK_SIZE; //stack pointer?
     proc->context.ebp    = proc->useresp; //stack bottom. Same as top in the begining. No plate you know
+    proc->context.esp    = proc->useresp;
     proc->context.eflags = EFLAGS_DEFAULT;
 
     //for now before usermode
