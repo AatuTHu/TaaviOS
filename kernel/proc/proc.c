@@ -49,9 +49,9 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     proc->kernel_stack   = kernel_stack + KERNEL_STACK_SIZE; //kernel stack is bottom of stack so add the stack on top of it
 
     proc->context.eip    = entry; //Begining of the proc like the main function
-    proc->useresp        = USER_STACK_TOP + USER_STACK_SIZE; //stack pointer?
-    proc->context.ebp    = proc->useresp; //stack bottom. Same as top in the begining. No plate you know
+    proc->useresp        = USER_STACK_TOP + USER_STACK_SIZE - 8; //stack pointer?
     proc->context.esp    = proc->useresp;
+    proc->context.ebp    = proc->useresp; //stack bottom. Same as top in the begining. No plate you know
     proc->context.eflags = EFLAGS_DEFAULT;
 
     //for now before usermode

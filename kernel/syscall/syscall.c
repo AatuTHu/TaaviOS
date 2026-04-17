@@ -25,7 +25,7 @@ static int32_t sys_exit(struct registers *r) {
     if(remaining_tasks == 0) {
         //NOW I GET IT!!!!! WE SET REGISTER TO SAFE VALUES 
         r->eip  = (uint32_t)kernel_idle;
-        r->useresp = 0; 
+        //r->useresp = 0; 
         r->cs      = SEG_KERNEL_CODE;
         r->ss      = SEG_KERNEL_DATA;
         return 0;

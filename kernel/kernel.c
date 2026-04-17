@@ -121,13 +121,14 @@ void kernel_main(uint32_t *mboot_info) {
     pit_init(PIT_FREQUENCY);
     
     
+    
+    // Code here is unreachable
+    __asm__ __volatile__("sti");
     if(first_proc != NULL) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         _set_scheduler_on();
         vmm_switch(first_proc->page_dir);
+        DEBUG("[KERNEL]: Jumping with EIP: %x, ESP: %x\n", first_proc->context.eip, first_proc->useresp);
         enter_usermode(first_proc->context.eip, first_proc->useresp, first_proc->kernel_stack);
     }
-    
-    // Code here is unreachable
-    __asm__ __volatile__("sti");
 }
