@@ -1,5 +1,6 @@
 #include "usermode.h"
 #include "tss.h"
+#include "config.h"
 
 void enter_usermode(uint32_t entry, uint32_t user_stack, uint32_t kernel_stack) {
     tss_set_kernel_stack(kernel_stack);

@@ -32,7 +32,7 @@ void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t fl
 
     uint32_t pt_phys = (*dir)[pd_index] & ~0xFFF;
     uint32_t *page_table = (uint32_t *)(phys_to_virt(pt_phys));
-    page_table[pt_index] = phys | pd_flags;
+    page_table[pt_index] = phys | flags | PAGE_PRESENT;
 }
 
 void paging_unmap(page_directory_t *dir, uint32_t virt) {

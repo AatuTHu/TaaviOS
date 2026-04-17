@@ -11,4 +11,4 @@ _start:
     call main
     mov eax, 1
     int 0x80
-    hlt
+    ;hlt

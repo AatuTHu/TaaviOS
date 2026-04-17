@@ -54,6 +54,9 @@ void scheduler_tick(struct registers *r) {
     
     current_idx = next_idx;
     proc_t *next = tasks[current_idx];
+
+    DEBUG("[SHEDULER]: Now running: %c\n", next->name);
+
     next->state = PROCESS_RUNNING;
     
     /* Update CPU state for the new process */

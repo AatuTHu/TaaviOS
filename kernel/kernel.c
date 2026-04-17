@@ -15,6 +15,7 @@
 #include "usermode.h"
 #include "stddef.h"
 #include "elf.h"
+#include "syscall.h"
 
 static uint32_t mod_start = 0;
 static uint32_t mod_end = 0;
@@ -77,6 +78,7 @@ void kernel_main(uint32_t *mboot_info) {
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
     kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
     scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
+    syscall_init();
     
     vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     klog("----------------------------------------------------------------------------\n");

@@ -25,7 +25,7 @@ void isr_handler(struct registers *r) {
     
    ERROR("REASON: ");
     if (r->int_no == 14) {
-       klog("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
+       ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
                 (r->err_code & 0x1) ? "Yes" : "No",
                 (r->err_code & 0x2) ? "Write" : "Read",
                 (r->err_code & 0x4) ? "User" : "Kernel");

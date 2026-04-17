@@ -79,7 +79,7 @@ uint32_t elf_load(void *data, page_directory_t *page_dir) {
         for(uint32_t j = 0; j < pages; j++) {
             uint32_t phys = pmm_alloc();
 			DEBUG("[ELF] PT_LOAD vaddr=0x%x filesz=%d memsz=%d\n", phdr->p_vaddr, phdr->p_filesz, phdr->p_memsz);
-            paging_map(page_dir, phdr->p_vaddr + j * PAGE_SIZE, phys, PAGE_USER);
+            paging_map(page_dir, phdr->p_vaddr + j * PAGE_SIZE, phys, PAGE_USER | PAGE_PRESENT);
 
             uint32_t file_offset = phdr->p_offset + j * PAGE_SIZE;
             uint32_t copied = j * PAGE_SIZE;
