@@ -16,8 +16,10 @@ static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
     DEBUG("[SYSCALL][SYSEXIT]\n");
-    vmm_switch((page_directory_t *)kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
-    scheduler_remove();
+    //vmm_switch((page_directory_t *)kernel_page_dir); 
+    //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
+    //We don't actually remove anything so this is not necessery.
+    scheduler_kill_task();
     
     //This should be in the scheduler tick? Like maeby if scheduler cant find any tasks t orun then go to idle
     int remaining_tasks = scheduler_get_task_count();
@@ -25,12 +27,15 @@ static int32_t sys_exit(struct registers *r) {
     if(remaining_tasks == 0) {
         //NOW I GET IT!!!!! WE SET REGISTER TO SAFE VALUES 
         r->eip  = (uint32_t)kernel_idle;
-        //r->useresp = 0; 
+        r->useresp = 0; 
         r->cs      = SEG_KERNEL_CODE;
         r->ss      = SEG_KERNEL_DATA;
         return 0;
     }
-    
+
+    int next_idx = scheduler_find_next();
+    scheduler_switch_context(r, next_idx);
+
     return 0;
 }
 
