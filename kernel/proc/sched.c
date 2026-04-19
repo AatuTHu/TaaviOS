@@ -2,6 +2,8 @@
 #include "klog.h"
 #include "config.h"
 #include "kstring.h"
+#include "tss.h"
+#include "vmm.h"
 #include <stddef.h>
 
 static proc_t *tasks[MAX_PROCESSES];

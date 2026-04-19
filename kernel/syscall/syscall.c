@@ -16,7 +16,7 @@ static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
     DEBUG("[SYSCALL][SYSEXIT]\n");
-    vmm_switch(kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
+    vmm_switch((page_directory_t *)kernel_page_dir); //Switch back to kernels own directory so that the processors dosn't stay in destroyd proc dir.
     scheduler_remove();
     
     //This should be in the scheduler tick? Like maeby if scheduler cant find any tasks t orun then go to idle
@@ -47,6 +47,7 @@ static int32_t sys_write(struct registers *r) {
 }
 
 static int32_t sys_getpid(struct registers *r) {
+    (void)r;
     proc_t *proc = scheduler_get_current();
     return (proc) ? (int32_t)proc->pid : -1;
 }

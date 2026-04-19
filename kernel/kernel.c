@@ -40,7 +40,7 @@ void init_mm(uint32_t *mboot_info) {
     pmm_init(mboot);
 }
 
-void check_for_modules (uint32_t mboot_info) {
+void check_for_modules (uint32_t *mboot_info) {
     DEBUG("--CHECKING FOR MODULES--\n");
     struct multiboot_info *mbi = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
 

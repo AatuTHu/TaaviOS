@@ -38,7 +38,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
 
     uint32_t kernel_stack = pmm_alloc(); //allocate a physical page so that it is reality
 
-    if(kernel_stack == NULL) return NULL;
+    if(kernel_stack == 0) return NULL;
 
     memset(&proc->context, 0, sizeof(struct registers));
     
@@ -67,7 +67,7 @@ void process_destroy(proc_t *proc) {
     if(proc == NULL) return;
     process_table[proc->pid] = NULL;
     vmm_free(proc->page_dir, proc->useresp, USER_STACK_SIZE);
-    kfree(proc->kernel_stack);
+    kfree((void *)proc->kernel_stack);
     kfree(proc->page_dir);
     kfree(proc);
 }

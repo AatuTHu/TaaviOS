@@ -17,7 +17,7 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flag
     uint32_t n_pages = size / PAGE_SIZE;
     DEBUG("[VMM] Number of pages to be allocated: %d\n", n_pages);
     uint32_t virt_start = virt;
-    for(int i = 0; i < n_pages; i++) {
+    for(uint32_t i = 0; i < n_pages; i++) {
         uint32_t addr = pmm_alloc();
         if(addr == 0) {
             DEBUG("[VMM] NO PHYSICAL MEMORY LEFT FOR THE ALLOCATION\n");
@@ -45,7 +45,7 @@ void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
 
     uint32_t n_pages = size / PAGE_SIZE;
     DEBUG("[VMM] Number of pages to be freed: %d\n", n_pages);
-    for(int i = 0; i < n_pages; i++) {
+    for(uint32_t i = 0; i < n_pages; i++) {
         uint32_t phys_addr = paging_get_phys(dir, virt);
         pmm_free(phys_addr);
         paging_unmap(dir, virt);

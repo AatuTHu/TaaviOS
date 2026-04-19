@@ -4,7 +4,7 @@
 #include "config.h"
 #include "klog.h"
 
-volatile static uint32_t tick_count = 0;
+static volatile uint32_t tick_count = 0;
 static uint32_t ticks_per_second = 0;
 
 void pit_init(uint32_t frequency) {
