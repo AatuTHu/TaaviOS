@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -O0 -fno-pic -fno-pie -mno-accumulate-outgoing-args -mregparm=0
+CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -O0 -fno-pic -fno-pie -mno-accumulate-outgoing-args -mregparm=0 -fno-stack-protector
 LDFLAGS = -m32 -nostdlib -no-pie -T link.ld
 
 LIBC_OBJS = $(LIBC_SRCS:.c=.o)

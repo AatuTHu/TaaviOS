@@ -7,13 +7,15 @@
 
 void scheduler_tick(struct registers *r);
 void scheduler_switch_context(struct registers *r, int idx);
+void scheduler_block_task(struct registers *r);
 void scheduler_init(void);
 void scheduler_add(proc_t *proc);
 void scheduler_kill_task();
+void _scheduler_remove_task();
 void _set_scheduler_on();
-void _scheduler_task_remove();
-int scheduler_find_next();
+void scheduler_set_task_ready();
 int  scheduler_get_task_count();
+int scheduler_find_next();
 proc_t *scheduler_get_current();
 
 #endif

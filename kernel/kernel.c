@@ -16,6 +16,8 @@
 #include "stddef.h"
 #include "elf.h"
 #include "syscall.h"
+#include "keyboard.h"
+#include "io.h"
 
 static uint32_t mod_start = 0;
 static uint32_t mod_end = 0;
@@ -43,9 +45,7 @@ void init_mm(uint32_t *mboot_info) {
 void check_for_modules (uint32_t *mboot_info) {
     DEBUG("--CHECKING FOR MODULES--\n");
     struct multiboot_info *mbi = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
-
-
-
+    
     if((mbi->mods_count) > 0) {
         DEBUG("Modules found\n");
         struct multiboot_mod *mod = (struct multiboot_mod *)phys_to_virt(mbi->mods_addr);
@@ -63,6 +63,10 @@ void check_for_modules (uint32_t *mboot_info) {
     }
 }
 
+void init_drivers() {
+    keyboard_init();
+}
+
 void kernel_main(uint32_t *mboot_info) {
 
     set_debug_mode();
@@ -72,14 +76,21 @@ void kernel_main(uint32_t *mboot_info) {
 
     init_mm(mboot_info);
     check_for_modules(mboot_info);
-
+    
+    
     init_arch();
+    init_drivers();
+    
+
     
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
-    kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
-    scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
-    syscall_init();
     
+    kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
+    
+    scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
+    
+    syscall_init();
+
     vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     klog("----------------------------------------------------------------------------\n");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
@@ -101,7 +112,6 @@ void kernel_main(uint32_t *mboot_info) {
     
     
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    klog("Carrots >");
 
     proc_t *first_proc = NULL;
     
@@ -124,8 +134,8 @@ void kernel_main(uint32_t *mboot_info) {
     
     
     
-    // Code here is unreachable
     __asm__ __volatile__("sti");
+    
     if(first_proc != NULL) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         _set_scheduler_on();

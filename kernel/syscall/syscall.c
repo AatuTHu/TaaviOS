@@ -41,6 +41,7 @@ static int32_t sys_exit(struct registers *r) {
 
 
 static int32_t sys_write(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_WRITE]\n");
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx; //ecx has the params?
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the lenght of the message
@@ -57,6 +58,40 @@ static int32_t sys_getpid(struct registers *r) {
     return (proc) ? (int32_t)proc->pid : -1;
 }
 
+static int32_t sys_read(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_READ]\n");
+    int fd    = r->ebx;
+    char *buf = (char *)r->ecx;
+    
+    if (fd != 0) {
+        DEBUG("[SYSCALL][SYS_READ]: fd not 0\n");
+        return -1; // Only STDIN (0) supported currently
+    }
+    
+    proc_t *current = scheduler_get_current();
+    if (!current) {
+        DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
+        return -1;
+    }
+
+    int nread = 0;
+    if (nread == 0) {
+        DEBUG("[SYSCALL][SYS_READ]: nread = 0 blocking\n");
+        scheduler_block_task(r); // Give up the remaining time slice
+        int next_idx = scheduler_find_next();
+        if(next_idx != -1) {
+            DEBUG("[SYSCALL][SYS_READ]: next task found, switching\n");
+            scheduler_switch_context(r, next_idx);
+        } else {
+            DEBUG("[SYSCALL][SYS_READ]: no next task found, setting current task to ready\n");
+            scheduler_set_task_ready();
+        }
+        return nread;
+    }
+
+    return nread;
+}
+
 void syscall_init() {
     DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
     for(uint8_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
@@ -65,7 +100,7 @@ void syscall_init() {
     syscall_table[SYS_WRITE]    = sys_write;
     syscall_table[SYS_GETPID]   = sys_getpid;
     //syscall_table[SYS_EXEC]     = sys_exec;
-    //syscall_table[SYS_READ]     = sys_read;
+    syscall_table[SYS_READ]     = sys_read;
 }
 
 void syscall_dispatch(struct registers *r) {

@@ -22,7 +22,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
     if(idx < 0 || idx >= MAX_PROCESSES) {
         //THIS SHOULD NOT GO TO SLEEP THO?
         DEBUG("[SCHEDULER]: invalid idx, cannot make a switch, going to sleep\n");
-        while(1) __asm__ __volatile__("hlt");
+        return;
     }
 
     current_idx = idx;
@@ -60,19 +60,28 @@ int scheduler_find_next() {
 
 //first find next task. Then remove dead task, We can use current_idx here. Then shift all tasks in the array to the left
 //Only one task at a time so processor has time for real work.
-void _scheduler_task_remove() {
+void _scheduler_remove_task() {
 
    int next_task_idx = scheduler_find_next();
    DEBUG("[SCHEDULER]: next task: %d\n", next_task_idx);
-
+   
+   //Take next runnable pid here before remove and shifting
    uint32_t next_pid = -1;
-   if(next_task_idx != -1) {
+   if(next_task_idx != -1) { 
       next_pid = tasks[next_task_idx]->pid;
    }
    
    DEBUG("[SCHEDULER]: Deleting task at current idx %d with name: %s\n", current_idx, tasks[current_idx]->name);
+   DEBUG("[SCHEDULER]: Switching to kernel_page_dir\n");
+   vmm_switch((page_directory_t *)kernel_page_dir);
    tasks[current_idx] = NULL;
    
+   if(next_task_idx == -1) {
+       DEBUG("[SCHEDULER]: No new tasks to run. Remove complete.\n");
+       current_idx = -1;
+       return;
+   }
+
    proc_t *new_task_list[task_count];
    memset(new_task_list, 0, task_count * sizeof(proc_t *));
    
@@ -87,13 +96,6 @@ void _scheduler_task_remove() {
 
     task_count--;
     memcpy(tasks, new_task_list, task_count * sizeof(proc_t *));
-
-
-    if(next_pid == -1) {
-        DEBUG("[SCHEDULER]: No new tasks to run. Remove complete.\n");
-        current_idx = -1;
-        return;
-    }
 
     DEBUG("[SCHEDULER]: Finding new task\n");
     for(int i = 0; i < task_count; i++) {
@@ -121,9 +123,8 @@ void scheduler_tick(struct registers *r) {
         return;
     }
     
-
     if(tasks[current_idx]->state == PROCESS_DEAD) {
-        _scheduler_task_remove();
+        _scheduler_remove_task();
         return;
     }
 
@@ -147,20 +148,20 @@ void scheduler_tick(struct registers *r) {
         return;
     }
     
-    current_idx = next_idx;
-    proc_t *next = tasks[current_idx];
-
-    DEBUG("[SHEDULER]: Now running: %c\n", next->name);
-
-    next->state = PROCESS_RUNNING;
-    
-    //Update CPU state for the new process 
-    tss_set_kernel_stack(next->kernel_stack);
-    vmm_switch(next->page_dir);
-
-     
-    memcpy(r, &next->context, sizeof(struct registers));
-    r->esp = tasks[current_idx]->useresp;
+    if(next_idx != current_idx) {
+        current_idx = next_idx;
+        proc_t *next = tasks[current_idx];
+        
+        DEBUG("[SHEDULER]: Now running: %s\n", next->name);
+        
+        next->state = PROCESS_RUNNING;
+        //Update CPU state for the new process 
+        tss_set_kernel_stack(next->kernel_stack);
+        vmm_switch(next->page_dir);
+           
+        memcpy(r, &next->context, sizeof(struct registers));
+        r->esp = tasks[current_idx]->useresp;
+    }
 }
 
 void scheduler_add(proc_t *task) {
@@ -187,6 +188,16 @@ proc_t *scheduler_get_current() {
 void scheduler_kill_task() {
     tasks[current_idx]->state = PROCESS_DEAD;
     tasks[current_idx]->started = 0;
+}
+
+void scheduler_block_task(struct registers *r) {
+    DEBUG("[SCHEDULER]: blocking current task\n");
+    tasks[current_idx]->state = PROCESS_BLOCKED;
+    
+}
+
+void scheduler_set_task_ready() {
+    tasks[current_idx]->state = PROCESS_READY;
 }
 
 int scheduler_get_task_count() { //We only want to know the task that are no dead
