@@ -114,25 +114,33 @@ void kernel_main(uint32_t *mboot_info) {
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 
     proc_t *first_proc = NULL;
-    
+    proc_t *second_proc = NULL;
+    proc_t *third_proc = NULL;
+
     if(mod_start != 0) {
-        page_directory_t *page_dir = paging_create_directory();
+        page_directory_t *page_dir1 = paging_create_directory();
+        page_directory_t *page_dir2 = paging_create_directory();
+        page_directory_t *page_dir3 = paging_create_directory();
         mod_start = phys_to_virt(mod_start);
         DEBUG("mod_start: 0x%x\n", mod_start);
-        uint32_t entry = elf_load((void*)mod_start, page_dir);
-        if(entry == ET_NONE) {
+        uint32_t entry1 = elf_load((void*)mod_start, page_dir1);
+        uint32_t entry2 = elf_load((void*)mod_start, page_dir2);
+        uint32_t entry3 = elf_load((void*)mod_start, page_dir3);
+        if(entry1 == ET_NONE || entry2 == ET_NONE || entry3 == ET_NONE) {
             DEBUG("[KERNEL]: ELF load failed!\n");
         } else {
             DEBUG("[KERNEL]: ELF loaded.\n");
             DEBUG("[KERNEL]: Creating init process\n");
-            first_proc = process_create(entry, "init", page_dir);
+            first_proc = process_create(entry1, "init1", page_dir1);
+            second_proc = process_create(entry2, "init2", page_dir2);
+            third_proc = process_create(entry3, "init3", page_dir3);
             scheduler_add(first_proc);
+            scheduler_add(second_proc);
+            scheduler_add(third_proc);
         }
     }
 
     pit_init(PIT_FREQUENCY);
-    
-    
     
     __asm__ __volatile__("sti");
     

@@ -25,15 +25,29 @@ void scheduler_switch_context(struct registers *r, int idx) {
         return;
     }
 
+    if(idx == current_idx) {
+        DEBUG("[SCHEDULER] next idx is the same as current one. No need to switch context\n");
+        return;
+    }
+
     current_idx = idx;
     proc_t *next = tasks[current_idx];
 
     DEBUG("[SCHEDULER]: switching context\n");
 
-    tss_set_kernel_stack(next->kernel_stack);
+    if(next->started == 0) {
+        next->started = 1;
+    }
+    
     vmm_switch(next->page_dir);
+    tss_set_kernel_stack(next->kernel_stack);
+
+    //next->state = PROCESS_RUNNING;
+    //Update CPU state for the new process 
+        
     memcpy(r, &next->context, sizeof(struct registers));
-    r->esp = tasks[current_idx]->useresp;
+    r->useresp = next->useresp;
+    
 
     DEBUG("[SCHEDULER]: switching complete\n");
 }
@@ -107,6 +121,20 @@ void _scheduler_remove_task() {
     DEBUG("[SCHEDULER]: Task found\n");
 }
 
+void debug_registers(struct registers r) {
+    int is_user = (r.cs & 0x3) == 3;
+
+   DEBUG("LOCATION: %s mode at EIP 0x%x\n", is_user ? "USER" : "KERNEL", r.eip);
+
+   DEBUG("--- REGISTER DUMP ---\n");
+   DEBUG("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", r.eax, r.ebx, r.ecx, r.edx);
+   DEBUG("ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", r.esi, r.edi, r.ebp, r.esp);
+   DEBUG("CS:  0x%x  EFLAGS: 0x%x\n", r.cs, r.eflags);
+   DEBUG("USER STACK: 0x%x\n", r.useresp);
+    
+
+}
+
 void scheduler_tick(struct registers *r) {
 
     if(scheduler_on == 0) { //master switch for if for somereason we want turn of the scheduler? Felt cute might delete later
@@ -131,15 +159,15 @@ void scheduler_tick(struct registers *r) {
     //if current task is in blocked state then try and clean another dead task away?
     //cold have a static int of dead tasks counter so that we check if it is higher than 0 and if current task is on block we go to clean dead task
 
-
     if(tasks[current_idx]->started) { //Started true so we don't push shit to context.
         memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
-        tasks[current_idx]->useresp = r->esp;
+        tasks[current_idx]->useresp = r->useresp;
     }
 
     tasks[current_idx]->started = 1;
     tasks[current_idx]->state = PROCESS_READY;
 
+    DEBUG("[SCHEDULER]: trying to find next task to run \n");
     int next_idx = scheduler_find_next();
     
     //Invalid idx switch to sleep, cox this should not happen
@@ -151,16 +179,17 @@ void scheduler_tick(struct registers *r) {
     if(next_idx != current_idx) {
         current_idx = next_idx;
         proc_t *next = tasks[current_idx];
-        
-        DEBUG("[SHEDULER]: Now running: %s\n", next->name);
+        DEBUG("[SCHEDULER]: Now running: %s\n", next->name);
+        vmm_switch(next->page_dir);
+        tss_set_kernel_stack(next->kernel_stack);
         
         next->state = PROCESS_RUNNING;
         //Update CPU state for the new process 
-        tss_set_kernel_stack(next->kernel_stack);
-        vmm_switch(next->page_dir);
-           
+        
         memcpy(r, &next->context, sizeof(struct registers));
-        r->esp = tasks[current_idx]->useresp;
+        r->useresp = next->useresp;
+        DEBUG("[SCHEDULER]: REGISTERS after memcpy\n");
+        debug_registers(next->context);
     }
 }
 

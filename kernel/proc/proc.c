@@ -46,7 +46,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     strncpy(proc->name, name, sizeof(proc->name));
     proc->state          = PROCESS_READY;
     proc->page_dir       = virt_dir;
-    
+    //proc->started        = 0;
 
     proc->kernel_stack   = phys_to_virt(kernel_stack + KERNEL_STACK_SIZE); //kernel stack is bottom of stack so add the stack on top of it. Convert it to virtual addr
 
