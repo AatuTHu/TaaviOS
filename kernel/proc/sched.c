@@ -15,6 +15,7 @@ Author: A.H - 20.4.2026
 
 static proc_t *tasks[MAX_PROCESSES];
 static int task_count = 0;
+static int dead_task_count = 0;
 static int current_idx = -1;
 static uint8_t scheduler_on = 0;
 
@@ -69,8 +70,12 @@ int scheduler_find_next() {
     return candidate;
 }
 
-//first find next task. Then remove dead task, We can use current_idx here. Then shift all tasks in the array to the left
-//Only one task at a time so processor has time for real work.
+/*
+*   First we try and find next task from the list to run. Beacouse once we delete task we cannot know for certain what was the next one.
+*   Second we are going to find a task that is in a dead state and we delete it.
+*   Thirdy we shift the old list on left so that there are no nulls
+*   Fourth we find the idx which corresponds to our next_pid
+*/
 void _scheduler_remove_task() {
 
    int next_task_idx = scheduler_find_next();
@@ -79,17 +84,46 @@ void _scheduler_remove_task() {
    //Take next runnable pid here before remove and shifting
    uint32_t next_pid = -1;
    if(next_task_idx != -1) { 
-      next_pid = tasks[next_task_idx]->pid;
+       next_pid = tasks[next_task_idx]->pid;
+    }
+
+    if(next_pid == -1) {
+        for(int i = 1; i <= task_count; i++) { 
+        int next_idx = (current_idx + i) % task_count;
+        if (tasks[next_idx]->state == PROCESS_DEAD) {
+            next_pid = tasks[next_idx]->pid;
+            break;
+        }
+        }
+    }
+
+   int candidate = -1;
+   for(int i = 1; i <= task_count; i++) { 
+        int next_idx = (current_idx + i) % task_count;
+        if (tasks[next_idx]->state == PROCESS_DEAD && next_pid != tasks[next_idx]->pid) {
+            candidate = next_idx;
+            break;
+        } else if(tasks[next_idx]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
+            candidate = next_idx;
+            break;
+        }
    }
    
-   DEBUG("[SCHEDULER]: Deleting task at current idx %d with name: %s\n", current_idx, tasks[current_idx]->name);
-   DEBUG("[SCHEDULER]: Switching to kernel_page_dir\n");
-   vmm_switch((page_directory_t *)kernel_page_dir);
-   tasks[current_idx] = NULL;
-   
-   if(next_task_idx == -1) {
+   if(candidate == -1) {
+        DEBUG("[SCHEDULER]: No deletable task found.\n");
+        return;
+   }
+    
+    DEBUG("[SCHEDULER]: Deleting task at current idx %d with name: %s\n", candidate, tasks[candidate]->name);
+    DEBUG("[SCHEDULER]: Switching to kernel_page_dir\n");
+    vmm_switch((page_directory_t *)kernel_page_dir);
+    tasks[candidate] = NULL;
+    
+   if(dead_task_count == 1 && task_count == 1) {
        DEBUG("[SCHEDULER]: No need to shift. Remove complete.\n");
        current_idx = -1;
+       task_count--;
+       dead_task_count--;
        return;
    }
 
@@ -106,6 +140,7 @@ void _scheduler_remove_task() {
     }
 
     task_count--;
+    dead_task_count--;
     memcpy(tasks, new_task_list, task_count * sizeof(proc_t *));
 
     DEBUG("[SCHEDULER]: Finding new task\n");
@@ -134,13 +169,12 @@ void scheduler_tick(struct registers *r) {
         return;
     }
     
-    if(task_count == 0) {
-        //DEBUG("[SCHEDULER] No tasks added\n");
-        return;
-    }
-    
     if(current_idx == -1) {
         //DEBUG("[SCHEDULER] invalid current_idx\n");
+        return;
+    }
+
+    if(task_count == 0) {
         return;
     }
     
@@ -158,8 +192,7 @@ void scheduler_tick(struct registers *r) {
 
     tasks[current_idx]->started = 1;
     tasks[current_idx]->state = PROCESS_READY;
-
-    DEBUG("[SCHEDULER]: trying to find next task to run \n");
+    
     int next_idx = scheduler_find_next();
     
     //Invalid idx switch to sleep, cox this should not happen
@@ -206,8 +239,10 @@ proc_t *scheduler_get_current() {
 }
 
 void scheduler_kill_task() {
+    DEBUG("[SCHEDULER]: killing current task: %s\n", tasks[current_idx]->name);
     tasks[current_idx]->state = PROCESS_DEAD;
     tasks[current_idx]->started = 0;
+    dead_task_count++;
 }
 
 void scheduler_block_task(struct registers *r) {
@@ -217,10 +252,14 @@ void scheduler_block_task(struct registers *r) {
 }
 
 void scheduler_set_task_ready() {
+    if(tasks[current_idx]->state == PROCESS_DEAD) {
+        dead_task_count--;
+    }
     tasks[current_idx]->state = PROCESS_READY;
 }
 
-int scheduler_get_task_count() { //We only want to know the task that are no dead
+//We only want to know the task that are no dead
+int scheduler_get_task_count() { 
     int potential_tasks = 0;
 
     for(int i = 1; i < task_count; i++) {
