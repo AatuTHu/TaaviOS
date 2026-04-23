@@ -46,14 +46,14 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     strncpy(proc->name, name, sizeof(proc->name));
     proc->state          = PROCESS_READY;
     proc->page_dir       = virt_dir;
-    //proc->started        = 0;
+    proc->started        = 0;
 
-    proc->kernel_stack   = phys_to_virt(kernel_stack + KERNEL_STACK_SIZE); //kernel stack is bottom of stack so add the stack on top of it. Convert it to virtual addr
+    proc->kernel_stack   = phys_to_virt(kernel_stack) + KERNEL_STACK_SIZE; //kernel stack is bottom of stack so add the stack on top of it. Convert it to virtual addr
 
     proc->context.eip    = entry; //Begining of the proc like the main function
-    proc->useresp        = USER_STACK_TOP + USER_STACK_SIZE; //stack pointer?
-    proc->context.esp    = proc->useresp;
-    proc->context.ebp    = proc->useresp; //stack bottom. Same as top in the begining. No plate you know
+    proc->context.useresp= USER_STACK_TOP + USER_STACK_SIZE; //stack pointer?
+    proc->context.esp    = 0;//proc->context.useresp;
+    proc->context.ebp    = proc->context.useresp; //stack bottom. Same as top in the begining. No plate you know
     proc->context.eflags = EFLAGS_DEFAULT;
     proc->context.cs     = SEG_USER_CODE;
     proc->context.ss     = SEG_USER_DATA;
@@ -66,7 +66,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
 void process_destroy(proc_t *proc) {
     if(proc == NULL) return;
     process_table[proc->pid] = NULL;
-    vmm_free(proc->page_dir, proc->useresp, USER_STACK_SIZE);
+    vmm_free(proc->page_dir, proc->context.useresp, USER_STACK_SIZE);
     kfree((void *)proc->kernel_stack);
     kfree(proc->page_dir);
     kfree(proc);

@@ -32,15 +32,4 @@ int sys_read(char *buf, int len) {
 
 void main(void) {
    sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-
-   sys_write("> \n",4);
-   sys_write("> \n",4);
-   sys_write("> \n",4);
 }

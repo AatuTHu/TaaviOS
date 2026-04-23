@@ -46,9 +46,6 @@ void scheduler_switch_context(struct registers *r, int idx) {
     //Update CPU state for the new process 
         
     memcpy(r, &next->context, sizeof(struct registers));
-    r->useresp = next->useresp;
-    
-
     DEBUG("[SCHEDULER]: switching complete\n");
 }
 
@@ -91,7 +88,7 @@ void _scheduler_remove_task() {
    tasks[current_idx] = NULL;
    
    if(next_task_idx == -1) {
-       DEBUG("[SCHEDULER]: No new tasks to run. Remove complete.\n");
+       DEBUG("[SCHEDULER]: No need to shift. Remove complete.\n");
        current_idx = -1;
        return;
    }
@@ -123,16 +120,12 @@ void _scheduler_remove_task() {
 
 void debug_registers(struct registers r) {
     int is_user = (r.cs & 0x3) == 3;
-
    DEBUG("LOCATION: %s mode at EIP 0x%x\n", is_user ? "USER" : "KERNEL", r.eip);
-
    DEBUG("--- REGISTER DUMP ---\n");
    DEBUG("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", r.eax, r.ebx, r.ecx, r.edx);
    DEBUG("ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", r.esi, r.edi, r.ebp, r.esp);
    DEBUG("CS:  0x%x  EFLAGS: 0x%x\n", r.cs, r.eflags);
    DEBUG("USER STACK: 0x%x\n", r.useresp);
-    
-
 }
 
 void scheduler_tick(struct registers *r) {
@@ -161,7 +154,6 @@ void scheduler_tick(struct registers *r) {
 
     if(tasks[current_idx]->started) { //Started true so we don't push shit to context.
         memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
-        tasks[current_idx]->useresp = r->useresp;
     }
 
     tasks[current_idx]->started = 1;
@@ -187,9 +179,8 @@ void scheduler_tick(struct registers *r) {
         //Update CPU state for the new process 
         
         memcpy(r, &next->context, sizeof(struct registers));
-        r->useresp = next->useresp;
-        DEBUG("[SCHEDULER]: REGISTERS after memcpy\n");
-        debug_registers(next->context);
+        //DEBUG("[SCHEDULER]: REGISTERS after memcpy\n");
+        //debug_registers(next->context);
     }
 }
 

@@ -148,7 +148,7 @@ void kernel_main(uint32_t *mboot_info) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         _set_scheduler_on();
         vmm_switch(first_proc->page_dir);
-        DEBUG("[KERNEL]: Jumping with EIP: %x, ESP: %x\n", first_proc->context.eip, first_proc->useresp);
-        enter_usermode(first_proc->context.eip, first_proc->useresp, first_proc->kernel_stack);
+        DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x\n", first_proc->context.eip, first_proc->context.useresp);
+        enter_usermode(first_proc->context.eip, first_proc->context.useresp, first_proc->kernel_stack);
     }
 }
