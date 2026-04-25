@@ -17,9 +17,18 @@ static proc_t *tasks[MAX_PROCESSES];
 static int task_count = 0;
 static int dead_task_count = 0;
 static int current_idx = -1;
-static uint8_t scheduler_on = 0;
+volatile static uint8_t scheduler_on = 0;
 
 void scheduler_switch_context(struct registers *r, int idx) {
+
+    if(scheduler_on == 0) {
+        r->eip  = (uint32_t)kernel_idle;
+        r->useresp = 0; 
+        r->cs      = SEG_KERNEL_CODE;
+        r->ss      = SEG_KERNEL_DATA;
+        return;
+    }
+
     if(idx < 0 || idx >= MAX_PROCESSES) {
         //THIS SHOULD NOT GO TO SLEEP THO?
         DEBUG("[SCHEDULER]: invalid idx, cannot make a switch, going to sleep\n");
@@ -43,9 +52,8 @@ void scheduler_switch_context(struct registers *r, int idx) {
     vmm_switch(next->page_dir);
     tss_set_kernel_stack(next->kernel_stack);
 
-    //next->state = PROCESS_RUNNING;
-    //Update CPU state for the new process 
-        
+    next->state = PROCESS_RUNNING;
+
     memcpy(r, &next->context, sizeof(struct registers));
     DEBUG("[SCHEDULER]: switching complete\n");
 }
