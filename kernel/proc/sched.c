@@ -100,8 +100,11 @@ void _scheduler_remove_task() {
        DEBUG("[SCHEDULER]: No tasks with a ready state found. Finding dead task to run next\n");
        int deletable_idx = scheduler_find_next(PROCESS_DEAD);
        pid_after_deletion = tasks[deletable_idx]->pid;
-    } else {
-       pid_after_deletion = tasks[next_task_idx]->pid;
+    }
+
+    if(pid_after_deletion == -1) {
+        DEBUG("[SCHEDULER]: Nothing to delete, returning\n");
+        return;
     }
 
     //edge case for when there is only one task and it is dead
@@ -168,7 +171,7 @@ void _scheduler_remove_task() {
 /*
 * First we make the basic checks so that we know if there is a reason to switch task on this tick.
 * scheduler_on is a master switch if that I could see as a syscall that init task makes when everything is ready.
-* Second Then if tasks state is blocked we can use that timespace to delete task.
+* Second Then if tasks state is blocked or dead we can use that timespace to delete task.
 * Third Then basic context-switch. If task is started we save registers to tasks context.
 * Fourth see if next idx is the same as now. if it is then no need to switch context.
 */
@@ -179,7 +182,6 @@ void scheduler_tick(struct registers *r) {
     }
     
     if(current_idx == -1) {
-        //DEBUG("[SCHEDULER] invalid current_idx\n");
         return;
     }
 
@@ -187,15 +189,12 @@ void scheduler_tick(struct registers *r) {
         return;
     }
     
-    if(tasks[current_idx]->state == PROCESS_DEAD) {
+    if(tasks[current_idx]->state == PROCESS_BLOCKED || tasks[current_idx]->state == PROCESS_DEAD) {
         _scheduler_remove_task();
         return;
     }
 
-    //if current task is in blocked state then try and clean another dead task away?
-    //cold have a static int of dead tasks counter so that we check if it is higher than 0 and if current task is on block we go to clean dead task
-
-    if(tasks[current_idx]->started) { //Started true so we don't push shit to context.
+    if(tasks[current_idx]->started) {
         memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
     }
 

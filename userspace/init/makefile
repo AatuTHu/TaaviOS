@@ -1,21 +1,35 @@
 CC = gcc
-CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -O0 -fno-pic -fno-pie -mno-accumulate-outgoing-args -mregparm=0 -fno-stack-protector
+AS = nasm
+CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -O0 \
+         -fno-pic -fno-pie -mno-accumulate-outgoing-args -mregparm=0 \
+         -fno-stack-protector -Wall -Wextra
 LDFLAGS = -m32 -nostdlib -no-pie -T link.ld
 
-LIBC_OBJS = $(LIBC_SRCS:.c=.o)
+BUILD = build
 
-all: init.elf
+C_SRCS   = main.c $(LIBC_SRCS)
+ASM_SRCS = start.asm
 
-START_OBJ = start.o
+C_OBJS   = $(patsubst %.c, $(BUILD)/%.o, $(C_SRCS))
+ASM_OBJS = $(patsubst %.asm, $(BUILD)/%.o, $(ASM_SRCS))
+OBJS     = $(ASM_OBJS) $(C_OBJS)
 
-start.o: start.asm
-	nasm -f elf32 start.asm -o start.o
+all: $(BUILD)/init.elf
 
-init.elf: start.o main.o $(LIBC_OBJS)
-	$(CC) $(LDFLAGS) -o init.elf start.o main.o $(LIBC_OBJS)
+$(BUILD)/%.o: %.asm
+	mkdir -p $(dir $@)
+	$(AS) -f elf32 $< -o $@
 
-main.o: main.c
-	$(CC) $(CFLAGS) -c main.c -o main.o
+$(BUILD)/%.o: %.c
+	mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD)/init.elf: $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+	cp $(BUILD)/init.elf ./init.elf
 
 clean:
-	rm -f *.o init.elf
+	rm -rf $(BUILD)
+	rm -f init.elf
+
+.PHONY: all clean
