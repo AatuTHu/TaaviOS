@@ -88,14 +88,20 @@ uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
     if (!dir) {
         ERROR("[PAGING] No directory given, cant give physical page\n");
         return 0;
-    } 
+    }
+    DEBUG("[PAGING]: getting physical location for page directory: %x, with virt: %d\n", (uint32_t)dir, virt);
     uint32_t pd_index = virt >> 22;
-    if (!((*dir)[pd_index] & PAGE_PRESENT)) return 0; //Page not found
+    DEBUG("[PAGING]: page directory index: %d\n", pd_index);
+    if (!((*dir)[pd_index] & PAGE_PRESENT)) {
+        DEBUG("[PAGING] page not found\n");
+        return 0;
+    } 
 
 
     uint32_t pt_index = (virt >> 12) & 0x3FF;
+    DEBUG("[PAGING]: page table index: %d\n", pt_index);
     uint32_t pt_virt = phys_to_virt(((*dir)[pd_index] & 0xFFFFF000));
-
+    DEBUG("[PAGING]: virtual page table: %x\n", pt_virt);
     page_table_t *pt = (page_table_t *)pt_virt;
 
     return (* pt)[pt_index] & 0xFFFFF000;

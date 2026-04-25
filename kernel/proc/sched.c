@@ -50,82 +50,82 @@ void scheduler_switch_context(struct registers *r, int idx) {
     DEBUG("[SCHEDULER]: switching complete\n");
 }
 
-int scheduler_find_next() {
+int scheduler_find_next(process_state_t state) {
    DEBUG("[SCHEDULER]: finding next idx. Current %d\n", current_idx);
    int candidate = -1;
 
    for(int i = 1; i <= task_count; i++) { 
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == PROCESS_READY) {
+        if (tasks[next_idx]->state == state) {
             candidate = next_idx;
             break;
         }
    }
 
    if(candidate == -1) {
-    DEBUG("[SCHEDULER]: could not find next task\n");
+   DEBUG("[SCHEDULER]: could not find next task\n");
     return candidate;
    }
-    DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
+
+   DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
     return candidate;
 }
 
 /*
 *   First we try and find next task from the list to run. Beacouse once we delete task we cannot know for certain what was the next one.
+*   If we don't find tasks that are ready to run we are going to run DEAD task next, so that scheduler comes here again. [THIS SHOULD BE CHANGED TO BLOCKED?]
+*   ---
 *   Second we are going to find a task that is in a dead state and we delete it.
 *   Thirdy we shift the old list on left so that there are no nulls
 *   Fourth we find the idx which corresponds to our next_pid
 */
 void _scheduler_remove_task() {
 
-   int next_task_idx = scheduler_find_next();
-   DEBUG("[SCHEDULER]: next task: %d\n", next_task_idx);
+   int pid_after_deletion = -1;
+   int next_task_idx = scheduler_find_next(PROCESS_READY);
+   DEBUG("[SCHEDULER]: next idx: %d\n", next_task_idx);
    
-   //Take next runnable pid here before remove and shifting
-   uint32_t next_pid = -1;
-   if(next_task_idx != -1) { 
-       next_pid = tasks[next_task_idx]->pid;
+   if(next_task_idx == -1) { 
+       DEBUG("[SCHEDULER]: No tasks with a ready state found. Finding dead task to run next\n");
+       int deletable_idx = scheduler_find_next(PROCESS_DEAD);
+       pid_after_deletion = tasks[deletable_idx]->pid;
+    } else {
+       pid_after_deletion = tasks[next_task_idx]->pid;
     }
 
-    if(next_pid == -1) {
-        for(int i = 1; i <= task_count; i++) { 
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == PROCESS_DEAD) {
-            next_pid = tasks[next_idx]->pid;
-            break;
-        }
-        }
+    //edge case for when there is only one task and it is dead
+    if(tasks[pid_after_deletion]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
+        DEBUG("[SCHEDULER]: Deleting the only task in the scheduler.\n");
+        vmm_switch((page_directory_t *)kernel_page_dir);
+        process_destroy(tasks[pid_after_deletion]);
+        tasks[pid_after_deletion] = NULL;
+        current_idx = -1;
+        task_count--;
+        dead_task_count--;
+        DEBUG("[SCHEDULER]: Remove complete.\n");
+        DEBUG("[SCHEDULER]: Going to sleep\n");
+        return;
     }
 
-   int candidate = -1;
+   int delete_candidate = -1;
    for(int i = 1; i <= task_count; i++) { 
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == PROCESS_DEAD && next_pid != tasks[next_idx]->pid) {
-            candidate = next_idx;
-            break;
-        } else if(tasks[next_idx]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
-            candidate = next_idx;
+        if (tasks[next_idx]->state == PROCESS_DEAD && pid_after_deletion != tasks[next_idx]->pid) {
+            delete_candidate = next_idx;
             break;
         }
    }
    
-   if(candidate == -1) {
+   if(delete_candidate == -1) {
         DEBUG("[SCHEDULER]: No deletable task found.\n");
         return;
    }
     
-    DEBUG("[SCHEDULER]: Deleting task at current idx %d with name: %s\n", candidate, tasks[candidate]->name);
+    DEBUG("[SCHEDULER]: Deleting task at current idx %d with name: %s\n", delete_candidate, tasks[delete_candidate]->name);
     DEBUG("[SCHEDULER]: Switching to kernel_page_dir\n");
     vmm_switch((page_directory_t *)kernel_page_dir);
-    tasks[candidate] = NULL;
-    
-   if(dead_task_count == 1 && task_count == 1) {
-       DEBUG("[SCHEDULER]: No need to shift. Remove complete.\n");
-       current_idx = -1;
-       task_count--;
-       dead_task_count--;
-       return;
-   }
+    process_destroy(tasks[delete_candidate]);
+    tasks[delete_candidate] = NULL;
 
    proc_t *new_task_list[task_count];
    memset(new_task_list, 0, task_count * sizeof(proc_t *));
@@ -145,12 +145,12 @@ void _scheduler_remove_task() {
 
     DEBUG("[SCHEDULER]: Finding new task\n");
     for(int i = 0; i < task_count; i++) {
-        if(tasks[i]->pid == next_pid) {
+        if(tasks[i]->pid == pid_after_deletion) {
             current_idx = i;
             break;
         }
     }
-    DEBUG("[SCHEDULER]: Task found\n");
+    DEBUG("[SCHEDULER]: Task found! Task name: %s, idx: %d\n", tasks[current_idx]->name, current_idx);
 }
 
 void debug_registers(struct registers r) {
@@ -193,7 +193,7 @@ void scheduler_tick(struct registers *r) {
     tasks[current_idx]->started = 1;
     tasks[current_idx]->state = PROCESS_READY;
     
-    int next_idx = scheduler_find_next();
+    int next_idx = scheduler_find_next(PROCESS_READY);
     
     //Invalid idx switch to sleep, cox this should not happen
     if (next_idx == -1) { 

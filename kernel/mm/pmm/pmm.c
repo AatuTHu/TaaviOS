@@ -127,10 +127,15 @@ uint32_t pmm_alloc() {
 
 void pmm_free(uint32_t addr) {
     uint32_t page_index = addr / PAGE_SIZE;
-    if(!pmm_test_bit(page_index)) { return; }
+    DEBUG("[PMM]: freeing page index: %d\n", page_index);
+    if(!pmm_test_bit(page_index)) { 
+        DEBUG("[PMM]: No page at that index\n");
+        return; 
+    }
     pmm_clear_bit(page_index);
     used_pages--;
     free_pages++;
+    DEBUG("[PMM]: page freed\n");
 }
 
 uint32_t pmm_get_used_pages(void) {

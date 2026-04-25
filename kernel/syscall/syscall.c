@@ -33,7 +33,7 @@ static int32_t sys_exit(struct registers *r) {
         return 0;
     }
 
-    int next_idx = scheduler_find_next();
+    int next_idx = scheduler_find_next(PROCESS_READY);
     scheduler_switch_context(r, next_idx);
 
     return 0;
@@ -41,7 +41,7 @@ static int32_t sys_exit(struct registers *r) {
 
 
 static int32_t sys_write(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_WRITE]\n");
+    DEBUG("[SYSCALL][SYS_WRITE]:\n");
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx; //ecx has the params?
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the lenght of the message
@@ -78,7 +78,7 @@ static int32_t sys_read(struct registers *r) {
     if (nread == 0) {
         DEBUG("[SYSCALL][SYS_READ]: nread = 0 blocking\n");
         scheduler_block_task(r); // Give up the remaining time slice
-        int next_idx = scheduler_find_next();
+        int next_idx = scheduler_find_next(PROCESS_READY);
         if(next_idx != -1) {
             DEBUG("[SYSCALL][SYS_READ]: next task found, switching\n");
             scheduler_switch_context(r, next_idx);

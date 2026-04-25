@@ -15,7 +15,7 @@ void _scheduler_remove_task();
 void _set_scheduler_on();
 void scheduler_set_task_ready();
 int  scheduler_get_task_count();
-int scheduler_find_next();
+int scheduler_find_next(process_state_t state);
 proc_t *scheduler_get_current();
 
 #endif
