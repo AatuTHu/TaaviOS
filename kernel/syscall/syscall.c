@@ -20,6 +20,12 @@ static int32_t sys_exit(struct registers *r) {
 
     scheduler_kill_task();
     
+    proc_t *current = scheduler_get_current_task();
+
+    if(get_foreground_pid() == current->pid) {
+        set_foreground_pid(-1);
+    }
+    
     int remaining_tasks = scheduler_get_task_count();
 
     if(remaining_tasks == 0) {
@@ -70,7 +76,7 @@ static int32_t sys_read(struct registers *r) {
     if(get_foreground_pid() == -1) {
         set_foreground_pid(current->pid);
     }
-    
+
     if(get_foreground_pid() != current->pid) {
         return -1;
     }

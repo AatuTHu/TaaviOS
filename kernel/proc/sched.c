@@ -66,18 +66,18 @@ void scheduler_switch_context(struct registers *r, int idx) {
 *   IF candidate is not found it returns as -1
 */
 int scheduler_find_next(process_state_t state) {
-   DEBUG("[SCHEDULER]: finding next idx. Current %d\n", current_idx);
-   int candidate = -1;
+    //DEBUG("[SCHEDULER]: finding next idx. Current %d\n", current_idx);
+    int candidate = -1;
 
-   for(int i = 1; i <= task_count; i++) { 
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == state) {
-            candidate = next_idx;
-            break;
-        }
-   }
+    for(int i = 1; i <= task_count; i++) { 
+            int next_idx = (current_idx + i) % task_count;
+            if (tasks[next_idx]->state == state) {
+                candidate = next_idx;
+                break;
+            }
+    }
 
-    DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
+    //DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
     return candidate;
 }
 
