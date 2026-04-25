@@ -135,8 +135,8 @@ void kernel_main(uint32_t *mboot_info) {
             second_proc = process_create(entry2, "init2", page_dir2);
             third_proc = process_create(entry3, "init3", page_dir3);
             scheduler_add(first_proc);
-            scheduler_add(second_proc);
-            scheduler_add(third_proc);
+            //scheduler_add(second_proc);
+            //scheduler_add(third_proc);
         }
     }
 

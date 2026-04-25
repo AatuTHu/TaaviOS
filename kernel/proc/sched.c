@@ -19,9 +19,14 @@ static int dead_task_count = 0;
 static int current_idx = -1;
 volatile static uint8_t scheduler_on = 0;
 
-void scheduler_switch_context(struct registers *r, int idx) {
 
-    if(scheduler_on == 0) {
+/*
+*   If scheduler is not on go to sleep. This is because in kernelmain when we jump to usermode we jump with a task that is added to scheduler.
+*   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
+*/
+void scheduler_switch_context(struct registers *r, int idx) { 
+
+    if(scheduler_on == 0) { 
         r->eip  = (uint32_t)kernel_idle;
         r->useresp = 0; 
         r->cs      = SEG_KERNEL_CODE;
@@ -30,8 +35,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
     }
 
     if(idx < 0 || idx >= MAX_PROCESSES) {
-        //THIS SHOULD NOT GO TO SLEEP THO?
-        DEBUG("[SCHEDULER]: invalid idx, cannot make a switch, going to sleep\n");
+        DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
         return;
     }
 
@@ -58,6 +62,10 @@ void scheduler_switch_context(struct registers *r, int idx) {
     DEBUG("[SCHEDULER]: switching complete\n");
 }
 
+/*
+*   Scheduler finder func. Give it a state you want to find and id finds the next one based from the current_idx
+*   IF candidate is not found it returns as -1
+*/
 int scheduler_find_next(process_state_t state) {
    DEBUG("[SCHEDULER]: finding next idx. Current %d\n", current_idx);
    int candidate = -1;
@@ -70,12 +78,7 @@ int scheduler_find_next(process_state_t state) {
         }
    }
 
-   if(candidate == -1) {
-   DEBUG("[SCHEDULER]: could not find next task\n");
-    return candidate;
-   }
-
-   DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
+    DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
     return candidate;
 }
 
@@ -161,16 +164,14 @@ void _scheduler_remove_task() {
     DEBUG("[SCHEDULER]: Task found! Task name: %s, idx: %d\n", tasks[current_idx]->name, current_idx);
 }
 
-void debug_registers(struct registers r) {
-    int is_user = (r.cs & 0x3) == 3;
-   DEBUG("LOCATION: %s mode at EIP 0x%x\n", is_user ? "USER" : "KERNEL", r.eip);
-   DEBUG("--- REGISTER DUMP ---\n");
-   DEBUG("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", r.eax, r.ebx, r.ecx, r.edx);
-   DEBUG("ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", r.esi, r.edi, r.ebp, r.esp);
-   DEBUG("CS:  0x%x  EFLAGS: 0x%x\n", r.cs, r.eflags);
-   DEBUG("USER STACK: 0x%x\n", r.useresp);
-}
 
+/*
+* First we make the basic checks so that we know if there is a reason to switch task on this tick.
+* scheduler_on is a master switch if that I could see as a syscall that init task makes when everything is ready.
+* Second Then if tasks state is blocked we can use that timespace to delete task.
+* Third Then basic context-switch. If task is started we save registers to tasks context.
+* Fourth see if next idx is the same as now. if it is then no need to switch context.
+*/
 void scheduler_tick(struct registers *r) {
 
     if(scheduler_on == 0) { //master switch for if for somereason we want turn of the scheduler? Felt cute might delete later
@@ -203,9 +204,7 @@ void scheduler_tick(struct registers *r) {
     
     int next_idx = scheduler_find_next(PROCESS_READY);
     
-    //Invalid idx switch to sleep, cox this should not happen
     if (next_idx == -1) { 
-        scheduler_switch_context(r, -1);
         return;
     }
     
@@ -217,11 +216,7 @@ void scheduler_tick(struct registers *r) {
         tss_set_kernel_stack(next->kernel_stack);
         
         next->state = PROCESS_RUNNING;
-        //Update CPU state for the new process 
-        
         memcpy(r, &next->context, sizeof(struct registers));
-        //DEBUG("[SCHEDULER]: REGISTERS after memcpy\n");
-        //debug_registers(next->context);
     }
 }
 
@@ -238,7 +233,7 @@ void scheduler_add(proc_t *task) {
     }
 }
 
-proc_t *scheduler_get_current() {
+proc_t *scheduler_get_current_task() {
     if(current_idx == -1) {
         ERROR("[SCHEDULER]: no tasks added to scheduler yet\n");
         return NULL;
@@ -279,10 +274,10 @@ int scheduler_get_task_count() {
     return potential_tasks;
 }
 
-void scheduler_init() {
-    DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");
-}
-
 void _set_scheduler_on() {
     scheduler_on = 1;
+}
+
+void scheduler_init() {
+    DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");
 }
