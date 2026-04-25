@@ -2,6 +2,7 @@
 #define KEYBOARD_H
 
 #include <stdint.h>
+#define KEYBOARD_BUFFER_SIZE 256
 // Scancode Set 1 → ASCII (Finnish/Scandinavian layout)
 // Indeksi = scancode, arvo = ASCII-merkki (0 = ei merkkiä)
 static const char scancode_to_ascii[] = {
@@ -28,8 +29,23 @@ static const char scancode_to_ascii_caps_lock[] = {
     ' ',                                                                            // 0x39
 };
 
+typedef void (*buffer_callback_t)(char c);
+
+typedef struct keyboard_buffer_t {
+    char buf[KEYBOARD_BUFFER_SIZE];
+    uint32_t read;
+    uint32_t write;
+    uint32_t foreground_pid;
+    buffer_callback_t callback;
+} keyboard_buffer_t;
+
 void keyboard_init(void);
-void keyboard_handler(uint8_t scancode);
 void keyboard_irq_handler(void);
+void keyboard_handler(uint8_t scancode);
+void write_to_keyboard_buffer(char c);
+void set_foreground_pid(uint32_t pid);
+int  read_from_keyboard_buffer(char* out);
+int get_foreground_pid();
+
 
 #endif

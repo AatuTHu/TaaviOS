@@ -81,12 +81,11 @@ void kernel_main(uint32_t *mboot_info) {
     init_arch();
     init_drivers();
     
-
-    
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
     
     kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
     
+
     scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
     
     syscall_init();

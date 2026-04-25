@@ -9,7 +9,6 @@
 
 
 /* 
-This scheduler is in need of a thorough cleanup, it works but it is a bit messy
 Author: A.H - 20.4.2026
 */
 
@@ -248,9 +247,7 @@ void scheduler_kill_task() {
 }
 
 void scheduler_block_task(struct registers *r) {
-    DEBUG("[SCHEDULER]: blocking current task\n");
-    tasks[current_idx]->state = PROCESS_BLOCKED;
-    
+    tasks[current_idx]->state = PROCESS_BLOCKED;   
 }
 
 void scheduler_set_task_ready() {

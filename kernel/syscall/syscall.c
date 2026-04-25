@@ -9,6 +9,7 @@
 #include "elf.h"
 #include "vmm.h"
 #include "config.h"
+#include "keyboard.h"
 #include "kernel_idle.h"
 
 
@@ -55,7 +56,25 @@ static int32_t sys_getpid(struct registers *r) {
 } //sys_getpid
 
 static int32_t sys_read(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_READ]\n");
+    //DEBUG("[SYSCALL][SYS_READ]\n");
+
+    proc_t *current = scheduler_get_current_task();
+
+    if (!current) {
+        DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
+        return -1;
+    }
+
+    int is_foreground_pid = get_foreground_pid();
+
+    if(get_foreground_pid() == -1) {
+        set_foreground_pid(current->pid);
+    }
+    
+    if(get_foreground_pid() != current->pid) {
+        return -1;
+    }
+
     int fd    = r->ebx;
     char *buf = (char *)r->ecx;
     
@@ -64,22 +83,14 @@ static int32_t sys_read(struct registers *r) {
         return -1; // Only STDIN (0) supported currently
     }
     
-    proc_t *current = scheduler_get_current_task();
-    if (!current) {
-        DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-        return -1;
-    }
 
-    int nread = 0;
+    int nread = read_from_keyboard_buffer(buf);
     if (nread == 0) {
-        DEBUG("[SYSCALL][SYS_READ]: nread = 0 blocking\n");
         scheduler_block_task(r); // Give up the remaining time slice
         int next_idx = scheduler_find_next(PROCESS_READY);
         if(next_idx != -1) {
-            DEBUG("[SYSCALL][SYS_READ]: next task found, switching\n");
             scheduler_switch_context(r, next_idx);
         } else {
-            DEBUG("[SYSCALL][SYS_READ]: no next task found, setting current task to ready\n");
             scheduler_set_task_ready();
         }
         return nread;
