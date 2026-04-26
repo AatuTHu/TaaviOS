@@ -18,44 +18,6 @@ static int dead_task_count = 0;
 static int current_idx = -1;
 volatile static uint8_t scheduler_on = 0;
 
-
-/*
-*   If scheduler is not on go to sleep. This is because in kernelmain when we jump to usermode we jump with a task that is added to scheduler.
-*   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
-*/
-void scheduler_switch_context(struct registers *r, int idx) { 
-
-    if(scheduler_on == 0) { 
-        r->eip  = (uint32_t)kernel_idle;
-        r->useresp = 0; 
-        r->cs      = SEG_KERNEL_CODE;
-        r->ss      = SEG_KERNEL_DATA;
-        return;
-    }
-
-    if(idx < 0 || idx >= MAX_PROCESSES) {
-        //DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
-        return;
-    }
-
-    current_idx = idx;
-    proc_t *next = tasks[current_idx];
-
-    //DEBUG("[SCHEDULER]: switching context\n");
-
-    if(tasks[current_idx]->started) {
-        memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
-    }
-
-    vmm_switch(next->page_dir);
-    tss_set_kernel_stack(next->kernel_stack);
-
-    next->state = PROCESS_READY;
-
-    memcpy(r, &next->context, sizeof(struct registers));
-    //DEBUG("[SCHEDULER]: switching complete\n");
-}
-
 int scheduler_find_next_task() {
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
@@ -182,6 +144,43 @@ void _scheduler_remove_task() {
     DEBUG("[SCHEDULER]: Task found! Task name: %s, idx: %d\n", tasks[current_idx]->name, current_idx);
 }
 
+/*
+*   If scheduler is not on go to sleep. This is because in kernelmain when we jump to usermode we jump with a task that is added to scheduler.
+*   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
+*/
+void scheduler_switch_context(struct registers *r, int idx) { 
+
+    if(scheduler_on == 0) { 
+        r->eip  = (uint32_t)kernel_idle;
+        r->useresp = 0; 
+        r->cs      = SEG_KERNEL_CODE;
+        r->ss      = SEG_KERNEL_DATA;
+        return;
+    }
+
+    if(idx < 0 || idx >= MAX_PROCESSES) {
+        //DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
+        return;
+    }
+
+    current_idx = idx;
+    proc_t *next = tasks[current_idx];
+
+    //DEBUG("[SCHEDULER]: switching context\n");
+
+    if(tasks[current_idx]->started) {
+        memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
+    }
+
+    vmm_switch(next->page_dir);
+    tss_set_kernel_stack(next->kernel_stack);
+
+    next->state = PROCESS_READY;
+
+    memcpy(r, &next->context, sizeof(struct registers));
+    //DEBUG("[SCHEDULER]: switching complete\n");
+}
+
 
 /*
 * First we make the basic checks so that we know if there is a reason to switch task on this tick.
@@ -204,7 +203,7 @@ void scheduler_tick(struct registers *r) {
         return;
     }
     
-    if(tasks[current_idx]->state == PROCESS_DEAD) {
+    if(tasks[current_idx]->state == PROCESS_DEAD || tasks[current_idx]->state == PROCESS_BLOCKED) {
         _scheduler_remove_task();
         return;
     }
@@ -233,18 +232,7 @@ void scheduler_tick(struct registers *r) {
     }
 }
 
-void scheduler_add(proc_t *task) {
-    if(task_count >= MAX_PROCESSES) {
-        ERROR("[SCHEDULER]: too many tasks added to scheduler\n");
-        return;
-    }
-    tasks[task_count] = task;
-    task_count++;
-
-    if(current_idx == -1) {
-        current_idx = 0;
-    }
-}
+///////////////////////////////////////////////// helper functions
 
 proc_t *scheduler_get_current_task() {
     if(current_idx == -1) {
@@ -294,6 +282,20 @@ void scheduler_wake_task(int pid) {
         }
     }
 }
+
+void scheduler_add(proc_t *task) {
+    if(task_count >= MAX_PROCESSES) {
+        ERROR("[SCHEDULER]: too many tasks added to scheduler\n");
+        return;
+    }
+    tasks[task_count] = task;
+    task_count++;
+
+    if(current_idx == -1) {
+        current_idx = 0;
+    }
+}
+
 
 void _set_scheduler_on() {
     scheduler_on = 1;
