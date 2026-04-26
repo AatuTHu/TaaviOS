@@ -45,6 +45,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     proc->pid            = slot;
     strncpy(proc->name, name, sizeof(proc->name));
     proc->state          = PROCESS_READY;
+    proc->priority       = PRIORITY_NORMAL;
     proc->page_dir       = virt_dir;
     proc->started        = 0;
 

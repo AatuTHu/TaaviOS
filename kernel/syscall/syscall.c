@@ -36,7 +36,7 @@ static int32_t sys_exit(struct registers *r) {
         return 0;
     }
 
-    int next_idx = scheduler_find_next(PROCESS_READY);
+    int next_idx = scheduler_find_next_task();
     scheduler_switch_context(r, next_idx);
 
     return 0;
@@ -44,7 +44,6 @@ static int32_t sys_exit(struct registers *r) {
 
 
 static int32_t sys_write(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_WRITE]:\n");
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx; //ecx has the string
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
@@ -62,7 +61,6 @@ static int32_t sys_getpid(struct registers *r) {
 } //sys_getpid
 
 static int32_t sys_read(struct registers *r) {
-    //DEBUG("[SYSCALL][SYS_READ]\n");
 
     proc_t *current = scheduler_get_current_task();
 
@@ -71,12 +69,10 @@ static int32_t sys_read(struct registers *r) {
         return -1;
     }
 
-    int is_foreground_pid = get_foreground_pid();
-
     if(get_foreground_pid() == -1) {
         set_foreground_pid(current->pid);
     }
-
+    
     if(get_foreground_pid() != current->pid) {
         return -1;
     }
@@ -92,13 +88,14 @@ static int32_t sys_read(struct registers *r) {
 
     int nread = read_from_keyboard_buffer(buf);
     if (nread == 0) {
-        scheduler_block_task(r); // Give up the remaining time slice
-        int next_idx = scheduler_find_next(PROCESS_READY);
-        if(next_idx != -1) {
-            scheduler_switch_context(r, next_idx);
-        } else {
+        scheduler_block_task(r);
+        int next_idx = scheduler_find_next_task();
+
+        int complete = scheduler_switch_context(r, next_idx);
+        if(complete == 0) {
             scheduler_set_task_ready();
         }
+
         return nread;
     }
 

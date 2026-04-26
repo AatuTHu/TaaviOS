@@ -23,52 +23,69 @@ volatile static uint8_t scheduler_on = 0;
 *   If scheduler is not on go to sleep. This is because in kernelmain when we jump to usermode we jump with a task that is added to scheduler.
 *   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
 */
-void scheduler_switch_context(struct registers *r, int idx) { 
+int scheduler_switch_context(struct registers *r, int idx) { 
 
     if(scheduler_on == 0) { 
         r->eip  = (uint32_t)kernel_idle;
         r->useresp = 0; 
         r->cs      = SEG_KERNEL_CODE;
         r->ss      = SEG_KERNEL_DATA;
-        return;
+        return 0;
     }
 
     if(idx < 0 || idx >= MAX_PROCESSES) {
-        DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
-        return;
-    }
-
-    if(idx == current_idx) {
-        DEBUG("[SCHEDULER] next idx is the same as current one. No need to switch context\n");
-        return;
+        //DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
+        return -1;
     }
 
     current_idx = idx;
     proc_t *next = tasks[current_idx];
 
-    DEBUG("[SCHEDULER]: switching context\n");
+    //DEBUG("[SCHEDULER]: switching context\n");
 
-    if(next->started == 0) {
-        next->started = 1;
+    if(tasks[current_idx]->started) {
+        memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
     }
-    
+
     vmm_switch(next->page_dir);
     tss_set_kernel_stack(next->kernel_stack);
 
-    next->state = PROCESS_RUNNING;
+    next->state = PROCESS_READY;
 
     memcpy(r, &next->context, sizeof(struct registers));
-    DEBUG("[SCHEDULER]: switching complete\n");
+    //DEBUG("[SCHEDULER]: switching complete\n");
+}
+
+int scheduler_find_next_task() {
+    for(int i = 1; i <= task_count; i++) { 
+            int next_idx = (current_idx + i) % task_count;
+            if (tasks[next_idx]->priority == PRIORITY_HIGH) {
+                return next_idx;
+            }
+    }
+
+    for(int i = 1; i <= task_count; i++) { 
+            int next_idx = (current_idx + i) % task_count;
+            if (tasks[next_idx]->priority == PRIORITY_NORMAL) {
+                return next_idx;
+            }
+    }
+    
+    for(int i = 1; i <= task_count; i++) { 
+            int next_idx = (current_idx + i) % task_count;
+            if (tasks[next_idx]->priority == PRIORITY_LOW) {
+                return next_idx;
+            }
+    }
+    return -1;
 }
 
 /*
 *   Scheduler finder func. Give it a state you want to find and id finds the next one based from the current_idx
 *   IF candidate is not found it returns as -1
 */
-int scheduler_find_next(process_state_t state) {
-    //DEBUG("[SCHEDULER]: finding next idx. Current %d\n", current_idx);
+int scheduler_find_first_task_based_on_state(process_state_t state) {
     int candidate = -1;
-
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
             if (tasks[next_idx]->state == state) {
@@ -76,8 +93,6 @@ int scheduler_find_next(process_state_t state) {
                 break;
             }
     }
-
-    //DEBUG("[SCHEDULER]: next one found with idx: %d\n", candidate);
     return candidate;
 }
 
@@ -92,19 +107,20 @@ int scheduler_find_next(process_state_t state) {
 void _scheduler_remove_task() {
 
    int pid_after_deletion = -1;
-   int next_task_idx = scheduler_find_next(PROCESS_READY);
+   int next_task_idx = scheduler_find_first_task_based_on_state(PROCESS_READY);
    DEBUG("[SCHEDULER]: next idx: %d\n", next_task_idx);
    
    if(next_task_idx == -1) { 
        DEBUG("[SCHEDULER]: No tasks with a ready state found. Finding dead task to run next\n");
-       int deletable_idx = scheduler_find_next(PROCESS_DEAD);
+       int deletable_idx = scheduler_find_first_task_based_on_state(PROCESS_DEAD);
+
+        if(deletable_idx == -1) {
+            DEBUG("[SCHEDULER]: Nothing to delete, returning\n");
+            return;
+        }
        pid_after_deletion = tasks[deletable_idx]->pid;
     }
 
-    if(pid_after_deletion == -1) {
-        DEBUG("[SCHEDULER]: Nothing to delete, returning\n");
-        return;
-    }
 
     //edge case for when there is only one task and it is dead
     if(tasks[pid_after_deletion]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
@@ -188,19 +204,19 @@ void scheduler_tick(struct registers *r) {
         return;
     }
     
-    if(tasks[current_idx]->state == PROCESS_BLOCKED || tasks[current_idx]->state == PROCESS_DEAD) {
+    if(tasks[current_idx]->state == PROCESS_DEAD) {
         _scheduler_remove_task();
         return;
     }
 
-    if(tasks[current_idx]->started) {
+    if(tasks[current_idx]->started && tasks[current_idx]->state != PROCESS_BLOCKED) {
         memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
     }
 
     tasks[current_idx]->started = 1;
     tasks[current_idx]->state = PROCESS_READY;
     
-    int next_idx = scheduler_find_next(PROCESS_READY);
+    int next_idx = scheduler_find_next_task();
     
     if (next_idx == -1) { 
         return;
@@ -209,7 +225,6 @@ void scheduler_tick(struct registers *r) {
     if(next_idx != current_idx) {
         current_idx = next_idx;
         proc_t *next = tasks[current_idx];
-        DEBUG("[SCHEDULER]: Now running: %s\n", next->name);
         vmm_switch(next->page_dir);
         tss_set_kernel_stack(next->kernel_stack);
         
@@ -247,6 +262,7 @@ void scheduler_kill_task() {
 }
 
 void scheduler_block_task(struct registers *r) {
+    //memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
     tasks[current_idx]->state = PROCESS_BLOCKED;   
 }
 
@@ -270,9 +286,19 @@ int scheduler_get_task_count() {
     return potential_tasks;
 }
 
+void scheduler_wake_task(int pid) {
+    for(int i = 0; i < task_count; i++) {
+        if(tasks[i]->pid == pid) {
+            tasks[i]->state = PROCESS_READY;
+            break;
+        }
+    }
+}
+
 void _set_scheduler_on() {
     scheduler_on = 1;
 }
+
 
 void scheduler_init() {
     DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");

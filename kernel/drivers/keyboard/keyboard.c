@@ -2,6 +2,7 @@
 #include "isr.h"
 #include "io.h"
 #include "vga.h"
+#include "sched.h"
 
 static keyboard_buffer_t kbd_buf_instance;
 static keyboard_buffer_t *keyboard_buffer = &kbd_buf_instance;
@@ -21,10 +22,7 @@ void write_to_keyboard_buffer(char c) {
     /* Store the byte at the wrapped index */
     keyboard_buffer->buf[keyboard_buffer->write % KEYBOARD_BUFFER_SIZE] = c;
     keyboard_buffer->write++;
-
-     if (keyboard_buffer->callback != 0) {
-        keyboard_buffer->callback(c);
-    }
+    scheduler_wake_task(keyboard_buffer->foreground_pid);
 }
 
 int read_from_keyboard_buffer(char* out) {
@@ -40,6 +38,7 @@ int read_from_keyboard_buffer(char* out) {
 
 
 void keyboard_handler(uint8_t scancode) {
+    
     if ((scancode == 0x2A) || (scancode == 0x36)) { shift_pressed = 1; return; }
     if ((scancode == 0xAA) || (scancode == 0xB6)) { shift_pressed = 0; return; }
     
@@ -66,7 +65,7 @@ int get_foreground_pid() {
     return keyboard_buffer->foreground_pid;
 }
 
-void set_foreground_pid(uint32_t pid) {
+void set_foreground_pid(int pid) {
     keyboard_buffer->foreground_pid = pid;
 }
 

@@ -13,6 +13,11 @@ typedef enum {
     PROCESS_DEAD
 } process_state_t;
 
+typedef enum {
+    PRIORITY_HIGH,
+    PRIORITY_NORMAL,
+    PRIORITY_LOW
+} process_priority_t;
 
 typedef struct proc_t {
     uint32_t                pid;
@@ -21,6 +26,7 @@ typedef struct proc_t {
     page_directory_t        *page_dir;
     uint32_t                kernel_stack;
     uint8_t                 started;
+    uint8_t                 priority;
     struct registers        context;
     struct proc_t           *next;
 } proc_t;
