@@ -23,19 +23,19 @@ volatile static uint8_t scheduler_on = 0;
 *   If scheduler is not on go to sleep. This is because in kernelmain when we jump to usermode we jump with a task that is added to scheduler.
 *   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
 */
-int scheduler_switch_context(struct registers *r, int idx) { 
+void scheduler_switch_context(struct registers *r, int idx) { 
 
     if(scheduler_on == 0) { 
         r->eip  = (uint32_t)kernel_idle;
         r->useresp = 0; 
         r->cs      = SEG_KERNEL_CODE;
         r->ss      = SEG_KERNEL_DATA;
-        return 0;
+        return;
     }
 
     if(idx < 0 || idx >= MAX_PROCESSES) {
         //DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
-        return -1;
+        return;
     }
 
     current_idx = idx;

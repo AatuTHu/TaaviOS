@@ -90,12 +90,7 @@ static int32_t sys_read(struct registers *r) {
     if (nread == 0) {
         scheduler_block_task(r);
         int next_idx = scheduler_find_next_task();
-
-        int complete = scheduler_switch_context(r, next_idx);
-        if(complete == 0) {
-            scheduler_set_task_ready();
-        }
-
+        scheduler_switch_context(r, next_idx);
         return nread;
     }
 

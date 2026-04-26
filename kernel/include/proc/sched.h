@@ -14,7 +14,7 @@ void _scheduler_remove_task();
 void _set_scheduler_on();
 void scheduler_set_task_ready();
 void scheduler_wake_task(int pid);
-int scheduler_switch_context(struct registers *r, int idx);
+void scheduler_switch_context(struct registers *r, int idx);
 int  scheduler_get_task_count();
 int scheduler_find_next_task();
 int scheduler_find_first_task_based_on_state(process_state_t state);
