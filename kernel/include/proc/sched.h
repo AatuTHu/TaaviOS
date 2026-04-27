@@ -18,6 +18,7 @@ void scheduler_switch_context(struct registers *r, int idx);
 int  scheduler_get_task_count();
 int scheduler_find_next_task();
 int scheduler_find_first_task_based_on_state(process_state_t state);
+int scheduler_does_exist(int pid);
 proc_t *scheduler_get_current_task();
 
 #endif

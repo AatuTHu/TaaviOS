@@ -19,17 +19,19 @@
 #include "keyboard.h"
 #include "io.h"
 
-static uint32_t mod_start = 0;
-static uint32_t mod_end = 0;
+#define MAX_MODS 10
+uint32_t module_starts[MAX_MODS];
+uint32_t module_ends[MAX_MODS];
+uint32_t total_mods = 0;
 
 void init_serial_and_vga() {
     vga_init();
     serial_init();
-    DEBUG("--INIT SERIAL & VGA--\n");
+    DEBUG("[KERNEL]: --INIT SERIAL & VGA--\n");
 }
 
 void init_arch() {
-    DEBUG("--INIT ARCH--\n");
+    DEBUG("[KERNEL]: --INIT ARCH--\n");
     gdt_init();
     tss_init();
     idt_init();
@@ -37,29 +39,31 @@ void init_arch() {
 }
 
 void init_mm(uint32_t *mboot_info) {
-    DEBUG("--INIT MEMORY MANAGEMENT--\n");
+    DEBUG("[KERNEL]: --INIT MEMORY MANAGEMENT--\n");
     struct multiboot_info *mboot = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
 }
 
 void check_for_modules (uint32_t *mboot_info) {
-    DEBUG("--CHECKING FOR MODULES--\n");
+    DEBUG("[KERNEL]: --CHECKING FOR MODULES--\n");
     struct multiboot_info *mbi = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     
-    if((mbi->mods_count) > 0) {
-        DEBUG("Modules found\n");
-        struct multiboot_mod *mod = (struct multiboot_mod *)phys_to_virt(mbi->mods_addr);
-        mod_start = mod->mod_start;
-        mod_end   = mod->mod_end;
-        uint32_t start_page = mod_start / PAGE_SIZE;
-        DEBUG("mod start_page: %d\n", start_page);
-        uint32_t end_page   = (mod_end + PAGE_SIZE-1) / PAGE_SIZE;
-        DEBUG("mod page_end: %d\n", end_page);
-        for(uint32_t i = start_page; i < end_page; i++) {
-            pmm_set_bit(i);
+    if (mbi->mods_count > 0) {
+        struct multiboot_mod *mods = (struct multiboot_mod *)phys_to_virt(mbi->mods_addr);
+        total_mods = mbi->mods_count;
+
+        for (uint32_t i = 0; i < total_mods && i < MAX_MODS; i++) {
+            module_starts[i] = mods[i].mod_start;
+            module_ends[i] = mods[i].mod_end;
+
+            uint32_t start_page = mods[i].mod_start / PAGE_SIZE;
+            uint32_t end_page = (mods[i].mod_end + PAGE_SIZE - 1) / PAGE_SIZE;
+            for (uint32_t p = start_page; p < end_page; p++) {
+                pmm_set_bit(p);
+            }
         }
     } else {
-        DEBUG("MODULES NOT FOUND\n");
+        DEBUG("[KERNEL]: MODULES NOT FOUND\n");
     }
 }
 
@@ -113,29 +117,27 @@ void kernel_main(uint32_t *mboot_info) {
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 
     proc_t *first_proc = NULL;
-    proc_t *second_proc = NULL;
-    proc_t *third_proc = NULL;
 
-    if(mod_start != 0) {
-        page_directory_t *page_dir1 = paging_create_directory();
-        page_directory_t *page_dir2 = paging_create_directory();
-        page_directory_t *page_dir3 = paging_create_directory();
-        mod_start = phys_to_virt(mod_start);
-        DEBUG("mod_start: 0x%x\n", mod_start);
-        uint32_t entry1 = elf_load((void*)mod_start, page_dir1);
-        uint32_t entry2 = elf_load((void*)mod_start, page_dir2);
-        uint32_t entry3 = elf_load((void*)mod_start, page_dir3);
-        if(entry1 == ET_NONE || entry2 == ET_NONE || entry3 == ET_NONE) {
+    if(total_mods > 0) {
+        page_directory_t *init_pd = paging_create_directory();
+        uint32_t init_phys = module_starts[0];
+        uint32_t entry = elf_load((void*)phys_to_virt(init_phys), init_pd);
+        if(entry == ET_NONE) {
             DEBUG("[KERNEL]: ELF load failed!\n");
         } else {
             DEBUG("[KERNEL]: ELF loaded.\n");
             DEBUG("[KERNEL]: Creating init process\n");
-            first_proc = process_create(entry1, "init1", page_dir1);
-            second_proc = process_create(entry2, "init2", page_dir2);
-            third_proc = process_create(entry3, "init3", page_dir3);
+            first_proc = process_create(entry, "init", init_pd);
             scheduler_add(first_proc);
-            //scheduler_add(second_proc);
-            //scheduler_add(third_proc);
+        }
+    }
+
+    if(total_mods > 1) {
+        page_directory_t *shell_pd = paging_create_directory();
+        uint32_t shell_phys = module_starts[1];
+        uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd);     
+        if (entry != ET_NONE) {
+            process_create(entry, "shell", shell_pd);
         }
     }
 

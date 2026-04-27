@@ -23,6 +23,7 @@ static int32_t sys_exit(struct registers *r) {
     proc_t *current = scheduler_get_current_task();
 
     if(get_foreground_pid() == current->pid) {
+        DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
         set_foreground_pid(-1);
     }
     
@@ -93,9 +94,24 @@ static int32_t sys_read(struct registers *r) {
         scheduler_switch_context(r, next_idx);
         return nread;
     }
-
     return nread;
 } //sys_read
+
+static int sys_exec(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_EXEC]: filename: %s\n", r->ecx);
+    char *filename = (char *)r->ecx;
+    proc_t *proc = get_proc_by_name(filename);
+    if(proc != NULL) {
+        int is_added = scheduler_does_exist(proc->pid);
+        if(is_added == 0) {
+            scheduler_add(proc);
+            int next_idx = scheduler_find_next_task();
+            scheduler_switch_context(r, next_idx);
+            return 0;
+        }
+    }
+    return -1;
+}
 
 void syscall_init() {
     DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
@@ -104,7 +120,7 @@ void syscall_init() {
     syscall_table[SYS_EXIT]     = sys_exit;
     syscall_table[SYS_WRITE]    = sys_write;
     syscall_table[SYS_GETPID]   = sys_getpid;
-    //syscall_table[SYS_EXEC]     = sys_exec;
+    syscall_table[SYS_EXEC]     = sys_exec;
     syscall_table[SYS_READ]     = sys_read;
 }
 

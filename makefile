@@ -35,9 +35,11 @@ $(BUILD)/carrots.bin: $(OBJS)
 
 iso: $(BUILD)/carrots.bin
 	$(MAKE) -C userspace/init
+	$(MAKE) -C userspace/shell
 	mkdir -p isodir/boot/grub
 	cp $(BUILD)/carrots.bin isodir/boot/
 	cp userspace/init/init.elf isodir/boot/
+	cp userspace/shell/shell.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/carrots.iso isodir
 
@@ -46,6 +48,7 @@ run: iso
 
 clean:
 	$(MAKE) -C userspace/init clean
+	$(MAKE) -C userspace/shell clean
 	find . -name '*.o' -delete
 	rm -f carrots.bin carrots.iso
 	rm -rf $(BUILD) isodir

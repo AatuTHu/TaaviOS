@@ -32,8 +32,9 @@ typedef struct proc_t {
 } proc_t;
 
 proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_dir);
-void       process_destroy(proc_t *proc);
 proc_t *process_get(int index);
+proc_t *get_proc_by_name(char *name);
+void   process_destroy(proc_t *proc);
 
 
 #endif

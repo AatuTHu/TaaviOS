@@ -79,6 +79,21 @@ void process_destroy(proc_t *proc) {
     kfree(proc);
 }
 
+proc_t *get_proc_by_name(char *name) {
+    if (name == NULL) return NULL;
+
+    for(int i = 0; i < MAX_PROCESSES; i++) {
+        if (process_table[i] == NULL) {
+            continue;
+        }
+        
+        if (strcmp(process_table[i]->name, name) == 0) {
+            return process_table[i];
+        }
+    }
+    return NULL;
+}
+ 
 proc_t *process_get(int index) {
     if(index >= 0 && index <= MAX_PROCESSES-1) {
         return process_table[index];
