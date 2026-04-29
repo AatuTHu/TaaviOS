@@ -88,29 +88,34 @@ static int32_t sys_read(struct registers *r) {
     
 
     int nread = read_from_keyboard_buffer(buf);
-    if (nread == 0) {
-        scheduler_block_task(r);
-        int next_idx = scheduler_find_next_task();
-        scheduler_switch_context(r, next_idx);
+    if (nread != 0) {
         return nread;
     }
-    return nread;
+
+   
+    scheduler_block_task(r);
+    int next_idx = scheduler_find_next_task();
+    scheduler_switch_context(r, next_idx);
+    return 0;
 } //sys_read
 
 static int sys_exec(struct registers *r) {
     DEBUG("[SYSCALL][SYS_EXEC]: filename: %s\n", r->ecx);
     char *filename = (char *)r->ecx;
     proc_t *proc = get_proc_by_name(filename);
-    if(proc != NULL) {
-        int is_added = scheduler_does_exist(proc->pid);
-        if(is_added == 0) {
-            scheduler_add(proc);
-            int next_idx = scheduler_find_next_task();
-            scheduler_switch_context(r, next_idx);
-            return 0;
-        }
+    if(proc == NULL) {
+        return 0;
     }
-    return -1;
+    
+    int is_added = scheduler_does_exist(proc->pid);
+    if(is_added == 0) {
+        scheduler_add(proc);
+        int next_idx = scheduler_find_next_task();
+        scheduler_switch_context(r, next_idx);
+        return 1;
+    }
+
+    return 0;
 }
 
 void syscall_init() {

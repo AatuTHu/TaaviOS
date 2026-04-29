@@ -8,8 +8,7 @@ void write(const char *msg) {
 }
 
 int read(char *buf) {
-    int len = strlen(buf);
-    return sys_read(buf, len);
+    return sys_read(buf, 1);
 }
 
 void terminate_program() {

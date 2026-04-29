@@ -128,6 +128,7 @@ syscall_handler:
     push eax
     call syscall_dispatch
     add esp, 4
+    mov [esp + 28], eax
     popa
     add esp, 8
     iret

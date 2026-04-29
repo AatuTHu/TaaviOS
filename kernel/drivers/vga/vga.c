@@ -125,11 +125,11 @@ void vga_putchar(char c) {
     // Check again if the newline/wrap pushed us off screen
     if(y_pos >= 25) lift_texts_up();
     
-    update_cursor();
 }
 
 void vga_write(char *msg) {
     for (int i = 0; msg[i] != '\0'; i++) {
         vga_putchar(msg[i]);
     }
+    update_cursor();
 }

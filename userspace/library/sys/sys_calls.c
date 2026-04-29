@@ -43,7 +43,7 @@ int sys_exec(const char *filename) {
     __asm__ __volatile__(
         "int $0x80"
         : "=a" (result)
-        : "a"(11), "b"(1),"c"(filename)
+        : "a"(11),"c"(filename)
         : "memory"
     );
     return result;

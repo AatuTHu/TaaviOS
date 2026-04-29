@@ -22,17 +22,16 @@ void write_to_keyboard_buffer(char c) {
     /* Store the byte at the wrapped index */
     keyboard_buffer->buf[keyboard_buffer->write % KEYBOARD_BUFFER_SIZE] = c;
     keyboard_buffer->write++;
-    scheduler_wake_task(keyboard_buffer->foreground_pid);
 }
 
 int read_from_keyboard_buffer(char* out) {
     if (keyboard_buffer->read == keyboard_buffer->write) {
         return 0;
     }
-
+    
     *out = keyboard_buffer->buf[keyboard_buffer->read % KEYBOARD_BUFFER_SIZE];
     keyboard_buffer->read++;
-
+    
     return 1;
 }
 
@@ -57,6 +56,7 @@ void keyboard_handler(uint8_t scancode) {
         
         if (c != 0) {
             write_to_keyboard_buffer(c);
+            scheduler_wake_task(keyboard_buffer->foreground_pid);
         }
     }
 }
