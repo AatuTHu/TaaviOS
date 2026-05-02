@@ -70,11 +70,11 @@ int get_foreground_pid() {
 
 void set_foreground_pid(int pid) {
     if(pid == -1) {
-        DEBUG("[KEYBOARD]: task released it's hold on me. Searching for a new master");
+        DEBUG("[KEYBOARD]: task released it's hold on me. Searching for a new master\n");
         for(int i = 0; i < waiting_queue_count; i++) {
             if(waiting_queue[i] != pid) {
                 pid = waiting_queue[i];
-                DEBUG("[KEYBOARD]: new master found");
+                DEBUG("[KEYBOARD]: new master found\n");
                 break;
             }
         }
