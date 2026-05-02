@@ -27,20 +27,21 @@ int scheduler_find_next_task() {
             }
     }
 
+    
+    for(int i = 1; i <= task_count; i++) { 
+        int next_idx = (current_idx + i) % task_count;
+        if (tasks[next_idx]->priority == PRIORITY_NORMAL && tasks[next_idx]->state == PROCESS_READY) {
+            return next_idx;      
+        }
+    }
+    
     if(dead_task_count > 0) {
         for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
-            if (tasks[next_idx]->priority == PRIORITY_NORMAL) {
+            if (tasks[next_idx]->state == PROCESS_BLOCKED || tasks[next_idx]->state == PROCESS_DEAD) {
                 return next_idx;
             }
         }
-    }
-
-    for(int i = 1; i <= task_count; i++) { 
-            int next_idx = (current_idx + i) % task_count;
-            if (tasks[next_idx]->priority == PRIORITY_NORMAL && tasks[next_idx]->state == PROCESS_READY) {
-                 return next_idx;      
-            }
     }
 
     for(int i = 1; i <= task_count; i++) { 
@@ -102,14 +103,13 @@ void _scheduler_remove_task() {
         task_count--;
         dead_task_count--;
         DEBUG("[SCHEDULER]: Remove complete.\n");
-        //DEBUG("[SCHEDULER]: Going to sleep\n");
         return;
     }
 
    int delete_candidate = -1;
    for(int i = 1; i <= task_count; i++) { 
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == PROCESS_DEAD && pid_after_deletion != tasks[next_idx]->pid) {
+        if (tasks[next_idx]->state == PROCESS_DEAD) {
             delete_candidate = next_idx;
             break;
         }
@@ -121,8 +121,7 @@ void _scheduler_remove_task() {
    }
     
     DEBUG("[SCHEDULER]: Deleting task at current idx %d with name: %s\n", delete_candidate, tasks[delete_candidate]->name);
-    DEBUG("[SCHEDULER]: Switching to kernel_page_dir\n");
-    vmm_switch((page_directory_t *)kernel_page_dir);
+    vmm_switch(&kernel_page_dir);
     process_destroy(tasks[delete_candidate]);
     tasks[delete_candidate] = NULL;
    
@@ -134,26 +133,11 @@ void _scheduler_remove_task() {
     task_count--;
     dead_task_count--;
 
-    DEBUG("[SCHEDULER]: Finding new task\n");
-    int next_idx = -1;
-    for(int i = 0; i < task_count; i++) {
-        if(tasks[i]->pid == pid_after_deletion) {
-            next_idx = i;
-            break;
-        }
-    }
-
-    if(next_idx == -1) {
+    if(delete_candidate < current_idx) {
+        current_idx--;
+    } else if(delete_candidate == current_idx) {
         current_idx = -1;
-        DEBUG("[SCHEDULER][REMOVE]: did not find new task, halting");
-        return;
     }
-    current_idx = next_idx;
-    DEBUG("[SCHEDULER]: Task found! Task name: %s, idx: %d, state: %d, started %d\n", tasks[next_idx]->name, next_idx, tasks[next_idx]->state, tasks[next_idx]->started);
-    
-    //struct registers *r = &tasks[next_idx]->context;
-    // print_registers_to_console(tasks[next_idx]->context);
-    //scheduler_switch_context(r, next_idx);
 }
 
 /*
@@ -162,18 +146,7 @@ void _scheduler_remove_task() {
 */
 void scheduler_switch_context(struct registers *r, int idx) { 
 
-    if(scheduler_on == 0) { 
-        r->eip  = (uint32_t)kernel_idle;
-        r->useresp = 0; 
-        r->cs      = SEG_KERNEL_CODE;
-        r->ss      = SEG_KERNEL_DATA;
-        return;
-    }
-
-    if(idx < 0 || idx >= MAX_PROCESSES) {
-      //  DEBUG("[SCHEDULER]: invalid idx, cannot make a switch\n");
-        return;
-    }
+    if(scheduler_on == 0 || idx < 0 || idx >= MAX_PROCESSES) return;
 
     proc_t *current = tasks[current_idx];
     if(current != NULL) {
@@ -187,18 +160,6 @@ void scheduler_switch_context(struct registers *r, int idx) {
     }
 
     proc_t *next = tasks[idx];
-
-    if(next->state == PROCESS_DEAD || next->state == PROCESS_BLOCKED) {
-        _scheduler_remove_task();
-        if(current_idx != -1) {
-            next = tasks[current_idx];
-            vmm_switch(next->page_dir);
-            next->state = PROCESS_RUNNING;
-            tss_set_kernel_stack(next->kernel_stack);
-            memcpy(r, &next->context, sizeof(struct registers));
-        }
-        return;
-    }
 
     if(current_idx != idx) {
         //DEBUG("[SCHEDULER][CONTEXT_SWITCH]: next running: %s\n", next->name);
@@ -221,30 +182,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
 */
 void scheduler_tick(struct registers *r) {
     
-    if(scheduler_on == 0) { //master switch for if for somereason we want turn of the scheduler? Felt cute might delete later
-        return;
-    }
-    
-    if(current_idx == -1 || task_count == 0) {
-        r->eip  = (uint32_t)kernel_idle;
-        r->useresp = 0; 
-        r->cs      = SEG_KERNEL_CODE;
-        r->ss      = SEG_KERNEL_DATA;
-        return;
-    }
-    
-    if(tasks[current_idx]->state == PROCESS_DEAD || tasks[current_idx]->state == PROCESS_BLOCKED) {
-        _scheduler_remove_task();
-        if(current_idx != -1) {
-            proc_t *next = tasks[current_idx];
-            vmm_switch(next->page_dir);
-            next->state = PROCESS_RUNNING;
-            tss_set_kernel_stack(next->kernel_stack);
-            memcpy(r, &next->context, sizeof(struct registers));
-        }
-        return;
-    }
-
+    if(current_idx == -1 || task_count == 0 || scheduler_on == 0) return;
     
     //DEBUG("[SCHEDULER][TICK]: now running: %s\n", tasks[current_idx]->name);
     if(tasks[current_idx]->started) {
@@ -253,21 +191,20 @@ void scheduler_tick(struct registers *r) {
             tasks[current_idx]->state = PROCESS_READY;
         }
     }
-    
     tasks[current_idx]->started = 1;
     
-    int next_idx = scheduler_find_next_task();
     
-    if (next_idx == -1) {
-        return;
+    if(tasks[current_idx]->state == PROCESS_DEAD || tasks[current_idx]->state == PROCESS_BLOCKED) {
+        _scheduler_remove_task();
     }
+    
+    int next_idx = scheduler_find_next_task();
+    if (next_idx == -1) return;
     
     proc_t *next = tasks[next_idx];
 
-    if(next->state == PROCESS_BLOCKED || next->state == PROCESS_DEAD) {
-        return;
-    }
-
+    if(next->state == PROCESS_BLOCKED || next->state == PROCESS_DEAD) return;
+    
     next->state = PROCESS_RUNNING;
     if(next_idx != current_idx) {
        // DEBUG("[SCHEDULER][TICK]: next running: %s\n", next->name);
