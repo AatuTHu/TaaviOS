@@ -76,7 +76,10 @@ static int32_t sys_read(struct registers *r) {
     }
     
     if(get_foreground_pid() != current->pid) {
+        scheduler_block_task(r);
         add_to_waiting_queue(current->pid);
+        int next_idx = scheduler_find_next_task();
+        scheduler_switch_context(r, next_idx);
         return -1;
     }
 
