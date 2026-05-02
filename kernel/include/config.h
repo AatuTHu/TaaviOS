@@ -58,6 +58,8 @@
 #define PAGE_USER_RW  (PAGE_PRESENT | PAGE_RW | PAGE_USER) //previous flags in one
 #define EFLAGS_IF (1 << 9) //interrupts flag
 #define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
+#define USER_PROCESS 1
+#define KERNEL_PROCESS 0
 
 #define KERNEL_STACK_SIZE 4096
 #define USER_STACK_SIZE (4096 * 4)

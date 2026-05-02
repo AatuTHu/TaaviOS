@@ -4,7 +4,7 @@ LD = i686-elf-ld
 ASFLAGS = -f elf32
 CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
-		 -Ikernel/include/mm -Ikernel/include/proc -Ikernel/include/loader -Ikernel -Ikernel/include/syscall \
+		 -Ikernel/include/mm -Ikernel/include/proc -Ikernel/include/loader -Ikernel \
 		 -Ikernel/include/usermode \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \

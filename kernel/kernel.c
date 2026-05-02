@@ -127,7 +127,8 @@ void kernel_main(uint32_t *mboot_info) {
         } else {
             DEBUG("[KERNEL]: ELF loaded.\n");
             DEBUG("[KERNEL]: Creating init process\n");
-            first_proc = process_create(entry, "init", init_pd);
+            first_proc = process_create(entry, "init", init_pd, USER_PROCESS);
+            first_proc->priority = PRIORITY_LOW;
             scheduler_add(first_proc);
         }
     }
@@ -137,7 +138,8 @@ void kernel_main(uint32_t *mboot_info) {
         uint32_t shell_phys = module_starts[1];
         uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd);     
         if (entry != ET_NONE) {
-            process_create(entry, "shell", shell_pd);
+            proc_t *shell = process_create(entry, "shell", shell_pd, USER_PROCESS);
+            //set_foreground_pid(shell->pid);
         }
     }
 

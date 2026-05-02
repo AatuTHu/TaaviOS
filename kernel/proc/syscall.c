@@ -93,16 +93,16 @@ static int32_t sys_read(struct registers *r) {
     }
 
     if (nread <= 0) {
-        scheduler_block_task(r);
+    scheduler_block_task(r);
 
-        if (scheduler_has_runnable_task()) {
-            int next_idx = scheduler_find_next_task();
-            scheduler_switch_context(r, next_idx);
-        } else {
-            __asm__ volatile ("sti; hlt");
-        }
+    if (scheduler_has_runnable_task()) {
+        int next_idx = scheduler_find_next_task();
+        scheduler_switch_context(r, next_idx);
+    } else {
+        __asm__ volatile ("sti; hlt");
+    }
 
-        return 0;
+    return 0;
     }
 } //sys_read
 
@@ -125,15 +125,24 @@ static int sys_exec(struct registers *r) {
     return 0;
 }
 
+static int32_t sys_yield(struct registers *r) {
+    int next_idx = scheduler_find_next_task();
+    if(next_idx != -1) {
+        scheduler_switch_context(r, next_idx);
+    }
+    return 0;
+}
+
 void syscall_init() {
     DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
-    for(uint8_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
+    for(uint32_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
     
     syscall_table[SYS_EXIT]     = sys_exit;
     syscall_table[SYS_WRITE]    = sys_write;
     syscall_table[SYS_GETPID]   = sys_getpid;
     syscall_table[SYS_EXEC]     = sys_exec;
     syscall_table[SYS_READ]     = sys_read;
+    syscall_table[SYS_YIELD]    = sys_yield;
 }
 
 void syscall_dispatch(struct registers *r) {

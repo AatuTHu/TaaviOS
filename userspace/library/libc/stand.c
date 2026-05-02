@@ -18,3 +18,7 @@ void terminate_program() {
 int exec(const char *filename) {
    return sys_exec(filename);
 }
+
+void yield_time(void) {
+    sys_yield();
+}

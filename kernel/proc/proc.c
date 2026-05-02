@@ -9,7 +9,7 @@
 
 static proc_t *process_table[MAX_PROCESSES];
 
-proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_dir) {
+proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t proc_mode) {
 
     int slot = -1;
 
@@ -33,8 +33,10 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
         virt_dir = page_dir;
     }
 
-    int response = vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW);
-    if(response != 0) return NULL;
+    if(proc_mode == USER_PROCESS) {
+        int response = vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW);
+        if(response != 0) return NULL;
+    }
 
     uint32_t kernel_stack = pmm_alloc(); //allocate a physical page so that it is reality
 
@@ -43,21 +45,21 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     memset(&proc->context, 0, sizeof(struct registers));
     
     proc->pid            = slot;
-    strncpy(proc->name, name, sizeof(proc->name));
     proc->state          = PROCESS_READY;
-    proc->priority       = PRIORITY_NORMAL;
     proc->page_dir       = virt_dir;
     proc->started        = 0;
-
+    
+    strncpy(proc->name, name, sizeof(proc->name));
     proc->kernel_stack   = phys_to_virt(kernel_stack) + KERNEL_STACK_SIZE; //kernel stack is bottom of stack so add the stack on top of it. Convert it to virtual addr
 
     proc->context.eip    = entry; //Begining of the proc like the main function
-    proc->context.useresp= USER_STACK_TOP + USER_STACK_SIZE; //stack pointer?
-    proc->context.esp    = 0;//proc->context.useresp;
+    proc->context.useresp= proc_mode == USER_PROCESS ? USER_STACK_TOP + USER_STACK_SIZE : proc->kernel_stack; //stack pointer?
+    proc->priority       = proc_mode == USER_PROCESS ? PRIORITY_NORMAL : PRIORITY_LOW;
+    proc->context.cs     = proc_mode == USER_PROCESS ? SEG_USER_CODE : SEG_KERNEL_CODE;
+    proc->context.ss     = proc_mode == USER_PROCESS ? SEG_USER_DATA : SEG_KERNEL_DATA;
     proc->context.ebp    = proc->context.useresp; //stack bottom. Same as top in the begining. No plate you know
+    proc->context.esp    = 0;//proc->context.useresp;
     proc->context.eflags = EFLAGS_DEFAULT;
-    proc->context.cs     = SEG_USER_CODE;
-    proc->context.ss     = SEG_USER_DATA;
     
     process_table[slot]  = proc;
 
