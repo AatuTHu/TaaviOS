@@ -141,7 +141,6 @@ void kernel_main(uint32_t *mboot_info) {
         if (entry != ET_NONE) {
             process_create(entry, "shell", shell_pd, USER_PROCESS);
             process_create(entry, "shell2", shell_pd2, USER_PROCESS);
-            //set_foreground_pid(shell->pid);
         }
     }
 

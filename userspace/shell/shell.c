@@ -32,7 +32,7 @@ void command_exit() {
 }
 
 void command_exec(const char *filename) {
-    //sys_exec(filename);
+    exec(filename);
 }
 
 void exec_cmd(char *buf) {
@@ -60,8 +60,6 @@ void main(void) {
         pos = 0;
         while (1) {
             int n = read(&c);
-            if (n <= 0) continue;
-
             if (n > 0) {
                 if (c == '\n') {
                     buf[pos] = 0;

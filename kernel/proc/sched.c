@@ -28,9 +28,11 @@ int scheduler_find_next_task() {
     }
     
     if(dead_task_count > 0) {
+        DEBUG("[SCHEDULER][SEARCH]: searching for someone to clean up tasks\n");
         for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
             if (tasks[next_idx]->state == PROCESS_BLOCKED || tasks[next_idx]->state == PROCESS_DEAD) {
+                DEBUG("[SCHEDULER][SEARCH]: cleaner found %s\n", tasks[next_idx]->name);
                 return next_idx;
             }
         }
@@ -78,27 +80,13 @@ int scheduler_find_first_task_based_on_state(process_state_t state) {
 *   Fourth we find the idx which corresponds to our next_pid
 */
 void _scheduler_remove_task() {
-   int pid_after_deletion = -1;
-   int next_task_idx = scheduler_find_first_task_based_on_state(PROCESS_READY);
-   
-   if(next_task_idx == -1) {
-        next_task_idx = scheduler_find_first_task_based_on_state(PROCESS_BLOCKED);
-   }
-
-   if(next_task_idx == -1) {
-        next_task_idx = scheduler_find_first_task_based_on_state(PROCESS_DEAD);
-   }
-
-
-   if(next_task_idx == -1) return;
-   pid_after_deletion = tasks[next_task_idx]->pid;
-
+  
     //edge case for when there is only one task and it is dead
-    if(tasks[next_task_idx]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
+    if(tasks[current_idx]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
         DEBUG("[SCHEDULER][REMOVE]: Deleting the only task in the scheduler.\n");
         vmm_switch((page_directory_t *)kernel_page_dir);
-        process_destroy(tasks[next_task_idx]);
-        tasks[next_task_idx] = NULL;
+        process_destroy(tasks[current_idx]);
+        tasks[current_idx] = NULL;
         current_idx = -1;
         task_count--;
         dead_task_count--;
@@ -106,14 +94,8 @@ void _scheduler_remove_task() {
         return;
     }
 
-   int delete_candidate = -1;
-   for(int i = 1; i <= task_count; i++) { 
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == PROCESS_DEAD) {
-            delete_candidate = next_idx;
-            break;
-        }
-   }
+    DEBUG("[SCHEDULER][REMOVE]: Searching for a dead process\n");
+    int delete_candidate = scheduler_find_first_task_based_on_state(PROCESS_DEAD);
    
    if(delete_candidate == -1) {
         DEBUG("[SCHEDULER][REMOVE]: No deletable task found.\n");
@@ -137,6 +119,7 @@ void _scheduler_remove_task() {
         current_idx--;
         DEBUG("[SCHEDULER][REMOVE]: current idx pointing to %s\n", tasks[current_idx]->name);
     } else if(delete_candidate == current_idx) {
+        DEBUG("[SCHEDULER][REMOVE]: Deleted current idx\n");
         current_idx = -1;
     }
 }
@@ -191,10 +174,16 @@ void scheduler_tick(struct registers *r) {
     if(current == NULL) return;
     
     if(current->started) {
-       // DEBUG("[SCHEDULER][TICK]: saving: %s\n", current->name);
+        //DEBUG("[SCHEDULER][TICK]: saving: %s\n", current->name);
         memcpy(&current->context, r, sizeof(struct registers));
         if(current->state == PROCESS_RUNNING) {
             current->state = PROCESS_READY;
+        }
+       if(current->pid == 0 && task_count == 1 && dead_task_count == 0) {
+            DEBUG("[SCHEDULER][TICK]: init is the only task remaining. Shutting down\n");
+            scheduler_kill_task();
+            _scheduler_remove_task();
+            __asm__ __volatile__("sti; hlt");
         }
     }
     current->started = 1;
@@ -211,9 +200,10 @@ void scheduler_tick(struct registers *r) {
     
     proc_t *next = tasks[next_idx];
     
-    if(next->state == PROCESS_BLOCKED || next->state == PROCESS_DEAD) return;
-    
+    if(next == NULL || next->state == PROCESS_BLOCKED || next->state == PROCESS_DEAD) return;
+
     next->state = PROCESS_RUNNING;
+
     if(next_idx != current_idx) {
         DEBUG("[SCHEDULER][TICK]: now running: %s\n", next->name);
         current_idx = next_idx;
@@ -221,6 +211,7 @@ void scheduler_tick(struct registers *r) {
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }
+
 }
 
 
@@ -247,8 +238,10 @@ void scheduler_kill_task() {
 
 void scheduler_block_task(struct registers *r) {
     DEBUG("[SCHEDULER][block_task]: blocking task: %s\n", tasks[current_idx]->name);
-    if(tasks[current_idx]->state != PROCESS_BLOCKED) {
-        tasks[current_idx]->state = PROCESS_BLOCKED;   
+    if(tasks[current_idx]->state != PROCESS_BLOCKED && tasks[current_idx]->state != PROCESS_DEAD) {
+        tasks[current_idx]->state = PROCESS_BLOCKED;
+        DEBUG("[CONTEXT_SWITCH]: saving %s at EIP=%x\n", tasks[current_idx]->name, r->eip);
+        //memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
     }
 }
 

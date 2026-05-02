@@ -3,8 +3,7 @@
 #include "string.h"
 
 void write(const char *msg) {
-    int len = strlen(msg);
-    sys_write(msg, len);
+    sys_write(msg, 1);
 }
 
 int read(char *buf) {

@@ -4,7 +4,7 @@
 
 void main(void) {
     exec("shell");
-    exec("shell2");
+    //exec("shell2");
     while(1) {
         idle();
     }

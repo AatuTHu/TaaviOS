@@ -50,6 +50,7 @@ static int32_t sys_write(struct registers *r) {
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
     
     if (fd == 1 || fd == 2) { // STDOUT or STDERR
+        DEBUG("[SYS_WRITE]: writing '%s'\n", buf);
         vga_write(buf);
     }
     return len;
@@ -76,9 +77,6 @@ static int32_t sys_read(struct registers *r) {
     
     if(get_foreground_pid() != current->pid) {
         add_to_waiting_queue(current->pid);
-        //scheduler_block_task(r);
-        int next_idx = scheduler_find_next_task();
-        scheduler_switch_context(r, next_idx);
         return -1;
     }
 
@@ -93,11 +91,13 @@ static int32_t sys_read(struct registers *r) {
 
     int nread = read_from_keyboard_buffer(buf);
     if (nread > 0) {
+        DEBUG("[SYS_READ]: returning char '%c'\n", buf[0]);
         return nread;
     }
 
     if(current->state != PROCESS_BLOCKED) {
         scheduler_block_task(r);
+        r->eax = 0;
         int next_idx = scheduler_find_next_task();
         scheduler_switch_context(r, next_idx);
     }
@@ -127,8 +127,7 @@ static int sys_exec(struct registers *r) {
 static int32_t sys_idle(struct registers *r) {
     int next_idx = scheduler_find_next_task();
     if(next_idx != -1) {
-        scheduler_switch_context(r, next_idx);
-        //__asm__ __volatile__("sti; hlt");
+        __asm__ __volatile__("sti; hlt");
     }
     return 0;
 }
@@ -142,7 +141,7 @@ void syscall_init() {
     syscall_table[SYS_GETPID]   = sys_getpid;
     syscall_table[SYS_EXEC]     = sys_exec;
     syscall_table[SYS_READ]     = sys_read;
-    syscall_table[SYS_IDLE]    = sys_idle;
+    syscall_table[SYS_IDLE]     = sys_idle;
 }
 
 void syscall_dispatch(struct registers *r) {

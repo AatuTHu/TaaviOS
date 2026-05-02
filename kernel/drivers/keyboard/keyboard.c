@@ -70,21 +70,28 @@ int get_foreground_pid() {
 
 void set_foreground_pid(int pid) {
     if(pid == -1) {
-        DEBUG("[KEYBOARD]: task released it's hold on me. Searching for a new master\n");
-        for(int i = 0; i < waiting_queue_count; i++) {
-            if(waiting_queue[i] != pid) {
-                pid = waiting_queue[i];
-                DEBUG("[KEYBOARD]: new master found\n");
-                break;
+        if(waiting_queue_count > 0) {
+            pid = waiting_queue[0];
+            for(int i = 0; i < waiting_queue_count - 1; i++) {
+                waiting_queue[i] = waiting_queue[i+1];
             }
+            waiting_queue_count--;
         }
     }
+    keyboard_clear_buffer();
     keyboard_buffer->foreground_pid = pid;
 }
 
 void add_to_waiting_queue(int pid) {
     if(pid == -1) return;
-    waiting_queue[waiting_queue_count] = pid;
+    for(int i = 0; i < waiting_queue_count; i++) {
+        if(waiting_queue[i] == pid) return; // already queued
+    }
+    waiting_queue[waiting_queue_count++] = pid;
+}
+
+void keyboard_clear_buffer() {
+    keyboard_buffer->read = keyboard_buffer->write;
 }
 
 void keyboard_init() {
