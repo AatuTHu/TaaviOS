@@ -73,8 +73,7 @@ void init_drivers() {
 
 void kernel_main(uint32_t *mboot_info) {
 
-    set_debug_mode();
-    set_log_level(2);
+    set_print_level(2);
 
     init_serial_and_vga();
 

@@ -92,18 +92,11 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     }
 
-    if (nread <= 0) {
     scheduler_block_task(r);
-
-    if (scheduler_has_runnable_task()) {
-        int next_idx = scheduler_find_next_task();
-        scheduler_switch_context(r, next_idx);
-    } else {
-        __asm__ volatile ("sti; hlt");
-    }
-
+    int next_idx = scheduler_find_next_task();
+    scheduler_switch_context(r, next_idx);
     return 0;
-    }
+    
 } //sys_read
 
 static int sys_exec(struct registers *r) {
