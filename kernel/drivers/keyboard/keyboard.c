@@ -3,11 +3,16 @@
 #include "io.h"
 #include "vga.h"
 #include "sched.h"
+#include "config.h"
+#include "klog.h"
 
 static keyboard_buffer_t kbd_buf_instance;
 static keyboard_buffer_t *keyboard_buffer = &kbd_buf_instance;
 static int shift_pressed = 0;
 static int caps_lock_pressed = 0;
+static int waiting_queue_count = 0;
+static int waiting_queue[MAX_PROCESSES];
+
 
 void keyboard_irq_handler(void) {
     uint8_t scancode = inb(0x60);
@@ -64,7 +69,22 @@ int get_foreground_pid() {
 }
 
 void set_foreground_pid(int pid) {
+    if(pid == -1) {
+        DEBUG("[KEYBOARD]: task released it's hold on me. Searching for a new master");
+        for(int i = 0; i < waiting_queue_count; i++) {
+            if(waiting_queue[i] != pid) {
+                pid = waiting_queue[i];
+                DEBUG("[KEYBOARD]: new master found");
+                break;
+            }
+        }
+    }
     keyboard_buffer->foreground_pid = pid;
+}
+
+void add_to_waiting_queue(int pid) {
+    if(pid == -1) return;
+    waiting_queue[waiting_queue_count] = pid;
 }
 
 void keyboard_init() {

@@ -19,6 +19,6 @@ int exec(const char *filename) {
    return sys_exec(filename);
 }
 
-void yield_time(void) {
-    sys_yield();
+void idle(void) {
+    sys_idle();
 }

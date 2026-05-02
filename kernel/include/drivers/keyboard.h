@@ -43,6 +43,6 @@ void write_to_keyboard_buffer(char c);
 void set_foreground_pid(int pid);
 int  read_from_keyboard_buffer(char* out);
 int  get_foreground_pid();
-
+void add_to_waiting_queue(int pid);
 
 #endif

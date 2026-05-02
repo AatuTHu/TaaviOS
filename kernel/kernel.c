@@ -134,10 +134,13 @@ void kernel_main(uint32_t *mboot_info) {
 
     if(total_mods > 1) {
         page_directory_t *shell_pd = paging_create_directory();
+        page_directory_t *shell_pd2 = paging_create_directory();
         uint32_t shell_phys = module_starts[1];
-        uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd);     
+        uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd); 
+        uint32_t entry2 = elf_load((void*)phys_to_virt(shell_phys), shell_pd2);    
         if (entry != ET_NONE) {
-            proc_t *shell = process_create(entry, "shell", shell_pd, USER_PROCESS);
+            process_create(entry, "shell", shell_pd, USER_PROCESS);
+            process_create(entry, "shell2", shell_pd2, USER_PROCESS);
             //set_foreground_pid(shell->pid);
         }
     }

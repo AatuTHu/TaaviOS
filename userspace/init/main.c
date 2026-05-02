@@ -4,8 +4,8 @@
 
 void main(void) {
     exec("shell");
-
+    exec("shell2");
     while(1) {
-        yield_time();
+        idle();
     }
 }

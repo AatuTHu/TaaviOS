@@ -49,7 +49,7 @@ int sys_exec(const char *filename) {
     return result;
 }
 
-void sys_yield(void) {
+void sys_idle(void) {
     __asm__ __volatile__(
         "int $0x80"
         :

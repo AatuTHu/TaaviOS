@@ -9,7 +9,7 @@
 #define SYS_READ 3
 #define SYS_GETPID 20
 #define SYS_EXEC 11
-#define SYS_YIELD 158
+#define SYS_IDLE 158
 #define MAX_SYSCALLS 256
 
 typedef int32_t (*syscall_fn_t)(struct registers *r);

@@ -75,6 +75,10 @@ static int32_t sys_read(struct registers *r) {
     }
     
     if(get_foreground_pid() != current->pid) {
+        add_to_waiting_queue(current->pid);
+        //scheduler_block_task(r);
+        int next_idx = scheduler_find_next_task();
+        scheduler_switch_context(r, next_idx);
         return -1;
     }
 
@@ -92,9 +96,11 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     }
 
-    scheduler_block_task(r);
-    int next_idx = scheduler_find_next_task();
-    scheduler_switch_context(r, next_idx);
+    if(current->state != PROCESS_BLOCKED) {
+        scheduler_block_task(r);
+        int next_idx = scheduler_find_next_task();
+        scheduler_switch_context(r, next_idx);
+    }
     return 0;
     
 } //sys_read
@@ -118,10 +124,11 @@ static int sys_exec(struct registers *r) {
     return 0;
 }
 
-static int32_t sys_yield(struct registers *r) {
+static int32_t sys_idle(struct registers *r) {
     int next_idx = scheduler_find_next_task();
     if(next_idx != -1) {
         scheduler_switch_context(r, next_idx);
+        //__asm__ __volatile__("sti; hlt");
     }
     return 0;
 }
@@ -135,7 +142,7 @@ void syscall_init() {
     syscall_table[SYS_GETPID]   = sys_getpid;
     syscall_table[SYS_EXEC]     = sys_exec;
     syscall_table[SYS_READ]     = sys_read;
-    syscall_table[SYS_YIELD]    = sys_yield;
+    syscall_table[SYS_IDLE]    = sys_idle;
 }
 
 void syscall_dispatch(struct registers *r) {
