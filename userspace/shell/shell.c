@@ -60,11 +60,13 @@ void main(void) {
         pos = 0;
         while (1) {
             int n = read(&c);
+            if (n <= 0) continue;
+
             if (n > 0) {
                 if (c == '\n') {
                     buf[pos] = 0;
-                    pos = 0;
                     exec_cmd(buf);
+                    pos = 0;
                     break;
                 } else if (c == '\b') {
                    if(pos > 0) {

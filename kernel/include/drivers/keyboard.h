@@ -31,8 +31,8 @@ static const char scancode_to_ascii_caps_lock[] = {
 
 typedef struct keyboard_buffer_t {
     char buf[KEYBOARD_BUFFER_SIZE];
-    uint32_t read;
-    uint32_t write;
+    volatile uint32_t read;
+    volatile uint32_t write;
     int foreground_pid;
 } keyboard_buffer_t;
 

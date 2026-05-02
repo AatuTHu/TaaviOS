@@ -88,15 +88,22 @@ static int32_t sys_read(struct registers *r) {
     
 
     int nread = read_from_keyboard_buffer(buf);
-    if (nread != 0) {
+    if (nread > 0) {
         return nread;
     }
 
-   
-    scheduler_block_task(r);
-    int next_idx = scheduler_find_next_task();
-    scheduler_switch_context(r, next_idx);
-    return 0;
+    if (nread <= 0) {
+        scheduler_block_task(r);
+
+        if (scheduler_has_runnable_task()) {
+            int next_idx = scheduler_find_next_task();
+            scheduler_switch_context(r, next_idx);
+        } else {
+            __asm__ volatile ("sti; hlt");
+        }
+
+        return 0;
+    }
 } //sys_read
 
 static int sys_exec(struct registers *r) {

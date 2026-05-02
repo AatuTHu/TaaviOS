@@ -18,8 +18,6 @@ void write_to_keyboard_buffer(char c) {
         if ((keyboard_buffer->write - keyboard_buffer->read) == KEYBOARD_BUFFER_SIZE) {
         return;
     }
-
-    /* Store the byte at the wrapped index */
     keyboard_buffer->buf[keyboard_buffer->write % KEYBOARD_BUFFER_SIZE] = c;
     keyboard_buffer->write++;
 }
