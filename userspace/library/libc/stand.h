@@ -4,6 +4,7 @@
 void write(const char *msg);
 int read(char *buf);
 int exec(const char *filename);
+int get_pid();
 void terminate_program();
 void idle(void);
 #endif

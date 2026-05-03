@@ -9,42 +9,49 @@ void command_help() {
     write("- help\n");
     write("- about\n");
     write("- exec filename.elf \n");
-    write("- cpu uptime\n");
+    write("- get pid\n");
     write("- exit\n");
+    write("\n");
 }
 
 void command_about() {
     write("\n-------------------------------------------------------------------------------\n");
-    write("Carrots v0.1.0 - Author: Aatu H\n");
+    write("Carrots v0.3.0 - Author: Aatu H\n");
+    write("\n");
 }
 
-void command_cpu_uptime() {
-    /*int uptime = sys_uptime();
-    char msg[20];
-    itoa(uptime, msg);
-    write(": ");
+void command_get_pid() {
+    int pid = get_pid();
+    char msg[10];
+    itoa(pid, msg);
+    write("\n");
+    write("current task pid: ");
     write(msg);
-    write("ms\n");*/
+    write("\n");
 }
 
 void command_exit() {
+    write("\n");
     terminate_program();
+    write("\n");
 }
 
 void command_exec(const char *filename) {
+    write("\n");
     exec(filename);
+    write("\n");
 }
 
 void exec_cmd(char *buf) {
     if(str_eq(buf, "help") == 1) command_help();
     if(str_eq(buf, "about") == 1) command_about();
-    if(str_eq(buf, "cpu uptime") == 1) command_cpu_uptime();
+    if(str_eq(buf, "get pid") == 1) command_get_pid();
     if(str_eq(buf, "exit") == 1) command_exit();
     if(str_starts_with(buf, "exec ")==1) {
         command_exec(buf + 5);
-        write("\n");
         return;
     }
+
 }
 
 void main(void) {

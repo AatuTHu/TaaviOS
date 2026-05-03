@@ -21,3 +21,7 @@ int exec(const char *filename) {
 void idle(void) {
     sys_idle();
 }
+
+int get_pid() {
+    return sys_getpid();
+}

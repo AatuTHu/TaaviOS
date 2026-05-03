@@ -3,6 +3,7 @@
 #include "config.h"
 #include "klog.h"
 #include "sched.h"
+#include "proc.h"
 
 
 irq_callback_t irq_callbacks[16] = {0};
@@ -17,40 +18,41 @@ void isr_handler(struct registers *r) {
     __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
 
     int is_user = (r->cs & 0x3) == 3;
+    proc_t *current = scheduler_get_current_task();
 
-   klog("\n");
-   ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-   ERROR("                     KERNEL PANIC                           \n");
-   ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    
-   ERROR("REASON: ");
-    if (r->int_no == 14) {
-       ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
-                (r->err_code & 0x1) ? "Yes" : "No",
-                (r->err_code & 0x2) ? "Write" : "Read",
-                (r->err_code & 0x4) ? "User" : "Kernel");
-       ERROR("FAULTING ADDRESS: 0x%x\n", cr2);
-    } else if (r->int_no == 13) {
-       ERROR("GENERAL PROTECTION FAULT\n");
-    } else {
-       ERROR("EXCEPTION %d\n", r->int_no);
-    }
+    klog("\n");
+    ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    ERROR("                     KERNEL PANIC                           \n");
+    ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+        ERROR("Scheduler was running task %s\n", current->name);
+        ERROR("REASON: ");
+        if (r->int_no == 14) {
+            ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
+            (r->err_code & 0x1) ? "Yes" : "No",
+            (r->err_code & 0x2) ? "Write" : "Read",
+            (r->err_code & 0x4) ? "User" : "Kernel");
+            ERROR("FAULTING ADDRESS: 0x%x\n", cr2);
+        } else if (r->int_no == 13) {
+            ERROR("GENERAL PROTECTION FAULT\n");
+        } else {
+            ERROR("EXCEPTION %d\n", r->int_no);
+        }
 
-   ERROR("LOCATION: %s mode at EIP 0x%x\n", is_user ? "USER" : "KERNEL", r->eip);
+    ERROR("LOCATION: %s mode at EIP 0x%x\n", is_user ? "USER" : "KERNEL", r->eip);
 
-   ERROR("--- REGISTER DUMP ---\n");
-   ERROR("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", r->eax, r->ebx, r->ecx, r->edx);
-   ERROR("ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", r->esi, r->edi, r->ebp, r->esp);
-   ERROR("CS:  0x%x  EFLAGS: 0x%x\n", r->cs, r->eflags);
+    ERROR("--- REGISTER DUMP ---\n");
+    ERROR("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", r->eax, r->ebx, r->ecx, r->edx);
+    ERROR("ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", r->esi, r->edi, r->ebp, r->esp);
+    ERROR("CS:  0x%x  EFLAGS: 0x%x\n", r->cs, r->eflags);
 
-    if (is_user) {
+        if (is_user) {
         ERROR("USER STACK: 0x%x\n", r->useresp);
-    }
+        }
 
-   ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-   ERROR("System halted.\n");
+    ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    ERROR("System halted.\n");
 
-    while(1) { __asm__ __volatile__("hlt"); }
+while(1) { __asm__ __volatile__("hlt"); }
 }
 
 void irq_handler(struct registers *r) {

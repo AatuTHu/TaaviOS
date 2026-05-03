@@ -66,12 +66,12 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     return proc;
 }
 
-void process_destroy(proc_t *proc) {
+void process_destroy(proc_t *proc, uint8_t proc_mode) {
     if(proc == NULL) return;
     DEBUG("[PROC]: Destroyn process: %s \n", proc->name);
     process_table[proc->pid] = NULL;
     DEBUG("[PROC]: Freeing virtual memory \n");
-    vmm_free(proc->page_dir, USER_STACK_TOP, USER_STACK_SIZE);
+    proc_mode == USER_PROCESS ? vmm_free(proc->page_dir, USER_STACK_TOP, USER_STACK_SIZE) : NULL;
     DEBUG("[PROC]: Freeing kernel_stack\n");
     uint32_t phys = virt_to_phys(proc->kernel_stack - KERNEL_STACK_SIZE);
     pmm_free(phys);

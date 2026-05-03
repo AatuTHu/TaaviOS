@@ -85,7 +85,7 @@ void _scheduler_remove_task() {
     if(tasks[current_idx]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
         DEBUG("[SCHEDULER][REMOVE]: Deleting the only task in the scheduler.\n");
         vmm_switch((page_directory_t *)kernel_page_dir);
-        process_destroy(tasks[current_idx]);
+        process_destroy(tasks[current_idx], KERNEL_PROCESS);
         tasks[current_idx] = NULL;
         current_idx = -1;
         task_count--;
@@ -104,7 +104,7 @@ void _scheduler_remove_task() {
     
     DEBUG("[SCHEDULER][REMOVE]: Deleting task at current idx %d with name: %s\n", delete_candidate, tasks[delete_candidate]->name);
     vmm_switch(&kernel_page_dir);
-    process_destroy(tasks[delete_candidate]);
+    process_destroy(tasks[delete_candidate], USER_PROCESS);
     tasks[delete_candidate] = NULL;
    
    DEBUG("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
@@ -146,7 +146,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
     proc_t *next = tasks[idx];
 
     if(current_idx != idx) {
-        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: now running: %s\n", next->name);
+        //DEBUG("[SCHEDULER][CONTEXT_SWITCH]: now running: %s\n", next->name);
         current_idx = idx;
         vmm_switch(next->page_dir);
         next->started = 1;
@@ -179,12 +179,12 @@ void scheduler_tick(struct registers *r) {
         if(current->state == PROCESS_RUNNING) {
             current->state = PROCESS_READY;
         }
-        /*if(current->pid == 0 && task_count == 1 && dead_task_count == 0) {
-            DEBUG("[SCHEDULER][TICK]: init is the only task remaining. Shutting down\n");
+        if(current->pid == 0 && task_count == 1 && dead_task_count == 0) {
+            DEBUG("[SCHEDULER][TICK]: idle is the only task remaining. Shutting down\n");
             scheduler_kill_task();
             _scheduler_remove_task();
             __asm__ __volatile__("sti; hlt");
-        }*/
+        }
     }
     current->started = 1;
     
@@ -204,8 +204,9 @@ void scheduler_tick(struct registers *r) {
         if(idle_task != NULL) {
             DEBUG("[SCHEDULER][TICK]: Adding idle to scheduler\n");
             scheduler_add(idle_task);
+            next_idx = scheduler_find_next_task();
         }
-        return;
+        //return;
     }
     
     proc_t *next = tasks[next_idx];
@@ -215,7 +216,7 @@ void scheduler_tick(struct registers *r) {
     next->state = PROCESS_RUNNING;
 
     if(next_idx != current_idx) {
-        DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
+        //DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
         current_idx = next_idx;
         vmm_switch(next->page_dir);
         tss_set_kernel_stack(next->kernel_stack);
@@ -247,7 +248,7 @@ void scheduler_kill_task() {
 }
 
 void scheduler_block_task(struct registers *r) {
-    DEBUG("[SCHEDULER][block_task]: Blocking task: %s\n", tasks[current_idx]->name);
+    //DEBUG("[SCHEDULER][block_task]: Blocking task: %s\n", tasks[current_idx]->name);
     if(tasks[current_idx]->state != PROCESS_BLOCKED && tasks[current_idx]->state != PROCESS_DEAD) {
         tasks[current_idx]->state = PROCESS_BLOCKED;
         //DEBUG("[CONTEXT_SWITCH]: saving %s at EIP=%x\n", tasks[current_idx]->name, r->eip);
@@ -279,7 +280,7 @@ int scheduler_has_runnable_task() {
 void scheduler_wake_task(int pid) {
     for(int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->pid == pid) {
-            DEBUG("[SCHEDULER]: Waking task %s\n", tasks[i]->name);
+            //DEBUG("[SCHEDULER]: Waking task %s\n", tasks[i]->name);
             tasks[i]->state = PROCESS_READY;
             break;
         }

@@ -28,13 +28,12 @@ typedef struct proc_t {
     uint8_t                 started;
     uint8_t                 priority;
     struct registers        context;
-    struct proc_t           *next;
 } proc_t;
 
 proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t proc_mode);
 proc_t *process_get(int index);
 proc_t *get_proc_by_name(char *name);
-void   process_destroy(proc_t *proc);
+void   process_destroy(proc_t *proc, uint8_t proc_mode);
 
 
 #endif
