@@ -53,6 +53,14 @@ void sys_idle(void) {
     __asm__ __volatile__(
         "int $0x80"
         :
+        : "a"(112)
+    );
+}
+
+void sys_yield(void) {
+    __asm__ __volatile__(
+        "int $0x80"
+        :
         : "a"(158)
     );
 }

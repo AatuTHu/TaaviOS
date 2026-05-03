@@ -50,7 +50,7 @@ static int32_t sys_write(struct registers *r) {
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
     
     if (fd == 1 || fd == 2) { // STDOUT or STDERR
-        DEBUG("[SYS_WRITE]: writing '%s'\n", buf);
+        //DEBUG("[SYS_WRITE]: writing '%s'\n", buf);
         vga_write(buf);
     }
     return len;
@@ -94,7 +94,7 @@ static int32_t sys_read(struct registers *r) {
 
     int nread = read_from_keyboard_buffer(buf);
     if (nread > 0) {
-        DEBUG("[SYS_READ]: returning char '%c'\n", buf[0]);
+        //DEBUG("[SYS_READ]: returning char '%c'\n", buf[0]);
         return nread;
     }
 
@@ -109,42 +109,41 @@ static int32_t sys_read(struct registers *r) {
 } //sys_read
 
 static int sys_exec(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_EXEC]: filename: %s\n", r->ecx);
+    DEBUG("[SYSCALL][SYS_EXEC]\n");
     char *filename = (char *)r->ecx;
     proc_t *proc = get_proc_by_name(filename);
     if(proc == NULL) {
         return 0;
     }
     
-    int is_added = scheduler_does_exist(proc->pid);
-    if(is_added == 0) {
-        scheduler_add(proc);
-        int next_idx = scheduler_find_next_task();
-        scheduler_switch_context(r, next_idx);
-        return 1;
-    }
+    scheduler_add(proc);
+    int next_idx = scheduler_find_next_task();
+    scheduler_switch_context(r, next_idx);
+    return 1;
+} //sys_exec
 
+static int32_t sys_yield(struct registers *r) {
+    //r->eax = 0;
+    int next_idx = scheduler_find_next_task();
+    scheduler_switch_context(r, next_idx);
     return 0;
-}
+} //sys_yield
 
 static int32_t sys_idle(struct registers *r) {
-    int next_idx = scheduler_find_next_task();
-    if(next_idx != -1) {
-        __asm__ __volatile__("sti; hlt");
-    }
+    __asm__ __volatile__("sti; hlt");
     return 0;
-}
+} //sys_idle
 
 void syscall_init() {
     DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
     for(uint32_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
-    
     syscall_table[SYS_EXIT]     = sys_exit;
     syscall_table[SYS_WRITE]    = sys_write;
     syscall_table[SYS_GETPID]   = sys_getpid;
     syscall_table[SYS_EXEC]     = sys_exec;
     syscall_table[SYS_READ]     = sys_read;
     syscall_table[SYS_IDLE]     = sys_idle;
+    syscall_table[SYS_YIELD]    = sys_yield;
 }
 
 void syscall_dispatch(struct registers *r) {

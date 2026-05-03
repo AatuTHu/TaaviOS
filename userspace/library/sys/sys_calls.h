@@ -9,6 +9,8 @@ int sys_getpid(void);
 
 void sys_idle(void);
 
+void sys_yield(void);
+
 int sys_read(char *buf, int len);
 
 int sys_exec(const char *filename);
