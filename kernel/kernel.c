@@ -17,6 +17,7 @@
 #include "elf.h"
 #include "syscall.h"
 #include "keyboard.h"
+#include "ata.h"
 #include "io.h"
 
 #define MAX_MODS 10
@@ -69,6 +70,15 @@ void check_for_modules (uint32_t *mboot_info) {
 
 void init_drivers() {
     keyboard_init();
+    ata_init();
+    DEBUG("[ATA]: Status at init: %x\n", inb(ATA_STATUS));
+    DEBUG("[ATA]: Alt status: %x\n", inb(ATA_ALT_STATUS));
+    uint8_t mbr[512];
+    if (ata_read_sector(0, mbr) == 0) {
+        DEBUG("[ATA]: MBR signature: %x %x\n", mbr[510], mbr[511]);
+    } else {
+        DEBUG("[ATA]: Read failed!\n");
+    }
 }
 
 void kernel_main(uint32_t *mboot_info) {

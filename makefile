@@ -5,7 +5,7 @@ ASFLAGS = -f elf32
 LOG_LEVEL ?= 2
 CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
-		 -Ikernel/include/mm -Ikernel/include/proc -Ikernel/include/loader -Ikernel \
+		 -Ikernel/include/mm -Ikernel/include/tcb -Ikernel/include/loader -Ikernel \
 		 -Ikernel/include/usermode \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
@@ -37,8 +37,10 @@ iso: $(BUILD)/carrots.bin
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/carrots.iso isodir
 run: iso
-	qemu-system-i386 -cdrom $(BUILD)/carrots.iso -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
-clean:
+	qemu-system-i386 \
+		-drive file=$(BUILD)/carrots.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
+		-drive file=disk.img,format=raw,if=ide,bus=0,unit=1,media=disk \
+		-boot d -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
 	$(MAKE) -C userspace/init clean
 	$(MAKE) -C userspace/shell clean
 	find . -name '*.o' -delete
