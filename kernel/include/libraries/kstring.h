@@ -10,6 +10,7 @@ void strcpy(char *dest, char *src);
 void strncpy(char *dest,const char *src, uint8_t size);
 int  strlen(char *s);
 int  strcmp(const char *a, const char *b);
+void itoa(int n, char *buf);
 
 
 #endif

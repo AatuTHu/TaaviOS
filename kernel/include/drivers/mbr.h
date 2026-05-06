@@ -2,6 +2,7 @@
 #define MBR_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct __attribute__((packed)) {
     uint8_t  status;

@@ -19,6 +19,8 @@
 #include "keyboard.h"
 #include "ata.h"
 #include "io.h"
+#include "mbr.h"
+#include "fat32.h"
 
 #define MAX_MODS 10
 uint32_t module_starts[MAX_MODS];
@@ -73,12 +75,18 @@ void init_drivers() {
     ata_init();
     DEBUG("[ATA]: Status at init: %x\n", inb(ATA_STATUS));
     DEBUG("[ATA]: Alt status: %x\n", inb(ATA_ALT_STATUS));
-    uint8_t mbr[512];
-    if (ata_read_sector(0, mbr) == 0) {
-        DEBUG("[ATA]: MBR signature: %x %x\n", mbr[510], mbr[511]);
+
+    uint32_t fat32_lba = 0;
+    uint32_t fat32_sectors = 0;
+
+    if (mbr_find_fat32(&fat32_lba, &fat32_sectors) == 0) {
+        DEBUG("[MBR]: FAT32 partition found! LBA start: %d, sectors: %d\n", fat32_lba, fat32_sectors);
     } else {
-        DEBUG("[ATA]: Read failed!\n");
+        DEBUG("[MBR]: FAT32 partition not found!\n");
     }
+
+    fat32_init(fat32_lba);
+    fat32_list_dir(fat32_fs.root_cluster);
 }
 
 void kernel_main(uint32_t *mboot_info) {

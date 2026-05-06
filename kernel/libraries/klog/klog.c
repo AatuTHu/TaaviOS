@@ -61,19 +61,39 @@ static void print_hex(uint32_t n) {
     kputs(&buf[pos+1]);
 }
 
+static void kputs_n(const char *s, int n) {
+    for(int i=0;i<n;i++) {
+        if(s[i] == '\0') return;
+        kputchar(s[i]);
+    }
+}
+
 static void kwrite (const char* fmt, va_list args) {
     for(int i = 0; fmt[i] != '\0'; i++) {
         if(fmt[i] != '%') {
             kputchar(fmt[i]);
         } else {
             i++;
+            int precision = -1;
+            if(fmt[i] == '.') {
+                i++;
+                precision = 0;
+                while (fmt[i] >= '0' && fmt[i] <= '9') {
+                    precision = precision * 10 + (fmt[i] - '0');
+                    i++;
+                }
+            }
+
             switch (fmt[i])
             {
             case 'd':
                 print_int(va_arg(args, int));
                 break;
             case 's':
-                kputs(va_arg(args, char*));
+                if (precision >= 0)
+                    kputs_n(va_arg(args, char*), precision);
+                else
+                    kputs(va_arg(args, char*));
                 break;
             case 'c':
                 kputchar((char)va_arg(args, int));
@@ -101,7 +121,7 @@ void klog_debug(const char* fmt, ...) {
     va_list args; //not important
     va_start(args, fmt); //not important
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-    kputs("[DEBUG] ");
+    //kputs("[DEBUG] ");
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt,args); //main writer function call ->
     va_end(args); //not important

@@ -41,6 +41,7 @@ run: iso
 		-drive file=$(BUILD)/carrots.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
 		-drive file=disk.img,format=raw,if=ide,bus=0,unit=1,media=disk \
 		-boot d -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
+clean:
 	$(MAKE) -C userspace/init clean
 	$(MAKE) -C userspace/shell clean
 	find . -name '*.o' -delete

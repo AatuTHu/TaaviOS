@@ -57,3 +57,38 @@ int memcmp(const void *ptr1, const void *ptr2, size_t n) {
     }
     return 0;
 }
+
+void itoa(int n, char *buf) {
+    int i = 0;
+    int isNegative = 0;
+
+     if (n == 0) {
+        buf[i++] = '0';
+        buf[i] = '\0';
+        return;
+    }
+    
+    if (n < 0) {
+        isNegative = 1;
+        n = -n;
+        buf[i++] = '-';
+    }
+
+    while (n != 0) {
+        int rem = n % 10;
+        buf[i++] = rem + '0';
+        n /= 10;
+    }
+
+    int start = isNegative ? 1 : 0;
+    int end = i - 1;
+    while (start < end) {
+        char tmp = buf[start];
+        buf[start] = buf[end];
+        buf[end] = tmp;
+        start++;
+        end--;
+    }
+
+    buf[i] = '\0';
+}
