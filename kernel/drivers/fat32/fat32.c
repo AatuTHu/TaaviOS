@@ -81,15 +81,3 @@ void fat32_list_dir(uint32_t cluster) {
     fat32_list_dir(next_cluster);
 }
 
-int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
-    // TODO: track how many bytes read so far
-    // TODO: cluster_size = sectors_per_cluster * 512
-    // TODO: loop:
-    //       read current cluster into buf + bytes_read
-    //       bytes_read += cluster_size
-    //       if bytes_read >= size, break
-    //       next = fat32_next_cluster(current)
-    //       if next >= 0x0FFFFFF8, break
-    //       current = next
-    // TODO: return 0 on success
-}
