@@ -49,9 +49,9 @@ typedef struct __attribute__((packed)) {
     uint8_t  ext[3];
     uint8_t  attributes;
     uint8_t  reserved[8];
+    uint16_t cluster_high;
     uint16_t time;
     uint16_t date;
-    uint16_t cluster_high;
     uint16_t cluster_low;
     uint32_t size;
 } fat32_dir_entry_t;
@@ -60,7 +60,7 @@ int fat32_init(uint32_t partition_lba);
 uint32_t fat32_next_cluster(uint32_t cluster);
 int fat32_read_cluster(uint32_t cluster, uint8_t *buf);
 void fat32_list_dir(uint32_t cluster);
-int fat32_find_file(uint32_t dir_cluster, const char *name, uint32_t *out_cluster, uint32_t *out_size);
+int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uint32_t *out_cluster, uint32_t *out_size);
 int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf);
 extern fat32_fs_t fat32_fs;
 #endif
