@@ -88,12 +88,12 @@ void init_drivers() {
     fat32_init(fat32_lba);
     uint32_t file_cluster = 0;
     uint32_t file_size = 0;
-    if (fat32_find_file(fat32_fs.root_cluster, "HELLO   ", "TXT", &file_cluster, &file_size) == 0) {
+    if (fat32_find_file(f32_fs.root_cluster, "HELLO   ", "TXT", &file_cluster, &file_size) == 0) {
         DEBUG("[FAT32]: Found file! cluster: %d size: %d\n", file_cluster, file_size);
         uint8_t file_buf[512];
         fat32_read_file(file_cluster, file_size, file_buf);
         file_buf[file_size] = '\0';
-        DEBUG("[FAT32]: contents: %s\n", file_buf);
+        DEBUG("[FAT32]: contents: %s", file_buf);
     } else {
         DEBUG("[FAT32]: File not found!\n");
     }

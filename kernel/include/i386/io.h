@@ -15,3 +15,7 @@ static inline uint16_t inw(uint16_t port) {
     __asm__ __volatile__("inw %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
+
+static inline void outw(uint16_t port, uint16_t val) {
+    __asm__ __volatile__("outw %0, %1" : : "a"(val), "Nd"(port));
+}

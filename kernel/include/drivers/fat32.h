@@ -62,5 +62,5 @@ int fat32_read_cluster(uint32_t cluster, uint8_t *buf);
 void fat32_list_dir(uint32_t cluster);
 int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uint32_t *out_cluster, uint32_t *out_size);
 int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf);
-extern fat32_fs_t fat32_fs;
+extern fat32_fs_t f32_fs;
 #endif

@@ -39,7 +39,6 @@ int ata_read_sector(uint32_t lba, uint8_t *buf) {
     _ata_wait_400_ns();
 
     outb(ATA_SECTOR_CNT, 1);
-
     outb(ATA_LBA_LOW, lba & 0xFF);
     outb(ATA_LBA_MID, (lba >> 8) & 0xFF);
     outb(ATA_LBA_HIGH, (lba >> 16) & 0xFF);
@@ -51,5 +50,28 @@ int ata_read_sector(uint32_t lba, uint8_t *buf) {
     for(int i = 0; i < 256;i++) {
         ptr[i] = inw(ATA_DATA);
     }
+    return 0;
+}
+
+int ata_write_sector(uint32_t lba, const uint8_t *buf) {
+    ata_wait_ready();
+    outb(ATA_DRIVE_HEAD, 0xF0 | ((lba >> 24) & 0x0F));
+
+    outb(ATA_SECTOR_CNT, 1);
+    outb(ATA_LBA_LOW, lba & 0xFF);
+    outb(ATA_LBA_MID, (lba >> 8) & 0xFF);
+    outb(ATA_LBA_HIGH, (lba >> 16) & 0xFF);
+    outb(ATA_COMMAND, ATA_CMD_WRITE_PIO);
+
+    if(ata_poll() == -1) return -1;
+
+    uint16_t *ptr = (uint16_t *)buf; 
+    for(int i = 0; i < 256;i++) {
+      outw(ATA_DATA, ptr[i]);
+    }
+
+    outb(ATA_COMMAND,ATA_CMD_CACHE_FLUSH);
+    ata_wait_ready();
+
     return 0;
 }

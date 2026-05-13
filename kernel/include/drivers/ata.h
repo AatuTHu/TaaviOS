@@ -21,8 +21,11 @@
 #define ATA_SR_DRQ  0x08
 #define ATA_SR_ERR  0x01
 #define ATA_CMD_READ_PIO 0x20
+#define ATA_CMD_CACHE_FLUSH 0xE7
+#define ATA_CMD_WRITE_PIO 0x30
 
 void ata_init(void);
 int ata_read_sector(uint32_t lba, uint8_t *buf);
+int ata_write_sector(uint32_t lba, const uint8_t *buf);
 
 #endif
