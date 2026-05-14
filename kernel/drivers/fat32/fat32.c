@@ -162,3 +162,48 @@ int fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
     return 0;
 
 }
+
+// Sets a specific FAT entry to a given value
+// Used for chaining clusters together
+// Returns 0 on success, -1 on failure
+int fat32_set_cluster(uint32_t cluster, uint32_t value) {
+    char buf[512];
+    uint32_t fat_sector = f32_fs.fat_start + (cluster * 4) / f32_fs.bytes_per_sector;
+    uint32_t fat_offset = (cluster * 4) % f32_fs.bytes_per_sector;
+ 
+    if(ata_read_sector(fat_sector, buf) == -1) return -1;
+
+    // 4. Cast buffer to uint32_t*
+    uint32_t *ptr = (uint32_t *)buf;
+    ptr[fat_offset / 4] = value;
+
+    if(ata_write_sector(fat_sector, buf) == -1 ||
+        ata_write_sector(fat_sector + f32_fs.sectors_per_fat, buf) == -1) {
+        return -1;
+    }
+    
+    return 0;
+}
+
+// Writes data to disk, allocating clusters as needed
+// Returns first cluster of the chain on success, 0 on failure
+uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
+    uint32_t clusters_needed = (size + 511) / 512;
+    uint32_t first_cluster = 0, prev_cluster = 0;
+
+    for(uint32_t i = 0; i < clusters_needed; i++) {
+        int new_cluster = fat32_alloc_cluster();
+        if(new_cluster == -1) return 0;
+
+        if(prev_cluster != 0) {
+            if(fat32_set_cluster(prev_cluster,new_cluster) == -1) return 0;
+        }
+        
+        if(first_cluster == 0) first_cluster = new_cluster;
+        fat32_write_cluster(new_cluster, buf + (i * 512));
+
+        prev_cluster = new_cluster;
+    }
+
+    return first_cluster;
+}
