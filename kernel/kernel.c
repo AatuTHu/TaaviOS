@@ -79,9 +79,7 @@ void init_drivers() {
     uint32_t fat32_lba = 0;
     uint32_t fat32_sectors = 0;
 
-    if (mbr_find_fat32(&fat32_lba, &fat32_sectors) == 0) {
-        DEBUG("[MBR]: FAT32 partition found! LBA start: %d, sectors: %d\n", fat32_lba, fat32_sectors);
-    } else {
+    if (mbr_find_fat32(&fat32_lba, &fat32_sectors) != 0) {
         DEBUG("[MBR]: FAT32 partition not found!\n");
     }
 
@@ -97,6 +95,8 @@ void init_drivers() {
     } else {
         DEBUG("[FAT32]: File not found!\n");
     }
+
+    //uint32_t new_cluster = fat32_alloc_cluster(); //AI ALLOCATED TWO CLUSTER FROM THE START 5,6 WROTE NOTHING TO THEM
 }
 
 void kernel_main(uint32_t *mboot_info) {

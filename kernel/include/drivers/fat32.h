@@ -72,6 +72,8 @@ typedef struct {
     uint16_t bytes_per_sector;
     uint8_t  fat_count;
     uint32_t sectors_per_fat;
+    uint32_t maximum_cluster_size;
+    uint32_t last_allocated_cluster;
 } fat32_fs_t;
 
 typedef struct __attribute__((packed)) {
