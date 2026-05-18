@@ -2,30 +2,31 @@
 #include "ata.h"
 #include "klog.h"
 #include "kstring.h"
+#include "config.h"
 
 fat32_fs_t f32_fs;
 
-uint32_t fat32_calculate_lba(uint32_t cluster) {
-    DEBUG("[FAT32]: calculating cluster number for %d\n", cluster);
+uint32_t __fat32_calculate_lba(uint32_t cluster) {
+    DEBUG("[FAT32][CALCULATE_LBA]: calculating cluster number for %d\n", cluster);
     if (cluster >= f32_fs.maximum_cluster_size) {
-        DEBUG("[FAT32]: Cluster number too high: %d\n", cluster);
-        return 0;
+        DEBUG("[FAT32][CALCULATE_LBA]: Cluster number too high: %d\n", cluster);
+        return INVALID_LBA;
     }
     return f32_fs.fat_start + (cluster * FAT32_FAT_ENTRY_SIZE) / f32_fs.bytes_per_sector;
 }
 
-uint32_t fat32_cluster_to_sector(uint32_t cluster) {
+uint32_t __fat32_cluster_to_sector(uint32_t cluster) {
     if(cluster < 2) {
-        DEBUG("[FAT32]: Invalid cluster number: %d\n", cluster);
-        return 0;
+        DEBUG("[FAT32][CLUSTER_TO_SECTOR]: Invalid cluster number: %d\n", cluster);
+        return INVALID_LBA;
     }
     return f32_fs.data_start + (cluster - 2) * f32_fs.sectors_per_cluster;
 }
 
-uint32_t fat32_calculate_offset(uint32_t cluster) {
+uint32_t __fat32_calculate_offset(uint32_t cluster) {
     if (cluster >= f32_fs.maximum_cluster_size) {
-        DEBUG("[FAT32]: Cluster number too high: %d\n", cluster);
-        return 0;
+        DEBUG("[FAT32][CALCULATE_OFFSET]: Cluster number too high: %d\n", cluster);
+        return INVALID_LBA;
     }
     return (cluster * FAT32_FAT_ENTRY_SIZE) % f32_fs.bytes_per_sector;
 }
@@ -36,7 +37,7 @@ int fat32_init(uint32_t partition_lba) {
     fat32_bpb_t *bpb = (fat32_bpb_t *)buf;
     
     if(bpb->bytes_per_sector != FAT32_SECTOR_SIZE) {
-        DEBUG("[FAT32]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);
+        DEBUG("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);
     }
 
     f32_fs.partition_lba          = partition_lba;
@@ -49,33 +50,33 @@ int fat32_init(uint32_t partition_lba) {
     f32_fs.sectors_per_fat        = bpb->sectors_per_fat;
     f32_fs.last_allocated_cluster = 0;
     uint32_t data_sectors  = bpb->total_sectors_32 - bpb->reserved_sectors - (bpb->fat_count * bpb->sectors_per_fat);
-    f32_fs.maximum_cluster_size = (data_sectors / bpb->sectors_per_cluster) + 2;
+    f32_fs.maximum_cluster_size = (data_sectors / bpb->sectors_per_cluster) + 2; // 2 for reserved clusters
 
-    DEBUG("[FAT32]: partition_lba: %d\n", f32_fs.partition_lba);
-    DEBUG("[FAT32]: fat_start: %d\n", f32_fs.fat_start);
-    DEBUG("[FAT32]: data_start: %d\n", f32_fs.data_start);
-    DEBUG("[FAT32]: root_cluster: %d\n", f32_fs.root_cluster);
-    DEBUG("[FAT32]: sectors_per_cluster: %d\n", f32_fs.sectors_per_cluster);
-    DEBUG("[FAT32]: bytes_per_sector: %d\n", f32_fs.bytes_per_sector);
-    DEBUG("[FAT32]: fat_count: %d\n", f32_fs.fat_count);
-    DEBUG("[FAT32]: sectors_per_fat %d\n", f32_fs.sectors_per_fat);
-    DEBUG("[FAT32]: maximum cluster size: %d\n", f32_fs.maximum_cluster_size);
+    DEBUG("[FAT32][INIT]: partition_lba: %d\n", f32_fs.partition_lba);
+    DEBUG("[FAT32][INIT]: fat_start: %d\n", f32_fs.fat_start);
+    DEBUG("[FAT32][INIT]: data_start: %d\n", f32_fs.data_start);
+    DEBUG("[FAT32][INIT]: root_cluster: %d\n", f32_fs.root_cluster);
+    DEBUG("[FAT32][INIT]: sectors_per_cluster: %d\n", f32_fs.sectors_per_cluster);
+    DEBUG("[FAT32][INIT]: bytes_per_sector: %d\n", f32_fs.bytes_per_sector);
+    DEBUG("[FAT32][INIT]: fat_count: %d\n", f32_fs.fat_count);
+    DEBUG("[FAT32][INIT]: sectors_per_fat %d\n", f32_fs.sectors_per_fat);
+    DEBUG("[FAT32][INIT]: maximum cluster size: %d\n", f32_fs.maximum_cluster_size);
     
-    return 0;
+    return STATUS_OK;
 }
 
-uint32_t fat32_next_cluster(uint32_t cluster) {
-    uint32_t lba = fat32_calculate_lba(cluster);
-    uint32_t fat_offset = fat32_calculate_offset(cluster);
+uint32_t __fat32_next_cluster(uint32_t cluster) {
+    uint32_t lba = __fat32_calculate_lba(cluster);
+    uint32_t fat_offset = __fat32_calculate_offset(cluster);
 
-    DEBUG("[FAT32]: finding next cluster with lba: %d\n", lba);
-    DEBUG("[FAT32]: offset: %d\n", fat_offset);
+    DEBUG("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
+    DEBUG("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
 
     uint8_t buf[FAT32_SECTOR_SIZE];
     
     if(ata_read_sector(lba, buf) == -1) {
-        DEBUG("[FAT32]: could not read sector with lba: %d\n", lba);
-        return 0;
+        DEBUG("[FAT32][NEXT_CLUSTER]: could not read sector with lba: %d\n", lba);
+        return INVALID_CLUSTER;
     }
     uint32_t *buf_ptr = (uint32_t*) buf; 
     uint32_t entry = buf_ptr[fat_offset / FAT32_FAT_ENTRY_SIZE];
@@ -83,21 +84,21 @@ uint32_t fat32_next_cluster(uint32_t cluster) {
     return (entry & FAT32_CLUSTER_MASK);
 }
 
-int fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
-    uint32_t cluster_sector = fat32_cluster_to_sector(cluster);
+int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
+    uint32_t cluster_sector = __fat32_cluster_to_sector(cluster);
     for(uint8_t i = 0; i < f32_fs.sectors_per_cluster; i++) {
         if(ata_read_sector((cluster_sector + i), (buf + i * FAT32_SECTOR_SIZE)) == -1) {
-            DEBUG("[FAT32]: reading clusters went wrong. Aborting \n");
-            return -1;
+            DEBUG("[FAT32][READ_CLUSTER]: reading clusters went wrong. Aborting \n");
+            return STATUS_ERROR;
         }
     }
-    return 0;
+    return STATUS_OK;
 }
 
 void fat32_list_dir(uint32_t cluster) {
     uint8_t buf[FAT32_SECTOR_SIZE];
 
-    fat32_read_cluster(cluster, buf);
+    __fat32_read_cluster(cluster, buf);
 
     fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
 
@@ -105,15 +106,15 @@ void fat32_list_dir(uint32_t cluster) {
         if(dir_entry[i].name[0] == FAT32_DIRENT_FREE) break;
         if(dir_entry[i].name[0] == FAT32_DIRENT_DELETED) continue;
         if ((dir_entry[i].attributes & 0x0F) == 0x0F) continue;
-        DEBUG("[FAT32]: name: %.8s.%.3s\n", dir_entry[i].name, dir_entry[i].ext);
-        DEBUG("[FAT32]: dir size: %d\n", dir_entry[i].size);
+        DEBUG("[FAT32][LIST_DIR]: name: %.8s.%.3s\n", dir_entry[i].name, dir_entry[i].ext);
+        DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
-    DEBUG("[FAT32]: searching for more clusters\n");
-    uint32_t next_cluster = fat32_next_cluster(cluster);
+    DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
+    uint32_t next_cluster = __fat32_next_cluster(cluster);
     if(next_cluster >= FAT32_CLUSTER_EOC_MIN) return;
 
-    DEBUG("[FAT32]: More clusters found at %d\n", next_cluster);
+    DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
     fat32_list_dir(next_cluster);
 }
 
@@ -123,16 +124,16 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
     uint32_t cluster_size = f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
     uint32_t current_cluster = start_cluster;
     while(1) {
-        fat32_read_cluster(current_cluster, buf + bytes_read);
+        __fat32_read_cluster(current_cluster, buf + bytes_read);
         bytes_read += cluster_size;
         
         if(bytes_read >= size) break;
-        uint32_t next = fat32_next_cluster(current_cluster);
+        uint32_t next = __fat32_next_cluster(current_cluster);
         if(next >= FAT32_CLUSTER_EOC_MIN) break;
         current_cluster = next;
     }
 
-    return 0;
+    return STATUS_OK;
 }
 
 int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uint32_t *out_cluster, uint32_t *out_size) {
@@ -140,11 +141,11 @@ int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uin
     uint32_t current = dir_cluster;
     uint32_t cluster_size = (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE;
 
-    DEBUG("[FAT32]: current cluster: %d\n", current);
-    DEBUG("[FAT32]: cluster size %d\n", cluster_size);
+    DEBUG("[FAT32][FIND_FILE]: current cluster: %d\n", current);
+    DEBUG("[FAT32][FIND_FILE]: cluster size %d\n", cluster_size);
 
     while(1) {
-        fat32_read_cluster(current, buf);
+        __fat32_read_cluster(current, buf);
         fat32_dirent_t* dir_entry = (fat32_dirent_t*)buf;
 
         for(int i = 0; i < cluster_size; i++) {
@@ -154,37 +155,38 @@ int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uin
             if(memcmp(dir_entry[i].name, name, 8) == 0 && memcmp(dir_entry[i].ext,  ext, 3) == 0) {
                 *out_cluster = (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
                 *out_size = dir_entry[i].size;
-                DEBUG("[FAT32]: file found!\n");
-                DEBUG("[FAT32]: cluster: %d\n", *out_cluster);
-                DEBUG("[FAT32]: size: %d\n", *out_size);
-                return 0;
+                DEBUG("[FAT32][FIND_FILE]: file found!\n");
+                DEBUG("[FAT32][FIND_FILE]: cluster: %d\n", *out_cluster);
+                DEBUG("[FAT32][FIND_FILE]: size: %d\n", *out_size);
+                return STATUS_OK;
             }
         }
 
         //DEBUG("[FAT32]: getting next cluster\n");
-        uint32_t next_cluster = fat32_next_cluster(current);
-        DEBUG("[FAT32]: Next cluster number: %d\n", next_cluster);
+        uint32_t next_cluster = __fat32_next_cluster(current);
+        DEBUG("[FAT32][FIND_FILE]: Next cluster number: %d\n", next_cluster);
 
         if(next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG("[FAT32]: End of the cluster chain\n");
-            return -1;
+            DEBUG("[FAT32][FIND_FILE]: End of the cluster chain\n");
+            return STATUS_ERROR;
         }
         current = next_cluster;
     }
     
     //DEBUG("[FAT32]: \n");
-    return -1;
+    return STATUS_ERROR;
 }
 
-uint32_t fat32_alloc_cluster(void) {
+uint32_t __fat32_alloc_cluster(void) {
     uint8_t buf[FAT32_SECTOR_SIZE];
 
+     
     uint32_t starting_sector_index = f32_fs.last_allocated_cluster / FAT32_ENTRIES_PER_SECTOR;
 
     for(int i = starting_sector_index; i < f32_fs.sectors_per_fat; i++) {
         if(ata_read_sector((f32_fs.fat_start + i), buf) == -1) {
             DEBUG("[FAT32][ALLOC_CLUSTER]: Could read sector. Stopping cluster allocation\n");
-            return 0;    
+            return INVALID_CLUSTER;    
         }
         uint32_t *ptr = (uint32_t*)buf;
     
@@ -200,7 +202,7 @@ uint32_t fat32_alloc_cluster(void) {
                    ata_write_sector(f32_fs.fat_start + f32_fs.sectors_per_fat + i, buf) == -1) {
                     DEBUG("[FAT32][ALLOC_CLUSTER]: Could not write to sector. Stopping cluster allocation\n");
                     ptr[j] = FAT32_CLUSTER_FREE;
-                    return 0;
+                    return INVALID_CLUSTER;
                 }
 
                 f32_fs.last_allocated_cluster = cluster_index; //save index of last allocated cluster so that next allocation can continue from it.
@@ -210,32 +212,28 @@ uint32_t fat32_alloc_cluster(void) {
         }
     }
     DEBUG("[FAT32][ALLOC_CLUSTER]: Allocation failed. Could not find free spot\n");
-    return 0;
+    return INVALID_CLUSTER;
 }
 
-uint32_t fat32_unalloc_cluster(uint32_t cluster) {
-    //todo::o00
-}
-
-int fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
-    uint32_t lba = fat32_cluster_to_sector(cluster);
+int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
+    uint32_t lba = __fat32_cluster_to_sector(cluster);
     for(int i = 0; i < f32_fs.sectors_per_cluster; i++) {
         if(ata_write_sector(lba + i, buf + i * FAT32_SECTOR_SIZE) == -1) {
             DEBUG("[FAT32][WRITE_CLUSTER]: Could not write to sector.\n");
-            return -1;
+            return STATUS_ERROR;
         }
     } 
-    return 0;
+    return STATUS_OK;
 }
 
-int fat32_set_cluster(uint32_t cluster, uint32_t value) {
+int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
     uint8_t buf[FAT32_SECTOR_SIZE];
-    uint32_t lba = fat32_calculate_lba(cluster);
-    uint32_t fat_offset = fat32_calculate_offset(cluster);
+    uint32_t lba = __fat32_calculate_lba(cluster);
+    uint32_t fat_offset = __fat32_calculate_offset(cluster);
  
     if(ata_read_sector(lba, buf) == -1) {
         DEBUG("[FAT32][SET_CLUSTER]: Could not read sector with lba: %d\n", lba);
-        return -1;
+        return STATUS_ERROR;
     }
 
     uint32_t *buf_ptr = (uint32_t *)buf;
@@ -243,10 +241,10 @@ int fat32_set_cluster(uint32_t cluster, uint32_t value) {
 
     if(ata_write_sector(lba, buf) == -1 ||
         ata_write_sector(lba + f32_fs.sectors_per_fat, buf) == -1) {
-        return -1;
+        return STATUS_ERROR;
     }
     
-    return 0;
+    return STATUS_OK;
 }
 
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
@@ -254,15 +252,18 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
     uint32_t first_cluster = 0, prev_cluster = 0;
 
     for(uint32_t i = 0; i < clusters_needed; i++) {
-        uint32_t new_cluster = fat32_alloc_cluster();
-        if(new_cluster == -1) return 0;
+        uint32_t new_cluster = __fat32_alloc_cluster();
+        if(new_cluster == -1) return INVALID_CLUSTER;
 
         if(prev_cluster != 0) {
-            if(fat32_set_cluster(prev_cluster,new_cluster) == -1) return 0;
+            if(__fat32_set_cluster(prev_cluster,new_cluster) == STATUS_ERROR) return INVALID_CLUSTER;
         }
         
         if(first_cluster == 0) first_cluster = new_cluster;
-        fat32_write_cluster(new_cluster, buf + (i * FAT32_SECTOR_SIZE));
+        if(__fat32_write_cluster(new_cluster, buf + (i * FAT32_SECTOR_SIZE)) == STATUS_ERROR) {
+            __fat32_unalloc_cluster(new_cluster);
+            return STATUS_ERROR;
+        }
 
         prev_cluster = new_cluster;
     }
@@ -271,7 +272,7 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 }
 
 
-int fat32_format_83(const char *filename, uint8_t *dst) {
+int __fat32_format_83(const char *filename, uint8_t *dst) {
     memset(dst, FAT32_83_PAD, 11);
 
     int index_of_dot = -1;
@@ -282,7 +283,7 @@ int fat32_format_83(const char *filename, uint8_t *dst) {
         }
     }
 
-    if(index_of_dot == -1) return -1;
+    if(index_of_dot == -1) return STATUS_ERROR;
     
     for(uint8_t i = 0; i < index_of_dot; i++) {
         if(i == 8) break;
@@ -301,15 +302,15 @@ int fat32_format_83(const char *filename, uint8_t *dst) {
         dst[8 + i] = filename[index_of_dot + 1 + i];
     }
 
-    return 0;
+    return STATUS_OK;
 }
 
 int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t first_cluster, uint32_t size) {
     uint8_t buf[FAT32_SECTOR_SIZE];
 
-    if(fat32_read_cluster(dir_cluster, buf) == -1) {
+    if(__fat32_read_cluster(dir_cluster, buf) == STATUS_ERROR) {
         DEBUG("[FAT32][CREATE_DIRENT]: Could not read cluster\n");
-        return -1;
+        return STATUS_ERROR;
     }
     
     fat32_dirent_t *entry = (fat32_dirent_t *)buf;
@@ -317,7 +318,7 @@ int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t fir
 
     for(uint8_t i = 0; i < cluster_length; i++) {
         if(entry[i].name[0] == FAT32_DIRENT_FREE || entry[i].name[0] == FAT32_DIRENT_DELETED) {
-            if(fat32_format_83(filename, entry[i].name) == -1) return -1;
+            if(__fat32_format_83(filename, entry[i].name) == -1) return -1;
             entry[i].attributes = FAT32_ATTR_ARCHIVE;
             memset(entry[i].reserved, 0, sizeof(entry[i].reserved));
             entry[i].cluster_low = first_cluster & 0xFFFF;
@@ -326,10 +327,18 @@ int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t fir
             entry[i].time = 0;
             entry[i].date = 0;
 
-            if(fat32_write_cluster(dir_cluster, buf) == -1) return -1;
-            return 0;
+            if(__fat32_write_cluster(dir_cluster, buf) == STATUS_ERROR) return STATUS_ERROR;
+            return STATUS_OK;
         }
     }
 
-    return -1;
+    return STATUS_ERROR;
+}
+
+uint32_t __fat32_unalloc_cluster(uint32_t cluster) {
+    if(__fat32_set_cluster(cluster, FAT32_CLUSTER_FREE) == STATUS_ERROR) {
+        DEBUG("[FAT32][UNALLOC_CLUSTER]: Invalid cluster. Could not unallocate");
+        return INVALID_CLUSTER;
+    }
+    return STATUS_OK;
 }

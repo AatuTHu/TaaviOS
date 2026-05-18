@@ -41,12 +41,16 @@
 #define GDT_FLAGS_32BIT      0x04
 #define GDT_FLAGS_4K_GRAN    0x08
 
+
 #define PIT_FREQUENCY 1000
 #define MAX_PROCESSES 256
+#define USER_PROCESS 1
+#define KERNEL_PROCESS 0
 
 #define HEAP_PAGES 256
 #define HEAP_START 0xD0000000
 
+/*  */
 #define PAGE_SIZE 4096
 #define MAX_PAGES (1024 * 1024)
 #define CONVENTIONAL_MEMORY_KB  1024
@@ -58,8 +62,6 @@
 #define PAGE_USER_RW  (PAGE_PRESENT | PAGE_RW | PAGE_USER) //previous flags in one
 #define EFLAGS_IF (1 << 9) //interrupts flag
 #define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
-#define USER_PROCESS 1
-#define KERNEL_PROCESS 0
 
 #define KERNEL_STACK_SIZE 4096
 #define USER_STACK_SIZE (4096 * 4)
@@ -73,5 +75,11 @@
 #define KERNEL_VIRTUAL_START (KERNEL_VIRTUAL_BASE + KERNEL_PHYSICAL_ADDRESS)
 
 #define HEAP_MAGIC 0xDEADBEEF
+
+#define STATUS_OK       0
+#define STATUS_ERROR   -1
+
+#define INVALID_CLUSTER 0
+#define INVALID_LBA     0
 
 #endif

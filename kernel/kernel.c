@@ -84,6 +84,8 @@ void init_drivers() {
     }
 
     fat32_init(fat32_lba);
+
+    fat32_list_dir(f32_fs.root_cluster);
     /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;
     
