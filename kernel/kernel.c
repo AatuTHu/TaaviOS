@@ -84,19 +84,25 @@ void init_drivers() {
     }
 
     fat32_init(fat32_lba);
-    uint32_t file_cluster = 0;
+    /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;
-    if (fat32_find_file(f32_fs.root_cluster, "HELLO   ", "TXT", &file_cluster, &file_size) == 0) {
+    
+    uint8_t data[] = "Hello from Carrots OS!";
+    uint32_t size = sizeof(data) -1;
+    
+    uint32_t cluster = fat32_write_file(data, size);
+    fat32_create_dirent(f32_fs.root_cluster, "helli.txt", cluster, size);
+
+
+    if (fat32_find_file(f32_fs.root_cluster, "HELLI   ", "TXT", &file_cluster, &file_size) == 0) {
         DEBUG("[FAT32]: Found file! cluster: %d size: %d\n", file_cluster, file_size);
         uint8_t file_buf[512];
         fat32_read_file(file_cluster, file_size, file_buf);
         file_buf[file_size] = '\0';
-        DEBUG("[FAT32]: contents: %s", file_buf);
+        DEBUG("[FAT32]: contents: %s\n", file_buf);
     } else {
         DEBUG("[FAT32]: File not found!\n");
-    }
-
-    //uint32_t new_cluster = fat32_alloc_cluster(); //AI ALLOCATED TWO CLUSTER FROM THE START 5,6 WROTE NOTHING TO THEM
+    }*/
 }
 
 void kernel_main(uint32_t *mboot_info) {

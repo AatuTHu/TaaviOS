@@ -6,7 +6,7 @@ LOG_LEVEL ?= 2
 CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
 		 -Ikernel/include/mm -Ikernel/include/tcb -Ikernel/include/loader -Ikernel \
-		 -Ikernel/include/usermode \
+		 -Ikernel/include/usermode -Ikernel/include/fs \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
 		 -mno-sse -mno-sse2 -mno-mmx \
@@ -28,22 +28,21 @@ $(BUILD)/%.o: %.asm
 $(BUILD)/carrots.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 iso: $(BUILD)/carrots.bin
-	$(MAKE) -C userspace/init
-	$(MAKE) -C userspace/shell
+	$(MAKE) -C userspace
 	mkdir -p isodir/boot/grub
 	cp $(BUILD)/carrots.bin isodir/boot/
-	cp userspace/init/init.elf isodir/boot/
-	cp userspace/shell/shell.elf isodir/boot/
+	cp userspace/build/bin/*.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/carrots.iso isodir
+	
 run: iso
 	qemu-system-i386 \
 		-drive file=$(BUILD)/carrots.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
 		-drive file=disk.img,format=raw,if=ide,bus=0,unit=1,media=disk \
 		-boot d -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
+
 clean:
-	$(MAKE) -C userspace/init clean
-	$(MAKE) -C userspace/shell clean
+	$(MAKE) -C userspace clean
 	find . -name '*.o' -delete
 	rm -f carrots.bin carrots.iso
 	rm -rf $(BUILD) isodir
