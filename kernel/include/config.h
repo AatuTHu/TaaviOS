@@ -82,4 +82,6 @@
 #define INVALID_CLUSTER 0
 #define INVALID_LBA     0
 
+#define INVALID_PHYSICAL_PAGE 0xFFFFFFFF
+
 #endif

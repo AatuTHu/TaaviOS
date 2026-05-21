@@ -55,18 +55,18 @@ bool elf_check_supported(Elf32_Ehdr *hdr) {
 	return true;
 }
 
-uint32_t elf_load(void *data, page_directory_t *page_dir) {
+int elf_load(void *data, page_directory_t *page_dir) {
 
 	DEBUG("[ELF]: starting load\n");
     Elf32_Ehdr *header_data = (Elf32_Ehdr *)data;
 
 
     if(!elf_check_file(header_data)) {     
-        return 0;
+        return STATUS_ERROR;
     }
 
     if(!elf_check_supported(header_data)) {
-        return 0;
+        return STATUS_ERROR;
     }
 
     for(uint16_t i = 0; i < header_data->e_phnum; i++) {
@@ -74,23 +74,37 @@ uint32_t elf_load(void *data, page_directory_t *page_dir) {
 
         if(phdr->p_type != PT_LOAD) continue;
 
-        uint32_t pages = (phdr->p_memsz + PAGE_SIZE-1) / PAGE_SIZE;
 
+        uint32_t pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
+		uint32_t size = (phdr->p_memsz + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+		
+		if(vmm_alloc(page_dir, phdr->p_vaddr, size, PAGE_USER | PAGE_PRESENT) == STATUS_ERROR) {
+			DEBUG("[ELF]: virtual memory allocation failed\n");
+			return STATUS_ERROR;
+		}
+		
+		
         for(uint32_t j = 0; j < pages; j++) {
-            uint32_t phys = pmm_alloc();
-			DEBUG("[ELF] PT_LOAD vaddr=0x%x filesz=%d memsz=%d\n", phdr->p_vaddr, phdr->p_filesz, phdr->p_memsz);
-            paging_map(page_dir, phdr->p_vaddr + j * PAGE_SIZE, phys, PAGE_USER | PAGE_PRESENT);
-
+			//uint32_t phys = pmm_alloc();
+			//DEBUG("[ELF] PT_LOAD vaddr=0x%x filesz=%d memsz=%d\n", phdr->p_vaddr, phdr->p_filesz, phdr->p_memsz);
+            //paging_map(page_dir, phdr->p_vaddr + j * PAGE_SIZE, phys, PAGE_USER | PAGE_PRESENT);
+			
             uint32_t file_offset = phdr->p_offset + j * PAGE_SIZE;
             uint32_t copied = j * PAGE_SIZE;
             uint32_t to_copy = 0;
-
+			
             if(copied < phdr->p_filesz) {
-                to_copy = phdr->p_filesz - copied;
+				to_copy = phdr->p_filesz - copied;
                 if(to_copy > PAGE_SIZE) to_copy = PAGE_SIZE;
             }
-
+			
             uint32_t to_zero = PAGE_SIZE - to_copy;
+			
+			uint32_t phys = vmm_get_phys(page_dir, phdr->p_vaddr + j * PAGE_SIZE);
+			if(phys == INVALID_PHYSICAL_PAGE) {
+				DEBUG("[ELF]: Invalid physical page given. Aborting\n");
+				return STATUS_ERROR;
+			}
 
             memcpy((void*)phys_to_virt(phys), (uint8_t*)data + file_offset, to_copy);
             memset((void*)(phys_to_virt(phys) + to_copy), 0, to_zero);

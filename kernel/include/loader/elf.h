@@ -71,6 +71,6 @@ typedef struct {
 	Elf32_Word		p_align;
 } Elf32_Phdr;
 
-uint32_t elf_load(void *data, page_directory_t *dir);
+int elf_load(void *data, page_directory_t *dir);
 
 #endif

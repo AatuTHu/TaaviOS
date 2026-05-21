@@ -87,14 +87,14 @@ void paging_init() {
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
     if (!dir) {
         ERROR("[PAGING] No directory given, cant give physical page\n");
-        return 0;
+        return INVALID_PHYSICAL_PAGE; //Kinda not the right word. But if directory missing we cant give a valid page? I think this is right.
     }
     DEBUG("[PAGING]: getting physical location for page directory: %x, with virt: %d\n", (uint32_t)dir, virt);
     uint32_t pd_index = virt >> 22;
     DEBUG("[PAGING]: page directory index: %d\n", pd_index);
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {
         DEBUG("[PAGING] page not found\n");
-        return 0;
+        return INVALID_PHYSICAL_PAGE;
     } 
 
 

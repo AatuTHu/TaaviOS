@@ -61,3 +61,7 @@ void vmm_switch(page_directory_t *dir) {
 page_directory_t *vmm_create_directory(void) {
     return paging_create_directory();
 }
+
+uint32_t vmm_get_phys(page_directory_t *dir, uint32_t virt) {
+    return paging_get_phys(dir, virt);
+}
