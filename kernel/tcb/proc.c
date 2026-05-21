@@ -34,12 +34,10 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     }
 
     if(proc_mode == USER_PROCESS) {
-        int response = vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW);
-        if(response != 0) return NULL;
+        if(vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW) == STATUS_ERROR) return NULL;
     }
 
     uint32_t kernel_stack = pmm_alloc(); //allocate a physical page so that it is reality
-
     if(kernel_stack == 0) return NULL;
 
     memset(&proc->context, 0, sizeof(struct registers));
