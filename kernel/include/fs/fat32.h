@@ -93,19 +93,19 @@ int      fat32_init(uint32_t partition_lba);
 void     fat32_list_dir(uint32_t cluster);
 int      fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uint32_t *out_cluster, uint32_t *out_size);
 int      fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf);
-uint32_t __fat32_next_cluster(uint32_t cluster);
-int      __fat32_read_cluster(uint32_t cluster, uint8_t *buf);
+//uint32_t __fat32_next_cluster(uint32_t cluster);
+//int      __fat32_read_cluster(uint32_t cluster, uint8_t *buf);
 
 /* Write */
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size);
 int      fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t first_cluster, uint32_t size);
-int      __fat32_write_cluster(uint32_t cluster, const uint8_t *buf);
-int     __fat32_alloc_cluster(void);
-int      __fat32_set_cluster(uint32_t cluster, uint32_t value);
-int      __fat32_format_83(const char *filename, uint8_t *dst);
+//int      __fat32_write_cluster(uint32_t cluster, const uint8_t *buf);
+//uint32_t __fat32_alloc_cluster(void);
+//int      __fat32_set_cluster(uint32_t cluster, uint32_t value);
+//int      __fat32_format_83(const char *filename, uint8_t *dst);
 
 /* DELETE */
-uint32_t __fat32_unalloc_cluster(uint32_t cluster);
+//uint32_t __fat32_unalloc_cluster(uint32_t cluster);
 
 extern fat32_fs_t f32_fs;
 

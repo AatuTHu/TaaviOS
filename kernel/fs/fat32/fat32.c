@@ -75,20 +75,22 @@ int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
 }
 
 
-int __fat32_alloc_cluster(void) {
+uint32_t __fat32_alloc_cluster(void) {
     uint8_t buf[FAT32_SECTOR_SIZE];
 
-     
-    uint32_t starting_sector_index = f32_fs.last_allocated_cluster / FAT32_ENTRIES_PER_SECTOR;
+    uint32_t starting_sector_index    = f32_fs.last_allocated_cluster / FAT32_ENTRIES_PER_SECTOR; // Since we saved last allocated cluster, we can calculate the sector from which to continue
+    uint32_t proposed_starting_offset = f32_fs.last_allocated_cluster % FAT32_ENTRIES_PER_SECTOR; // Calculate offset for the sector
 
     for(int i = starting_sector_index; i < f32_fs.sectors_per_fat; i++) {
         if(ata_read_sector((f32_fs.fat_start + i), buf) == -1) {
             DEBUG("[FAT32][ALLOC_CLUSTER]: Could read sector. Stopping cluster allocation\n");
-            return STATUS_ERROR;    
+            return INVALID_CLUSTER;    
         }
         uint32_t *ptr = (uint32_t*)buf;
-    
-        for(int j = 0; j < FAT32_ENTRIES_PER_SECTOR; j++) {
+        
+        uint32_t real_offset_start = (i == starting_sector_index) ? proposed_starting_offset : 0;
+
+        for(int j = real_offset_start; j < FAT32_ENTRIES_PER_SECTOR; j++) {
             if(i == 0 && j < 2) continue;
             if((ptr[j] & FAT32_CLUSTER_MASK) == FAT32_CLUSTER_FREE ) {
                 uint32_t cluster_index = (i * FAT32_ENTRIES_PER_SECTOR) + j;
@@ -100,7 +102,7 @@ int __fat32_alloc_cluster(void) {
                    ata_write_sector(f32_fs.fat_start + f32_fs.sectors_per_fat + i, buf) == -1) {
                     DEBUG("[FAT32][ALLOC_CLUSTER]: Could not write to sector. Stopping cluster allocation\n");
                     ptr[j] = FAT32_CLUSTER_FREE;
-                    return STATUS_ERROR;
+                    return INVALID_CLUSTER;
                 }
 
                 f32_fs.last_allocated_cluster = cluster_index; //save index of last allocated cluster so that next allocation can continue from it.
@@ -110,7 +112,7 @@ int __fat32_alloc_cluster(void) {
         }
     }
     DEBUG("[FAT32][ALLOC_CLUSTER]: Allocation failed. Could not find free spot\n");
-    return STATUS_ERROR;
+    return INVALID_CLUSTER;
 }
 
 int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
@@ -301,7 +303,7 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 
     for(uint32_t i = 0; i < clusters_needed; i++) {
         uint32_t new_cluster = __fat32_alloc_cluster();
-        if(new_cluster == -1) {
+        if(new_cluster == INVALID_CLUSTER) {
             DEBUG("[FAT32][WRITE_FILE]: Did not receive a cluster. Aborting\n");
             return INVALID_CLUSTER;
         }
