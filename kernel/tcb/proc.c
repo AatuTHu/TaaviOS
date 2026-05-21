@@ -71,7 +71,7 @@ void process_destroy(proc_t *proc, uint8_t proc_mode) {
     DEBUG("[PROC]: Destroyn process: %s \n", proc->name);
     process_table[proc->pid] = NULL;
     DEBUG("[PROC]: Freeing virtual memory \n");
-    proc_mode == USER_PROCESS ? vmm_free(proc->page_dir, USER_STACK_TOP, USER_STACK_SIZE) : NULL;
+    proc_mode == USER_PROCESS ? vmm_free_user_space(proc->page_dir) : NULL;
     DEBUG("[PROC]: Freeing kernel_stack\n");
     uint32_t phys = virt_to_phys(proc->kernel_stack - KERNEL_STACK_SIZE);
     pmm_free(phys);

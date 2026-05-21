@@ -1,5 +1,6 @@
 #include "vmm.h"
 #include "pmm.h"
+#include "mm.h"
 #include "config.h"
 #include "klog.h"
 
@@ -52,6 +53,34 @@ void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
         virt += PAGE_SIZE;
     }
     DEBUG("[VMM]: Pages freed\n");
+}
+
+void vmm_free_user_space(page_directory_t *dir) {
+    
+    DEBUG("[VMM]: Freeing userspace directory. \n");
+
+    if (!dir) {
+        ERROR("[VMM]: DIRECTORY NOT GIVEN ABORTING\n");
+        return;
+    }
+
+    uint32_t size = KERNEL_VIRTUAL_BASE >> 22; //768
+    uint32_t entries_per_page = PAGE_SIZE / 4;
+
+    for(int i = 0; i < size; i++) {
+        if(!((*dir)[i] & PAGE_PRESENT)) continue;
+        uint32_t pt_phys = (*dir)[i] & ~0xFFF;
+        uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
+        for(uint32_t j = 0; j < entries_per_page ; j++) {
+            if(pt[j] & PAGE_PRESENT) {
+                pmm_free(pt[j] & ~0xFFF);
+            }
+        }
+        pmm_free(pt_phys);
+        (*dir)[i] = 0;
+    }
+
+    DEBUG("[VMM]: Userspace directory freed\n");
 }
 
 void vmm_switch(page_directory_t *dir) {
