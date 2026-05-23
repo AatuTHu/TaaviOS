@@ -211,18 +211,18 @@ void fat32_list_dir(uint32_t cluster) {
         DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
-    kfree(buf);
 
     DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
     uint32_t next_cluster = __fat32_next_cluster(cluster);
 
     if(next_cluster >= FAT32_CLUSTER_EOC_MIN) {
+        DEBUG("[FAT32][LIST_DIR]: End of the chain reached\n");
         kfree(buf);
         return;
     }
 
-    kfree(buf);
     DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
+    kfree(buf);
     fat32_list_dir(next_cluster);
 } //list_dir
 
@@ -332,14 +332,14 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 
 
 int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t first_cluster, uint32_t size) {
-    //uint32_t cluster_size = __fat32_calculate_cluster_size();
-    //uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
-    uint8_t buf[FAT32_SECTOR_SIZE];
-    //if(!buf) return STATUS_ERROR;
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
+    //uint8_t buf[FAT32_SECTOR_SIZE];
+    if(!buf) return STATUS_ERROR;
 
     if(__fat32_read_cluster(dir_cluster, buf) == STATUS_ERROR) {
         DEBUG("[FAT32][CREATE_DIRENT]: Could not read cluster\n");
-        //kfree(buf);
+        kfree(buf);
         return STATUS_ERROR;
     }
     
@@ -358,12 +358,12 @@ int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t fir
             entry[i].date = 0;
 
             if(__fat32_write_cluster(dir_cluster, buf) == STATUS_ERROR) return STATUS_ERROR;
-            //kfree(buf);
+            kfree(buf);
             return STATUS_OK;
         }
     }
 
-    //kfree(buf);
+    kfree(buf);
     return STATUS_ERROR;
 } //create_dirent
 
