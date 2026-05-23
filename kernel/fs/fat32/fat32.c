@@ -189,15 +189,15 @@ int __fat32_format_83(const char *filename, uint8_t *dst) {
 
 
 void fat32_list_dir(uint32_t cluster) {
-    //uint32_t cluster_size = __fat32_calculate_cluster_size();
-    //uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
-    uint8_t buf[FAT32_SECTOR_SIZE];
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
+    //uint8_t buf[FAT32_SECTOR_SIZE];
 
-    //if(!buf) return;
+    if(!buf) return;
 
     if(__fat32_read_cluster(cluster, buf) == STATUS_ERROR) {
         DEBUG("[FAT32][LIST_DIR]: Could not read cluster. Aborting\n");
-        //kfree(buf);
+        kfree(buf);
         return;
     }
 
@@ -211,15 +211,17 @@ void fat32_list_dir(uint32_t cluster) {
         DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
-    //kfree(buf);
+    kfree(buf);
 
     DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
     uint32_t next_cluster = __fat32_next_cluster(cluster);
+
     if(next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-        //kfree(buf);
+        kfree(buf);
         return;
     }
 
+    kfree(buf);
     DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
     fat32_list_dir(next_cluster);
 } //list_dir
@@ -245,11 +247,11 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
 
 
 int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uint32_t *out_cluster, uint32_t *out_size) {
-   // uint32_t cluster_size = __fat32_calculate_cluster_size();
-   // uint8_t buf = (uint8_t *)kmalloc(cluster_size);
-   uint8_t buf[FAT32_SECTOR_SIZE];
+   uint32_t cluster_size = __fat32_calculate_cluster_size();
+   uint8_t buf = (uint8_t *)kmalloc(cluster_size);
+   //uint8_t buf[FAT32_SECTOR_SIZE];
 
-   // if(!buf) return STATUS_ERROR;
+    if(!buf) return STATUS_ERROR;
     uint32_t current = dir_cluster;
     uint32_t dirent_size = (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE;
 
@@ -259,7 +261,7 @@ int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uin
     while(1) {
         if(__fat32_read_cluster(current, buf) == STATUS_ERROR) {
             DEBUG("[FAT32][FIND_FILE]: Could not read cluster\n");
-            //kfree(buf);
+            kfree(buf);
             return STATUS_ERROR;
         }
         fat32_dirent_t* dir_entry = (fat32_dirent_t*)buf;
@@ -274,7 +276,7 @@ int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uin
                 DEBUG("[FAT32][FIND_FILE]: file found!\n");
                 DEBUG("[FAT32][FIND_FILE]: cluster: %d\n", *out_cluster);
                 DEBUG("[FAT32][FIND_FILE]: size: %d\n", *out_size);
-                //kfree(buf);
+                kfree(buf);
                 return STATUS_OK;
             }
         }
@@ -284,13 +286,13 @@ int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uin
 
         if(next_cluster >= FAT32_CLUSTER_EOC_MIN) {
             DEBUG("[FAT32][FIND_FILE]: End of the cluster chain\n");
-            //kfree(buf);
+            kfree(buf);
             return STATUS_ERROR;
         }
         current = next_cluster;
     }
 
-    //kfree(buf);
+    kfree(buf);
     return STATUS_ERROR;
 } //find_file
 

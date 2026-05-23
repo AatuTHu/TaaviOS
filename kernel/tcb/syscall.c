@@ -2,15 +2,15 @@
 #include "vga.h"
 #include "proc.h"
 #include "sched.h"
-#include "paging.h"
-#include "gdt.h"
-#include "pit.h"
+//#include "paging.h"
+//#include "gdt.h"
+//#include "pit.h"
 #include "klog.h"
 #include "elf.h"
 #include "vmm.h"
 #include "config.h"
 #include "keyboard.h"
-#include "kernel_idle.h"
+#include "idle_task.h"
 
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
@@ -30,7 +30,7 @@ static int32_t sys_exit(struct registers *r) {
     int remaining_tasks = scheduler_get_task_count();
 
     if(remaining_tasks == 0) {
-        r->eip  = (uint32_t)kernel_idle;
+        r->eip  = (uint32_t)idle;
         r->useresp = 0; 
         r->cs      = SEG_KERNEL_CODE;
         r->ss      = SEG_KERNEL_DATA;

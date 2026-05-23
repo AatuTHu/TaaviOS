@@ -4,7 +4,7 @@
 #include "kstring.h"
 #include "tss.h"
 #include "vmm.h"
-#include "kernel_idle.h"
+#include "idle_task.h"
 #include "print_register.h"
 #include <stddef.h>
 
@@ -324,6 +324,6 @@ void _set_scheduler_on() {
 
 void scheduler_init() {
     DEBUG("[SCHEDULER][INIT]: Creating an idle kernel process\n");
-    proc_t *idle_task = process_create((uint32_t)kernel_idle, "idle", &kernel_page_dir, KERNEL_PROCESS);
+    proc_t *idle_task = process_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_PROCESS);
     DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");
 }

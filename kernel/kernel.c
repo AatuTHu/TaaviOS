@@ -85,7 +85,6 @@ void init_drivers() {
 
     fat32_init(fat32_lba);
 
-    fat32_list_dir(f32_fs.root_cluster);
     /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;
     
@@ -150,6 +149,8 @@ void kernel_main(uint32_t *mboot_info) {
     
     
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+
+    fat32_list_dir(f32_fs.root_cluster);
 
     proc_t *first_proc = NULL;
 
