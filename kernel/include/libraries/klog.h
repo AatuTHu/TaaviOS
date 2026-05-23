@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-// Prototypes: Tell the compiler these exist in klog.c
 void klog(const char* fmt, ...);
 void klog_debug(const char* fmt, ...);
 void klog_error(const char* fmt, ...);
@@ -12,7 +11,6 @@ void klog_error(const char* fmt, ...);
 #define LOG_ERROR 1
 #define LOG_DEBUG 2
 
-// Fix: Point DEBUG to klog_debug, not 'c'
 #if LOG_LEVEL >= LOG_DEBUG
     #define DEBUG(fmt, ...) klog_debug(fmt, ##__VA_ARGS__)
 #else

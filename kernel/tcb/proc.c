@@ -28,7 +28,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     page_directory_t *virt_dir = NULL;
 
     if(page_dir == NULL) {
-        virt_dir = paging_create_directory();
+        virt_dir = vmm_create_directory();
     } else {
         virt_dir = page_dir;
     }

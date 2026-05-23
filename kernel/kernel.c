@@ -21,6 +21,7 @@
 #include "io.h"
 #include "mbr.h"
 #include "fat32.h"
+#include "fs_task.h"
 
 #define MAX_MODS 10
 uint32_t module_starts[MAX_MODS];
@@ -111,25 +112,12 @@ void init_filesystems() {
     }*/
 }
 
-void kernel_main(uint32_t *mboot_info) {
+void init_kernel_tasks() {
+    fs_init();
+    process_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_PROCESS);
+}
 
-    set_print_level(2);
-
-    init_serial_and_vga();
-
-    init_mm(mboot_info);
-    check_for_modules(mboot_info);
-    
-    init_arch();
-    init_drivers();
-    init_filesystems();
-    
-    //DEBUG("[KERBEL]: Initializing heap memory\n");
-    kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
-    
-    scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
-    syscall_init();
-
+void draw_logo() {
     vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     klog("----------------------------------------------------------------------------\n");
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
@@ -148,15 +136,35 @@ void kernel_main(uint32_t *mboot_info) {
     klog("                              |=|   |==|  |====|    |=|     |=====|        \n");
     vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
     klog("---------------------------------------------------------------------------\n");
-    
-    
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
+}
+
+void kernel_main(uint32_t *mboot_info) {
+
+    set_print_level(2);
+
+    init_serial_and_vga();
+
+    init_mm(mboot_info);
+    check_for_modules(mboot_info);
+    
+    init_arch();
+    init_drivers();
+    init_filesystems();
+    
+    kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
+    
+    scheduler_init();
+    syscall_init();
+    init_kernel_tasks();
+
+    draw_logo();
 
 
     proc_t *first_proc = NULL;
 
     if(total_mods > 0) {
-        page_directory_t *init_pd = paging_create_directory();
+        page_directory_t *init_pd = vmm_create_directory();
         uint32_t init_phys = module_starts[0];
         uint32_t entry = elf_load((void*)phys_to_virt(init_phys), init_pd);
         if(entry == ET_NONE) {
@@ -171,14 +179,11 @@ void kernel_main(uint32_t *mboot_info) {
     }
 
     if(total_mods > 1) {
-        page_directory_t *shell_pd = paging_create_directory();
-        page_directory_t *shell_pd2 = paging_create_directory();
+        page_directory_t *shell_pd = vmm_create_directory();
         uint32_t shell_phys = module_starts[1];
-        uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd); 
-        uint32_t entry2 = elf_load((void*)phys_to_virt(shell_phys), shell_pd2);    
+        uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd);    
         if (entry != ET_NONE) {
             process_create(entry, "shell", shell_pd, USER_PROCESS);
-            process_create(entry, "shell2", shell_pd2, USER_PROCESS);
         }
     }
 
