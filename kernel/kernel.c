@@ -114,7 +114,8 @@ void init_filesystems() {
 
 void init_kernel_tasks() {
     fs_init();
-    process_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_PROCESS);
+    proc_t *fs_task = process_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_PROCESS);
+    scheduler_add(fs_task);
 }
 
 void draw_logo() {

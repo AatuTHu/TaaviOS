@@ -6,7 +6,7 @@
 #include "idt.h"
 
 void scheduler_tick(struct registers *r);
-void scheduler_block_task(struct registers *r);
+void scheduler_block_task();
 void scheduler_init(void);
 void scheduler_add(proc_t *proc);
 void scheduler_kill_task();
@@ -19,6 +19,7 @@ int  scheduler_get_task_count();
 int scheduler_find_next_task();
 int scheduler_find_first_task_based_on_state(process_state_t state);
 int scheduler_does_exist(int pid);
+int scheduler_get_idx_off_pid(int pid);
 proc_t *scheduler_get_current_task();
 int scheduler_has_runnable_task();
 

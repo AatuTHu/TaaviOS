@@ -3,10 +3,20 @@
 
 #include <stdint.h>
 
-typedef struct fs_task_t {
-    uint32_t mem_start;
-    uint32_t mem_end;
-} fs_task_t;
+typedef enum  {
+    PENDING,
+    IN_PROGRESS,
+    COMPLETE,
+} fs_task_queue_status_t;
+
+typedef struct fs_task_queue_t {
+    uint32_t caller_pid;
+    uint8_t  request_type;
+    char     path[128];
+    uint32_t fd;
+    uint8_t  status;
+
+} fs_task_queue_t;
 
 void fs_init();
 void fs_task_loop();

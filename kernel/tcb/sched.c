@@ -107,7 +107,7 @@ void _scheduler_remove_task() {
     process_destroy(tasks[delete_candidate], USER_PROCESS);
     tasks[delete_candidate] = NULL;
    
-   DEBUG("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
+    DEBUG("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
     for (int i = delete_candidate; i < task_count - 1; i++) {
         tasks[i] = tasks[i + 1];
     }
@@ -247,12 +247,9 @@ void scheduler_kill_task() {
     }
 }
 
-void scheduler_block_task(struct registers *r) {
-    //DEBUG("[SCHEDULER][block_task]: Blocking task: %s\n", tasks[current_idx]->name);
+void scheduler_block_task() {
     if(tasks[current_idx]->state != PROCESS_BLOCKED && tasks[current_idx]->state != PROCESS_DEAD) {
         tasks[current_idx]->state = PROCESS_BLOCKED;
-        //DEBUG("[CONTEXT_SWITCH]: saving %s at EIP=%x\n", tasks[current_idx]->name, r->eip);
-        //memcpy(&tasks[current_idx]->context, r, sizeof(struct registers));
     }
 }
 
@@ -314,6 +311,15 @@ int scheduler_does_exist(int pid) {
     }
     //DEBUG("[SCHEDULER]: Task does not exists\n");
     return 0;
+}
+
+int scheduler_get_idx_off_pid(int pid) {
+     for(int i = 1; i <= task_count; i++) { 
+        int pids_idx = (current_idx + i) % task_count;
+        if (tasks[pids_idx]->pid == pid) {
+            return pids_idx;      
+        }
+    }
 }
 
 void _set_scheduler_on() {
