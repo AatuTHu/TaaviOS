@@ -39,6 +39,9 @@ void init_arch() {
     tss_init();
     idt_init();
     paging_init();
+
+    DEBUG("[KERNEL]: Allocating kernel page directory\n");
+    vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
 }
 
 void init_mm(uint32_t *mboot_info) {
@@ -73,18 +76,20 @@ void check_for_modules (uint32_t *mboot_info) {
 void init_drivers() {
     keyboard_init();
     ata_init();
-    DEBUG("[ATA]: Status at init: %x\n", inb(ATA_STATUS));
-    DEBUG("[ATA]: Alt status: %x\n", inb(ATA_ALT_STATUS));
-
+    
+}
+        
+void init_filesystems() {
     uint32_t fat32_lba = 0;
     uint32_t fat32_sectors = 0;
 
     if (mbr_find_fat32(&fat32_lba, &fat32_sectors) != 0) {
         DEBUG("[MBR]: FAT32 partition not found!\n");
     }
-
     fat32_init(fat32_lba);
 
+    //fat32_list_dir(f32_fs.root_cluster);
+    
     /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;
     
@@ -93,16 +98,16 @@ void init_drivers() {
     
     uint32_t cluster = fat32_write_file(data, size);
     fat32_create_dirent(f32_fs.root_cluster, "helli.txt", cluster, size);
-
-
+    
+    
     if (fat32_find_file(f32_fs.root_cluster, "HELLI   ", "TXT", &file_cluster, &file_size) == 0) {
         DEBUG("[FAT32]: Found file! cluster: %d size: %d\n", file_cluster, file_size);
         uint8_t file_buf[512];
         fat32_read_file(file_cluster, file_size, file_buf);
         file_buf[file_size] = '\0';
         DEBUG("[FAT32]: contents: %s\n", file_buf);
-    } else {
-        DEBUG("[FAT32]: File not found!\n");
+        } else {
+            DEBUG("[FAT32]: File not found!\n");
     }*/
 }
 
@@ -115,17 +120,14 @@ void kernel_main(uint32_t *mboot_info) {
     init_mm(mboot_info);
     check_for_modules(mboot_info);
     
-    
     init_arch();
     init_drivers();
+    init_filesystems();
     
-    vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
-    
+    //DEBUG("[KERBEL]: Initializing heap memory\n");
     kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
     
-
     scheduler_init(); //this does nothing yet, but could set something later. Now only a klog inside it
-    
     syscall_init();
 
     vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
@@ -150,7 +152,6 @@ void kernel_main(uint32_t *mboot_info) {
     
     vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
 
-    fat32_list_dir(f32_fs.root_cluster);
 
     proc_t *first_proc = NULL;
 
