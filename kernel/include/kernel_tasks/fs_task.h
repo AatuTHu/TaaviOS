@@ -2,6 +2,7 @@
 #define FS_TASK_H
 
 #include <stdint.h>
+#include "config.h"
 
 typedef enum  {
     PENDING,
@@ -15,7 +16,7 @@ typedef struct fs_task_queue_t {
     char     path[128];
     uint32_t fd;
     uint8_t  status;
-
+    
 } fs_task_queue_t;
 
 void fs_init();

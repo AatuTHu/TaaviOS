@@ -13,6 +13,7 @@ void scheduler_kill_task();
 void _scheduler_remove_task();
 void _set_scheduler_on();
 void scheduler_set_task_ready();
+void scheduler_set_task_sleeping();
 void scheduler_wake_task(int pid);
 void scheduler_switch_context(struct registers *r, int idx);
 int  scheduler_get_task_count();

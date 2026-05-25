@@ -10,6 +10,7 @@ typedef enum {
     PROCESS_READY,
     PROCESS_RUNNING,
     PROCESS_BLOCKED,
+    PROCESS_SLEEPING,
     PROCESS_DEAD
 } process_state_t;
 
@@ -28,6 +29,7 @@ typedef struct proc_t {
     uint8_t                 started;
     uint8_t                 priority;
     struct registers        context;
+    uint8_t                 proc_mode;
 } proc_t;
 
 proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t proc_mode);

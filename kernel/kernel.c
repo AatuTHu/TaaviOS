@@ -22,6 +22,7 @@
 #include "mbr.h"
 #include "fat32.h"
 #include "fs_task.h"
+#include "idle_task.h"
 
 #define MAX_MODS 10
 uint32_t module_starts[MAX_MODS];
@@ -113,8 +114,12 @@ void init_filesystems() {
 }
 
 void init_kernel_tasks() {
+    DEBUG("[SCHEDULER][INIT]: Creating an idle kernel process\n");
+    proc_t *idle_task = process_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_PROCESS);
+    
     fs_init();
     proc_t *fs_task = process_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_PROCESS);
+    scheduler_add(idle_task);
     scheduler_add(fs_task);
 }
 

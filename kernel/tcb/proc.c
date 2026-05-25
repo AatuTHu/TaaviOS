@@ -43,7 +43,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     memset(&proc->context, 0, sizeof(struct registers));
     
     proc->pid            = slot;
-    proc->state          = PROCESS_READY;
+    proc->state          = proc_mode == USER_PROCESS ? PROCESS_READY : PROCESS_SLEEPING;
     proc->page_dir       = virt_dir;
     proc->started        = 0;
     
@@ -58,6 +58,7 @@ proc_t *process_create(uint32_t entry, const char *name, page_directory_t *page_
     proc->context.ebp    = proc->context.useresp; //stack bottom. Same as top in the begining. No plate you know
     proc->context.esp    = 0;//proc->context.useresp;
     proc->context.eflags = EFLAGS_DEFAULT;
+    proc->proc_mode      = proc_mode; //can be usefull later?
     
     process_table[slot]  = proc;
 

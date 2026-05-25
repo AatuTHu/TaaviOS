@@ -20,13 +20,14 @@ static int current_idx = -1;
 volatile static uint8_t scheduler_on = 0;
 
 int scheduler_find_next_task() {
+    __asm__ __volatile__("cli");
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
             if (tasks[next_idx]->priority == PRIORITY_HIGH) {
                 return next_idx;
             }
     }
-    
+
     if(dead_task_count > 0) {
         DEBUG("[SCHEDULER][SEARCH]: Searching for someone to clean up tasks\n");
         for(int i = 1; i <= task_count; i++) { 
@@ -44,7 +45,6 @@ int scheduler_find_next_task() {
             return next_idx;      
         }
     }
-    
 
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
@@ -52,6 +52,8 @@ int scheduler_find_next_task() {
                 return next_idx;
             }
     }
+
+    __asm__ __volatile__("sti");
     return -1;
 }
 
@@ -80,7 +82,7 @@ int scheduler_find_first_task_based_on_state(process_state_t state) {
 *   Fourth we find the idx which corresponds to our next_pid
 */
 void _scheduler_remove_task() {
-  
+    
     //edge case for when there is only one task and it is dead
     if(tasks[current_idx]->state == PROCESS_DEAD && task_count == 1 && dead_task_count == 1) {
         DEBUG("[SCHEDULER][REMOVE]: Deleting the only task in the scheduler.\n");
@@ -129,8 +131,16 @@ void _scheduler_remove_task() {
 *   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
 */
 void scheduler_switch_context(struct registers *r, int idx) { 
+    __asm__ __volatile__("cli");
+    if(scheduler_on == 0) {
+        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: scheudler_on: %d\n", scheduler_on);
+    }
 
-    if(scheduler_on == 0 || idx < 0 || idx >= MAX_PROCESSES) return;
+    if(idx < 0 || idx >= MAX_PROCESSES) {
+        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: CANNOT SWITCH CONTEXT\n");
+        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: trying to switch to idx: %d\n", idx);
+        return;
+    }
 
     proc_t *current = tasks[current_idx];
     if(current != NULL) {
@@ -156,6 +166,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
             next->state = PROCESS_RUNNING;
         }
     }
+    __asm__ __volatile__("sti");
 }
 
 
@@ -167,7 +178,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
 * Fourth see if next idx is the same as now. if it is then no need to switch context.
 */
 void scheduler_tick(struct registers *r) {
-    
+    __asm__ __volatile__ ("cli");
     if(current_idx == -1 || task_count == 0 || scheduler_on == 0) return;
 
     proc_t *current = scheduler_get_current_task();
@@ -202,11 +213,11 @@ void scheduler_tick(struct registers *r) {
         DEBUG("[SCHEDULER][TICK]: No new task found, fetching idle task to run.\n");
         proc_t *idle_task = get_proc_by_name("idle");
         if(idle_task != NULL) {
-            DEBUG("[SCHEDULER][TICK]: Adding idle to scheduler\n");
-            scheduler_add(idle_task);
-            next_idx = scheduler_find_next_task();
+            DEBUG("[SCHEDULER][TICK]: Waking idle task\n");
+            idle_task->state = PROCESS_READY;
+            next_idx = scheduler_get_idx_off_pid(idle_task->pid);
         }
-        //return;
+       // return;
     }
     
     proc_t *next = tasks[next_idx];
@@ -214,15 +225,15 @@ void scheduler_tick(struct registers *r) {
     if(next == NULL || next->state == PROCESS_BLOCKED || next->state == PROCESS_DEAD) return;
 
     next->state = PROCESS_RUNNING;
-
+    
     if(next_idx != current_idx) {
-        //DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
+        DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
         current_idx = next_idx;
         vmm_switch(next->page_dir);
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }
-
+    __asm__ __volatile__ ("sti");
 }
 
 
@@ -251,6 +262,10 @@ void scheduler_block_task() {
     if(tasks[current_idx]->state != PROCESS_BLOCKED && tasks[current_idx]->state != PROCESS_DEAD) {
         tasks[current_idx]->state = PROCESS_BLOCKED;
     }
+}
+
+void scheduler_set_task_sleeping() {
+    tasks[current_idx]->state = PROCESS_SLEEPING;
 }
 
 void scheduler_set_task_ready() {
@@ -290,7 +305,7 @@ void scheduler_add(proc_t *task) {
         return;
     }
 
-    if(scheduler_does_exist(task->pid) == 0) {
+    if(scheduler_does_exist(task->pid) != -1) {
         tasks[task_count] = task;
         task_count++;
         if(current_idx == -1) {
@@ -305,8 +320,8 @@ void scheduler_add(proc_t *task) {
 int scheduler_does_exist(int pid) {
     for(int i = 0; i < task_count; i++) {
         if(tasks[i]->pid == pid) {
-            DEBUG("[SCHEDULER]: Task exists\n");
-            return 1;
+            DEBUG("[SCHEDULER][DOES_EXIST]: Task exists\n");
+            return -1;
         }
     }
     //DEBUG("[SCHEDULER]: Task does not exists\n");
@@ -329,7 +344,5 @@ void _set_scheduler_on() {
 
 
 void scheduler_init() {
-    DEBUG("[SCHEDULER][INIT]: Creating an idle kernel process\n");
-    proc_t *idle_task = process_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_PROCESS);
     DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");
 }
