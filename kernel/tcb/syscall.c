@@ -1,10 +1,7 @@
 #include "syscall.h"
 #include "vga.h"
-#include "proc.h"
+#include "task.h"
 #include "sched.h"
-//#include "paging.h"
-//#include "gdt.h"
-//#include "pit.h"
 #include "klog.h"
 #include "elf.h"
 #include "vmm.h"
@@ -22,7 +19,7 @@ static int32_t sys_exit(struct registers *r) {
 
     scheduler_kill_task();
     
-    proc_t *current = scheduler_get_current_task();
+    task_t *current = scheduler_get_current_task();
 
     if(get_foreground_pid() == current->pid) {
         DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
@@ -44,7 +41,7 @@ static int32_t sys_write(struct registers *r) {
     if (fd == 1 || fd == 2) { // STDOUT or STDERR
         vga_write(buf);
     } else {
-        proc_t *current = scheduler_get_current_task();
+        task_t *current = scheduler_get_current_task();
         scheduler_block_task();
         add_request_to_queue(current->pid, 1, fd," ",buf);
     }
@@ -55,13 +52,13 @@ static int32_t sys_write(struct registers *r) {
 
 static int32_t sys_getpid(struct registers *r) {
     (void)r;
-    proc_t *proc = scheduler_get_current_task();
-    return (proc) ? (int32_t)proc->pid : -1;
+    task_t *task = scheduler_get_current_task();
+    return (task) ? (int32_t)task->pid : -1;
 } //sys_getpid
 
 static int32_t sys_read(struct registers *r) {
 
-    proc_t *current = scheduler_get_current_task();
+    task_t *current = scheduler_get_current_task();
 
     if (!current) {
         DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
@@ -95,7 +92,7 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     }
 
-    if(current->state != PROCESS_BLOCKED) {
+    if(current->state != TASK_BLOCKED) {
         scheduler_block_task();
         r->eax = 0;
         int next_idx = scheduler_find_next_task();
@@ -108,12 +105,12 @@ static int32_t sys_read(struct registers *r) {
 static int sys_exec(struct registers *r) {
     DEBUG("[SYSCALL][SYS_EXEC]\n");
     char *filename = (char *)r->ecx;
-    proc_t *proc = get_proc_by_name(filename);
-    if(proc == NULL) {
+    task_t *task = get_task_by_name(filename);
+    if(task == NULL) {
         return 0;
     }
     
-    scheduler_add(proc);
+    scheduler_add(task);
     int next_idx = scheduler_find_next_task();
     scheduler_switch_context(r, next_idx);
     return 1;

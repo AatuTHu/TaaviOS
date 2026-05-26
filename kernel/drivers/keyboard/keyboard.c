@@ -11,7 +11,7 @@ static keyboard_buffer_t *keyboard_buffer = &kbd_buf_instance;
 static int shift_pressed = 0;
 static int caps_lock_pressed = 0;
 static int waiting_queue_count = 0;
-static int waiting_queue[MAX_PROCESSES];
+static int waiting_queue[MAX_TASKS];
 
 
 void keyboard_irq_handler(void) {

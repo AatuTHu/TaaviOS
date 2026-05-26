@@ -3,7 +3,7 @@
 #include "config.h"
 #include "klog.h"
 #include "sched.h"
-#include "proc.h"
+#include "task.h"
 
 
 irq_callback_t irq_callbacks[16] = {0};
@@ -18,7 +18,7 @@ void isr_handler(struct registers *r) {
     __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
 
     int is_user = (r->cs & 0x3) == 3;
-    proc_t *current = scheduler_get_current_task();
+    task_t *current = scheduler_get_current_task();
 
     klog("\n");
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");

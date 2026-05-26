@@ -10,7 +10,7 @@
 #include "paging.h"
 #include "vmm.h"
 #include "kmalloc.h"
-#include "proc.h"
+#include "task.h"
 #include "sched.h"
 #include "usermode.h"
 #include "stddef.h"
@@ -114,13 +114,14 @@ void init_filesystems() {
 }
 
 void init_kernel_tasks() {
-    DEBUG("[SCHEDULER][INIT]: Creating an idle kernel process\n");
+    DEBUG("[SCHEDULER][INIT]: Creating an idle kernel task\n");
+    task_t *idle_task = task_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_TASK);
     fs_init();
-    proc_t *fs_task = process_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_PROCESS);
-    proc_t *idle_task = process_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_PROCESS);
+    DEBUG("[SCHEDULER][INIT]: Creating an filesystem kernel task\n");
+    task_t *fs_task = task_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_TASK);
     
-    scheduler_add(fs_task);
     scheduler_add(idle_task);
+    scheduler_add(fs_task);
 }
 
 void draw_logo() {
@@ -167,7 +168,7 @@ void kernel_main(uint32_t *mboot_info) {
     draw_logo();
 
 
-    proc_t *first_proc = NULL;
+    task_t *first_task = NULL;
 
     if(total_mods > 0) {
         page_directory_t *init_pd = vmm_create_directory();
@@ -177,10 +178,10 @@ void kernel_main(uint32_t *mboot_info) {
             DEBUG("[KERNEL]: ELF load failed!\n");
         } else {
             DEBUG("[KERNEL]: ELF loaded.\n");
-            DEBUG("[KERNEL]: Creating init process\n");
-            first_proc = process_create(entry, "init", init_pd, USER_PROCESS);
-            first_proc->priority = PRIORITY_LOW;
-            scheduler_add(first_proc);
+            DEBUG("[KERNEL]: Creating init task\n");
+            first_task = task_create(entry, "init", init_pd, USER_TASK);
+            first_task->priority = PRIORITY_LOW;
+            scheduler_add(first_task);
         }
     }
 
@@ -189,7 +190,7 @@ void kernel_main(uint32_t *mboot_info) {
         uint32_t shell_phys = module_starts[1];
         uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd);    
         if (entry != ET_NONE) {
-            process_create(entry, "shell", shell_pd, USER_PROCESS);
+            task_create(entry, "shell", shell_pd, USER_TASK);
         }
     }
 
@@ -197,11 +198,11 @@ void kernel_main(uint32_t *mboot_info) {
     
     __asm__ __volatile__("sti");
     
-    if(first_proc != NULL) {
+    if(first_task != NULL) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         _set_scheduler_on();
-        vmm_switch(first_proc->page_dir);
-        DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x\n", first_proc->context.eip, first_proc->context.useresp);
-        enter_usermode(first_proc->context.eip, first_proc->context.useresp, first_proc->kernel_stack);
+        vmm_switch(first_task->page_dir);
+        DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x\n", first_task->context.eip, first_task->context.useresp);
+        enter_usermode(first_task->context.eip, first_task->context.useresp, first_task->kernel_stack);
     }
 }
