@@ -127,7 +127,7 @@ void _scheduler_remove_task() {
 }
 
 /*
-*   If scheduler is not on go to sleep. This is because in kernelmain when we jump to usermode we jump with a task that is added to scheduler.
+*   If scheduler is not on go to sleep. This is because in kernel main when we jump to usermode we jump with a task that is added to scheduler.
 *   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
 */
 void scheduler_switch_context(struct registers *r, int idx) { 
@@ -191,12 +191,14 @@ void scheduler_tick(struct registers *r) {
         if(current->state == TASK_RUNNING) {
             current->state = TASK_READY;
         }
-        if(current->pid == 0 && task_count == 1 && dead_task_count == 0) {
+
+        //LEGACY CODE FOR NOW KEEPING IT FOR ISNPIRATION
+        /*if(current->pid == 0 && task_count == 1 && dead_task_count == 0) {
             DEBUG("[SCHEDULER][TICK]: idle is the only task remaining. Shutting down\n");
             scheduler_kill_task();
             _scheduler_remove_task();
             __asm__ __volatile__("sti; hlt");
-        }
+        }*/
     }
     current->started = 1;
     
@@ -228,7 +230,7 @@ void scheduler_tick(struct registers *r) {
     next->state = TASK_RUNNING;
     
     if(next_idx != current_idx) {
-        DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
+        //DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
         current_idx = next_idx;
         vmm_switch(next->page_dir);
         tss_set_kernel_stack(next->kernel_stack);

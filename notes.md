@@ -13,6 +13,8 @@
 * if called it is running and high?
 *  Filesystems job is to keep sysfile updated? Sysfile has info on the system? Otherwise its job is to find and show directories and files?
 
+- progress on the above. I have created filesystem task which is opened and can receive requests from userspace. What I need to do now is to make better sys_write before I continue to make fs_task more. Userspace also. There is a elephant in the room tho. Shell is blocked, but it can be unblocked by typing even is fs_task is still doing it's thing
+
 
 1. NO MAGIC NUMBERS semi done
 2. vga assigns itselft to a memory addrres without using vmm. paging inits vga tho. Not good.
