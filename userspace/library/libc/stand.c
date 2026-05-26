@@ -3,10 +3,18 @@
 #include "string.h"
 
 void write(const char *msg) {
-    sys_write(msg, 1);
+    sys_write(msg, strlen(msg), 1);
+}
+
+void fwrite(int fd, const char *msg) {
+    sys_write(msg, strlen(msg), 4);
 }
 
 int read(char *buf) {
+    return sys_read(buf, 1);
+}
+
+int fread(char *buf) {
     return sys_read(buf, 1);
 }
 

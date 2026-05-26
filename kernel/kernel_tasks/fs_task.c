@@ -3,6 +3,7 @@
 #include "sched.h"
 #include "klog.h"
 #include "kstring.h"
+#include "kmalloc.h"
 
 static int request_queue_count = -1;
 static int last_request_index = -1;
@@ -53,17 +54,23 @@ void fs_remove_from_queue() {
 
 
 //reguest types can be 1 write, 2 read, 3 update and 4 delete
-//Pid is the id from the caller and target is naturally the file
-int add_request_to_queue(uint32_t pid, uint8_t request_type, const char* target) {
+//Pid is the id from the caller and path is naturally the file
+int add_request_to_queue(uint32_t pid, uint8_t request_type, uint32_t fd, const char* path, char *buf) {
+
+    DEBUG("[FS_TASK][artq]: %d\n", pid);
+    DEBUG("[FS_TASK][artq]: %d\n", request_type);
+
     fs_task_queue_t *new_request = (fs_task_queue_t *)kmalloc(sizeof(fs_task_queue_t));
 
     new_request->caller_pid = pid;
     new_request->request_type = request_type;
-    strncpy(new_request->path, target, sizeof(new_request->path));
+    strncpy(new_request->path, path, sizeof(new_request->path));
+    new_request->fd = fd;
     new_request->status = PENDING;
 
     request_queue_count++;
     request_queue[request_queue_count] = new_request;
+    
 }
 
 fs_task_queue_t *find_next_request() {
@@ -94,8 +101,9 @@ fs_task_queue_t *find_next_request() {
 }
 
 void fs_task_loop() {
-    DEBUG("[FS_TASK]: First time running\n");
+    DEBUG("[FS_TASK]: \n");
     while(1) {
+        
         if(request_queue_count != -1) {
             fs_task_queue_t *request = NULL;
     
@@ -129,11 +137,9 @@ void fs_task_loop() {
         * close / delete
         */
        
-       DEBUG("[FS_TASK][LOOP]: No requests or servicing required. Activating blankie protocol\n");
+       //DEBUG("[FS_TASK][LOOP]: No requests or servicing required. Activating blankie protocol\n");
+       //proc_t *self = scheduler_get_current_task();
        scheduler_set_task_sleeping();
-       proc_t *self = scheduler_get_current_task();
-       int next_idx = scheduler_find_next_task();
-       scheduler_switch_context(&self->context, next_idx);
     }
 }
 

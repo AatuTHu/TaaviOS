@@ -136,12 +136,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
         DEBUG("[SCHEDULER][CONTEXT_SWITCH]: scheudler_on: %d\n", scheduler_on);
     }
 
-    if(idx < 0 || idx >= MAX_PROCESSES) {
-        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: CANNOT SWITCH CONTEXT\n");
-        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: trying to switch to idx: %d\n", idx);
-        return;
-    }
-
+    
     proc_t *current = tasks[current_idx];
     if(current != NULL) {
         //DEBUG("[SCHEDULER][CONTEXT_SWITCH]: saving: %s\n", current->name);
@@ -152,7 +147,13 @@ void scheduler_switch_context(struct registers *r, int idx) {
             current->state = PROCESS_READY;
         }
     }
-
+    
+    if(idx < 0 || idx >= MAX_PROCESSES) {
+        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: CANNOT SWITCH CONTEXT\n");
+        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: trying to switch to idx: %d\n", idx);
+        return;
+    }
+    
     proc_t *next = tasks[idx];
 
     if(current_idx != idx) {
@@ -178,7 +179,7 @@ void scheduler_switch_context(struct registers *r, int idx) {
 * Fourth see if next idx is the same as now. if it is then no need to switch context.
 */
 void scheduler_tick(struct registers *r) {
-    __asm__ __volatile__ ("cli");
+    __asm__ __volatile__("cli");
     if(current_idx == -1 || task_count == 0 || scheduler_on == 0) return;
 
     proc_t *current = scheduler_get_current_task();
@@ -233,7 +234,7 @@ void scheduler_tick(struct registers *r) {
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }
-    __asm__ __volatile__ ("sti");
+    __asm__ __volatile__("sti");
 }
 
 
@@ -265,6 +266,7 @@ void scheduler_block_task() {
 }
 
 void scheduler_set_task_sleeping() {
+    DEBUG("[SCHEDULER][SLEEPING]: Setting task %s sleeping\n", tasks[current_idx]->name);
     tasks[current_idx]->state = PROCESS_SLEEPING;
 }
 

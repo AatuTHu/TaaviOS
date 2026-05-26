@@ -11,11 +11,13 @@
 #include "config.h"
 #include "keyboard.h"
 #include "idle_task.h"
+#include "fs_task.h"
 
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
+    __asm__ __volatile__("cli");
     DEBUG("[SYSCALL][SYSEXIT]\n");
 
     scheduler_kill_task();
@@ -26,20 +28,10 @@ static int32_t sys_exit(struct registers *r) {
         DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
         set_foreground_pid(-1);
     }
-    
-    int remaining_tasks = scheduler_get_task_count();
-
-    if(remaining_tasks == 0) {
-        r->eip  = (uint32_t)idle;
-        r->useresp = 0; 
-        r->cs      = SEG_KERNEL_CODE;
-        r->ss      = SEG_KERNEL_DATA;
-        return 0;
-    }
 
     int next_idx = scheduler_find_next_task();
     scheduler_switch_context(r, next_idx);
-
+    __asm__ __volatile__("sti");
     return 0;
 } //sys_exit
 
@@ -50,9 +42,14 @@ static int32_t sys_write(struct registers *r) {
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
     
     if (fd == 1 || fd == 2) { // STDOUT or STDERR
-        //DEBUG("[SYS_WRITE]: writing '%s'\n", buf);
         vga_write(buf);
+    } else {
+        proc_t *current = scheduler_get_current_task();
+        scheduler_block_task();
+        add_request_to_queue(current->pid, 1, fd," ",buf);
     }
+
+
     return len;
 } //sys_write
 
@@ -76,7 +73,7 @@ static int32_t sys_read(struct registers *r) {
     }
     
     if(get_foreground_pid() != current->pid) {
-        scheduler_block_task(r);
+        scheduler_block_task();
         add_to_waiting_queue(current->pid);
         int next_idx = scheduler_find_next_task();
         scheduler_switch_context(r, next_idx);
@@ -99,7 +96,7 @@ static int32_t sys_read(struct registers *r) {
     }
 
     if(current->state != PROCESS_BLOCKED) {
-        scheduler_block_task(r);
+        scheduler_block_task();
         r->eax = 0;
         int next_idx = scheduler_find_next_task();
         scheduler_switch_context(r, next_idx);

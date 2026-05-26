@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 void write(const char *msg);
+void fwrite(int fd, const char *msg);
 int read(char *buf);
 int exec(const char *filename);
 int get_pid();

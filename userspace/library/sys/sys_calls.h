@@ -1,7 +1,7 @@
 #ifndef SYS_CALLS_H
 #define SYS_CALLS_H
 
-void sys_write(const char *msg, int len);
+void sys_write(const char *msg, int len, int fd);
 
 void sys_exit(void);
 

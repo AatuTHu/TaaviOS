@@ -42,11 +42,16 @@ void command_exec(const char *filename) {
     write("\n");
 }
 
+void command_wake() {
+    fwrite(4,"wake!");
+}
+
 void exec_cmd(char *buf) {
     if(str_eq(buf, "help") == 1) command_help();
     if(str_eq(buf, "about") == 1) command_about();
     if(str_eq(buf, "get pid") == 1) command_get_pid();
     if(str_eq(buf, "exit") == 1) command_exit();
+    if(str_eq(buf, "wake") == 1) command_wake();
     if(str_starts_with(buf, "exec ")==1) {
         command_exec(buf + 5);
         return;
