@@ -7,10 +7,11 @@
 
 static int request_queue_count = -1;
 static int last_request_index = -1;
-static fs_task_queue_t *request_queue[MAX_TASKS];
-static const int FS_TASK_QUEUE_SIZE = MAX_TASKS * sizeof(fs_task_queue_t);
+static fs_mailbox_queue *request_queue[MAX_TASKS];
+static const int FS_TASK_QUEUE_SIZE = MAX_TASKS * sizeof(fs_mailbox_queue);
+static const int FS_TASK_TABLE_SIZE = 64 * sizeof(fd_entry_t);
 static const int FS_TASK_BUFFER_SIZE = 4096;
-static const int FS_TASK_REGION_SIZE = FS_TASK_QUEUE_SIZE + FS_TASK_BUFFER_SIZE;
+static const int FS_TASK_REGION_SIZE = FS_TASK_QUEUE_SIZE + FS_TASK_BUFFER_SIZE + FS_TASK_TABLE_SIZE;
 static uint32_t mem_start;
 static uint32_t mem_end;
 
@@ -22,11 +23,11 @@ int check_boundaries(void *ptr, uint32_t size) {
     return STATUS_OK;
 }
 
-void fs_wake_task(fs_task_queue_t *req) {
+void fs_wake_task(fs_mailbox_queue *req) {
     scheduler_wake_task(req->caller_pid);
 }
 
-int fs_handle_request(fs_task_queue_t *req) {
+int fs_handle_request(fs_mailbox_queue *req) {
 
     //stub. to. be. continued
     req->status = COMPLETE;
@@ -55,7 +56,7 @@ int add_request_to_queue(uint32_t pid, uint8_t request_type, uint32_t fd, const 
 
     DEBUG("[FS_TASK][artq]: adding a request for fs_task\n");
 
-    fs_task_queue_t *new_request = (fs_task_queue_t *)kmalloc(sizeof(fs_task_queue_t));
+    fs_mailbox_queue *new_request = (fs_mailbox_queue *)kmalloc(sizeof(fs_mailbox_queue));
 
     new_request->caller_pid = pid;
     new_request->request_type = request_type;
@@ -77,7 +78,7 @@ int add_request_to_queue(uint32_t pid, uint8_t request_type, uint32_t fd, const 
     DEBUG("[FS_TASK][artq]: request added\n");
 }
 
-fs_task_queue_t *find_next_request() {
+fs_mailbox_queue *find_next_request() {
 
     for(int i = 0; i <= request_queue_count; i++) {
         if(request_queue[i]->status == IN_PROGRESS) {
@@ -109,7 +110,7 @@ void fs_task_loop() {
     while(1) {
         
         if(request_queue_count != -1) {
-            fs_task_queue_t *request = NULL;
+            fs_mailbox_queue *request = NULL;
     
             if(last_request_index == -1) {
                 request = find_next_request();

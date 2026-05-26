@@ -26,8 +26,7 @@ static int32_t sys_exit(struct registers *r) {
         set_foreground_pid(-1);
     }
 
-    int next_idx = scheduler_find_next_task();
-    scheduler_switch_context(r, next_idx);
+    scheduler_switch_context(r, scheduler_find_next_task());
     __asm__ __volatile__("sti");
     return 0;
 } //sys_exit
@@ -38,14 +37,22 @@ static int32_t sys_write(struct registers *r) {
     char *buf    = (char *)r->ecx; //ecx has the string
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
     
-    if (fd == 1 || fd == 2) { // STDOUT or STDERR
+    switch (fd)
+    {
+    case 1:
         vga_write(buf);
-    } else {
+        break;
+    case 2:
+        vga_write(buf);
+        break;
+    case 3:
+        
+    default:
         task_t *current = scheduler_get_current_task();
         scheduler_block_task();
         add_request_to_queue(current->pid, 1, fd," ",buf);
+        break;
     }
-
 
     return len;
 } //sys_write
@@ -56,52 +63,63 @@ static int32_t sys_getpid(struct registers *r) {
     return (task) ? (int32_t)task->pid : -1;
 } //sys_getpid
 
+/*
+* 1. get current task. See if there is a foreground pid set. If not then set it as the foregroundpid. Otherwhise add it to keyboard waiting queue and switch context
+* 2. get fd and the buf. See if keyborad buffer has something for it. It it has return it if not then set caller task blocked, set eax to 0 and yield
+*/
 static int32_t sys_read(struct registers *r) {
-
-    task_t *current = scheduler_get_current_task();
-
-    if (!current) {
-        DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-        return -1;
-    }
-
-    if(get_foreground_pid() == -1) {
-        set_foreground_pid(current->pid);
-    }
-    
-    if(get_foreground_pid() != current->pid) {
-        scheduler_block_task();
-        add_to_waiting_queue(current->pid);
-        int next_idx = scheduler_find_next_task();
-        scheduler_switch_context(r, next_idx);
-        return -1;
-    }
 
     int fd    = r->ebx;
     char *buf = (char *)r->ecx;
-    
-    if (fd != 0) {
-        DEBUG("[SYSCALL][SYS_READ]: fd not 0\n");
-        return -1; // Only STDIN (0) supported currently
-    }
-    
 
-    int nread = read_from_keyboard_buffer(buf);
-    if (nread > 0) {
-        //DEBUG("[SYS_READ]: returning char '%c'\n", buf[0]);
-        return nread;
+    switch (fd)
+    {
+    case 0: //stdin
+         task_t *current = scheduler_get_current_task();
+
+        if (!current) {
+            DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
+            return -1;
+        }
+
+         if(get_foreground_pid() == -1) {
+        set_foreground_pid(current->pid);
+        }
+    
+        if(get_foreground_pid() != current->pid) {
+            scheduler_block_task();
+            add_to_waiting_queue(current->pid);
+            int next_idx = scheduler_find_next_task();
+            scheduler_switch_context(r, next_idx);
+            return -1;
+        }
+        
+        int nread = read_from_keyboard_buffer(buf);
+        if (nread > 0) {
+            //DEBUG("[SYS_READ]: returning char '%c'\n", buf[0]);
+            return nread;
+        }
+
+        if(current->state != TASK_BLOCKED) {
+            scheduler_block_task();
+            r->eax = 0;
+            int next_idx = scheduler_find_next_task();
+            scheduler_switch_context(r, next_idx);
+        }
+        break;
+    
+    default:
+        break;
     }
 
-    if(current->state != TASK_BLOCKED) {
-        scheduler_block_task();
-        r->eax = 0;
-        int next_idx = scheduler_find_next_task();
-        scheduler_switch_context(r, next_idx);
-    }
+   
     return 0;
     
 } //sys_read
 
+/*
+*   This is a hack function. Does not really execute elf binaries. I made it for now so that I could test multitasking. NEEDS TO BE FIXED
+*/
 static int sys_exec(struct registers *r) {
     DEBUG("[SYSCALL][SYS_EXEC]\n");
     char *filename = (char *)r->ecx;
@@ -111,15 +129,13 @@ static int sys_exec(struct registers *r) {
     }
     
     scheduler_add(task);
-    int next_idx = scheduler_find_next_task();
-    scheduler_switch_context(r, next_idx);
+    scheduler_switch_context(r, scheduler_find_next_task());
     return 1;
 } //sys_exec
 
 static int32_t sys_yield(struct registers *r) {
     //r->eax = 0;
-    int next_idx = scheduler_find_next_task();
-    scheduler_switch_context(r, next_idx);
+    scheduler_switch_context(r, scheduler_find_next_task());
     return 0;
 } //sys_yield
 
