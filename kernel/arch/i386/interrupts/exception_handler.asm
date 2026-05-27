@@ -1,4 +1,3 @@
-
 %macro ISR_NOERRCODE 1
 global isr%1
 isr%1:
@@ -25,66 +24,63 @@ irq%1:
 extern isr_handler
 extern irq_handler
 
-; ── CPU-poikkeukset (ISR 0–31) ────────────────────────────────────────────────
-; Intel määrittelee nämä. ERRCODE = CPU työntää virhekoodin pinoon automaattisesti.
-
-ISR_NOERRCODE 0   ; #DE — Division Error (div/idiv nollalla tai tulokset liian iso)
-ISR_NOERRCODE 1   ; #DB — Debug (yksittäisaskelus, breakpoint-rekisteri)
-ISR_NOERRCODE 2   ;  NMI — Non-Maskable Interrupt (laitteistovirhe, ei voi estää)
-ISR_NOERRCODE 3   ; #BP — Breakpoint (INT3-käsky, debuggeri käyttää)
-ISR_NOERRCODE 4   ; #OF — Overflow (INTO-käsky, overflow-lippu asetettu)
-ISR_NOERRCODE 5   ; #BR — BOUND Range Exceeded (BOUND-käsky ylittää rajat)
-ISR_NOERRCODE 6   ; #UD — Invalid Opcode (tuntematon käsky tai virheellinen prefiksi)
-ISR_NOERRCODE 7   ; #NM — Device Not Available (FPU-käsky ilman FPU:ta / TS-lippu)
-ISR_ERRCODE    8  ; #DF — Double Fault (poikkeus poikkeuksen käsittelyn aikana)
-ISR_NOERRCODE 9   ;       Coprocessor Segment Overrun (vanhentunut, 486+ ei käytä)
-ISR_ERRCODE    10 ; #TS — Invalid TSS (tehtäväsegmentin virhe, esim. tilasiirto)
-ISR_ERRCODE    11 ; #NP — Segment Not Present (segmentti merkitty ei-läsnäolevaksi)
-ISR_ERRCODE    12 ; #SS — Stack Segment Fault (pino-overflow tai virheellinen SS)
-ISR_ERRCODE    13 ; #GP — General Protection Fault (yleisin suojarikkomus, esim. ring)
-ISR_ERRCODE    14 ; #PF — Page Fault (sivua ei löydy tai oikeusrikkomus, CR2 = osoite)
-ISR_NOERRCODE 15  ;       Varattu Intelille — ei käytetä
-ISR_NOERRCODE 16  ; #MF — x87 Floating-Point Exception (FPU-laskuvirhe)
-ISR_ERRCODE    17 ; #AC — Alignment Check (muistiviittaus väärässä kohdistuksessa)
-ISR_NOERRCODE 18  ; #MC — Machine Check (laitteistovika, malli-spesifi)
-ISR_NOERRCODE 19  ; #XM — SIMD Floating-Point Exception (SSE-laskuvirhe)
-ISR_NOERRCODE 20  ; #VE — Virtualization Exception (EPT-rikkomus, VMX)
-ISR_NOERRCODE 21  ; #CP — Control Protection Exception (CET shadow stack -rikkomus)
-ISR_NOERRCODE 22  ;       Varattu
-ISR_NOERRCODE 23  ;       Varattu
-ISR_NOERRCODE 24  ;       Varattu
-ISR_NOERRCODE 25  ;       Varattu
-ISR_NOERRCODE 26  ;       Varattu
-ISR_NOERRCODE 27  ;       Varattu
+ISR_NOERRCODE 0   ; #DE — Divide Error (div/idiv by zero or result too large)
+ISR_NOERRCODE 1   ; #DB — Debug (single-step, breakpoint register)
+ISR_NOERRCODE 2   ;  NMI — Non-Maskable Interrupt (hardware error, cannot be masked)
+ISR_NOERRCODE 3   ; #BP — Breakpoint (INT3 instruction, used by debuggers)
+ISR_NOERRCODE 4   ; #OF — Overflow (INTO instruction, overflow flag set)
+ISR_NOERRCODE 5   ; #BR — BOUND Range Exceeded (BOUND instruction exceeds bounds)
+ISR_NOERRCODE 6   ; #UD — Invalid Opcode (unknown instruction or invalid prefix)
+ISR_NOERRCODE 7   ; #NM — Device Not Available (FPU instruction without FPU / TS flag)
+ISR_ERRCODE    8  ; #DF — Double Fault (exception during exception handling)
+ISR_NOERRCODE 9   ;       Coprocessor Segment Overrun (deprecated, 486+ does not use)
+ISR_ERRCODE    10 ; #TS — Invalid TSS (task segment error, e.g., state switch)
+ISR_ERRCODE    11 ; #NP — Segment Not Present (segment marked as not present)
+ISR_ERRCODE    12 ; #SS — Stack Segment Fault (stack overflow or invalid SS)
+ISR_ERRCODE    13 ; #GP — General Protection Fault (most common protection violation, e.g., ring)
+ISR_ERRCODE    14 ; #PF — Page Fault (page not found or privilege violation, CR2 = address)
+ISR_NOERRCODE 15  ;       Reserved by Intel — not used
+ISR_NOERRCODE 16  ; #MF — x87 Floating-Point Exception (FPU math error)
+ISR_ERRCODE    17 ; #AC — Alignment Check (misaligned memory reference)
+ISR_NOERRCODE 18  ; #MC — Machine Check (hardware fault, model-specific)
+ISR_NOERRCODE 19  ; #XM — SIMD Floating-Point Exception (SSE math error)
+ISR_NOERRCODE 20  ; #VE — Virtualization Exception (EPT violation, VMX)
+ISR_NOERRCODE 21  ; #CP — Control Protection Exception (CET shadow stack violation)
+ISR_NOERRCODE 22  ;       Reserved
+ISR_NOERRCODE 23  ;       Reserved
+ISR_NOERRCODE 24  ;       Reserved
+ISR_NOERRCODE 25  ;       Reserved
+ISR_NOERRCODE 26  ;       Reserved
+ISR_NOERRCODE 27  ;       Reserved
 ISR_NOERRCODE 28  ; #HV — Hypervisor Injection Exception (AMD SVM)
 ISR_NOERRCODE 29  ; #VC — VMM Communication Exception (AMD SEV-ES)
-ISR_ERRCODE    30 ; #SX — Security Exception (AMD SVM turvallisuusrikkomus)
-ISR_NOERRCODE 31  ;       Varattu
+ISR_ERRCODE    30 ; #SX — Security Exception (AMD SVM security violation)
+ISR_NOERRCODE 31  ;       Reserved
 
-; ── Laitteisto-IRQ:t (IRQ 0–15 → INT 32–47) ──────────────────────────────────
+; ── Hardware IRQs (IRQ 0–15 → INT 32–47) ──────────────────────────────────
 ; PIC remap: Master 0x20–0x27 = INT 32–39, Slave 0x28–0x2F = INT 40–47
 
 IRQ 0,  32  ; PIT  — Programmable Interval Timer (system tick)
-IRQ 1,  33  ; PS/2 — Näppäimistö
-IRQ 2,  34  ; PIC  — Slave-kaskadiline (Master pin 2 → Slave PIC, ei oikea laite)
-IRQ 3,  35  ; UART — COM2 / COM4 sarjaportti
-IRQ 4,  36  ; UART — COM1 / COM3 sarjaportti
-IRQ 5,  37  ;        LPT2 / äänikortti (vaihtelee)
-IRQ 6,  38  ;        Levykeasema (floppy)
-IRQ 7,  39  ;        LPT1 / rinnakkaisportti (spurious IRQ mahdollinen)
+IRQ 1,  33  ; PS/2 — Keyboard
+IRQ 2,  34  ; PIC  — Slave cascade line (Master pin 2 → Slave PIC, not a real device)
+IRQ 3,  35  ; UART — COM2 / COM4 serial port
+IRQ 4,  36  ; UART — COM1 / COM3 serial port
+IRQ 5,  37  ;        LPT2 / sound card (varies)
+IRQ 6,  38  ;        Floppy disk drive
+IRQ 7,  39  ;        LPT1 / parallel port (spurious IRQ possible)
 IRQ 8,  40  ; RTC  — Real-Time Clock
-IRQ 9,  41  ;        ACPI / vapaasti käytettävissä
-IRQ 10, 42  ;        Vapaasti käytettävissä
-IRQ 11, 43  ;        Vapaasti käytettävissä
-IRQ 12, 44  ; PS/2 — Hiiri
-IRQ 13, 45  ; FPU  — Coprocessor / FPU-virhe
-IRQ 14, 46  ; IDE  — Ensisijainen ATA-väylä (primary disk)
-IRQ 15, 47  ; IDE  — Toissijainen ATA-väylä (secondary disk)
+IRQ 9,  41  ;        ACPI / available for use
+IRQ 10, 42  ;        Available for use
+IRQ 11, 43  ;        Available for use
+IRQ 12, 44  ; PS/2 — Mouse
+IRQ 13, 45  ; FPU  — Coprocessor / FPU error
+IRQ 14, 46  ; IDE  — Primary ATA channel (primary disk)
+IRQ 15, 47  ; IDE  — Secondary ATA channel (secondary disk)
 
 isr_common:
     pusha
-    mov eax, esp ;laitetaan eaxiin käyttäjän stääääck
-    push eax
+    mov eax, esp ; Save user stack pointer to eax
+    push eax ; this pushes eax?
     call isr_handler
     add esp, 4
     popa
@@ -93,9 +89,9 @@ isr_common:
 
 irq_common:
     pusha
-    mov eax, esp ;laitetaan eaxiin käyttäjän stääääck
-    push eax ;pusketaan eaxi irq handler funuun.
-    call irq_handler
+    mov eax, esp ; Save user stack pointer to eax
+    push eax ; Push eax into the irq handler function
+    call irq_handler 
     add esp, 4
     popa
     add esp, 8

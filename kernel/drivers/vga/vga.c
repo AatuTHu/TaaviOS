@@ -4,6 +4,11 @@
 
 volatile unsigned short *vga = NULL;
 
+/*
+* This is shit should be rewritten, but it is the first things I wrote
+*/
+
+
 // Default: White (0x0F) on Black (0x00)
 static uint8_t terminal_attribute = 0x0F; 
 
@@ -19,10 +24,13 @@ static uint16_t get_blank_char() {
     return (uint16_t)terminal_attribute << 8 | ' ';
 }
 
+//calculates current cursos position
 int get_terminal_pos() {
     return x_pos + (terminal_width * y_pos);
 }
 
+
+//calculates the "cross" position based on x and y co'oordinates
 int get_pos(int x, int y) {
     return x + (terminal_width * y); 
 }
@@ -57,8 +65,8 @@ void vga_set_color(enum vga_color fg, enum vga_color bg) {
 void vga_init() {
     x_pos = 0;
     y_pos = 0;
-    vga = (volatile unsigned short *)VGA_MEMORY_ADDRESS;
-    clear_terminal();
+    vga = (volatile unsigned short *)VGA_MEMORY_ADDRESS; //hardcode hack
+    //clear_terminal();
 }
 
 void lift_texts_up() {

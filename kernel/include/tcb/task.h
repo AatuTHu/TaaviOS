@@ -6,6 +6,12 @@
 #include "paging.h"
 #include "idt.h"
 
+#define EFLAGS_IF (1 << 9)                                // interrupts flag
+#define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
+#define KERNEL_STACK_SIZE 4096
+#define USER_STACK_SIZE (4096 * 4)
+#define USER_STACK_TOP 0x800000
+
 typedef enum {
     TASK_READY,
     TASK_RUNNING,

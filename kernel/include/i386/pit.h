@@ -2,6 +2,10 @@
 #define PIT_H
 #include <stdint.h>
 
+#define PIT_COMMAND_PORT 0x43
+#define PIT_CHANNEL0_PORT 0x40
+#define PIT_MODE_SQUARE_WAVE 0x36
+#define clock_frequency 1193182
 
 void pit_init(uint32_t frequency);
 void pit_irq_handler(void);

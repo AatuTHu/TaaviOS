@@ -5,7 +5,17 @@
 #include "config.h"
 #include "kmalloc.h"
 
+/*
+* this could be divided in to own crud files for easy of read.
+*/
+
+
 fat32_fs_t f32_fs;
+
+/////////////////////////////////////////////////////////////////////////////////////////////
+/*
+*   Inside calc functions.
+*/
 
 uint32_t __fat32_calculate_lba(uint32_t cluster) {
     DEBUG("[FAT32][CALCULATE_LBA]: calculating cluster number for %d\n", cluster);
@@ -35,6 +45,12 @@ uint32_t __fat32_calculate_offset(uint32_t cluster) {
 uint32_t __fat32_calculate_cluster_size() {
     return f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
 }
+
+//////////////////////////////////////////////////////////////////////////////////
+
+/*
+* inside helpers
+*/
 
 uint32_t __fat32_next_cluster(uint32_t cluster) {
     uint8_t buf[FAT32_SECTOR_SIZE];

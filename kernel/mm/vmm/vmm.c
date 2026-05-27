@@ -15,7 +15,7 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flag
     DEBUG("[VMM]: Size: %d\n", size);
     DEBUG("[VMM]: Flags: %d\n", flags);
 
-    uint32_t n_pages = size / PAGE_SIZE;
+    uint32_t n_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
     DEBUG("[VMM]: Number of pages to be allocated: %d\n", n_pages);
     uint32_t virt_start = virt;
     for(uint32_t i = 0; i < n_pages; i++) {
@@ -23,10 +23,13 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flag
         if(addr == 0) {
             DEBUG("[VMM]: NO PHYSICAL MEMORY LEFT FOR THE ALLOCATION\n");
             DEBUG("[VMM]: STARTING ROLLBACK\n");
-            uint32_t rollback = virt_start;
-            for(int j = i; j >= 0; j--) {
+            while (virt > virt_start) {
+                virt -= PAGE_SIZE;
+                uint32_t phys_addr = paging_get_phys(dir, virt);
+                if (phys_addr != INVALID_PHYSICAL_PAGE) {
+                    pmm_free(phys_addr);
+                }
                 paging_unmap(dir, virt);
-                rollback -= PAGE_SIZE;
             }
             DEBUG("[VMM]: ROLLBACK SUCCESSFUL\n");
             return -1;
@@ -44,7 +47,7 @@ void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
         return;
     }
 
-    uint32_t n_pages = size / PAGE_SIZE;
+    uint32_t n_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
     DEBUG("[VMM]: Number of pages to be freed: %d\n", n_pages);
     for(uint32_t i = 0; i < n_pages; i++) {
         uint32_t phys_addr = paging_get_phys(dir, virt);
@@ -69,11 +72,11 @@ void vmm_free_user_space(page_directory_t *dir) {
 
     for(int i = 0; i < size; i++) {
         if(!((*dir)[i] & PAGE_PRESENT)) continue;
-        uint32_t pt_phys = (*dir)[i] & ~0xFFF;
+        uint32_t pt_phys = (*dir)[i] & ~PAGE_FLAGS_MASK;
         uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
         for(uint32_t j = 0; j < entries_per_page ; j++) {
             if(pt[j] & PAGE_PRESENT) {
-                pmm_free(pt[j] & ~0xFFF);
+                pmm_free(pt[j] & ~PAGE_FLAGS_MASK);
             }
         }
         pmm_free(pt_phys);

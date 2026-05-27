@@ -39,10 +39,10 @@ typedef struct keyboard_buffer_t {
 void keyboard_init(void);
 void keyboard_irq_handler(void);
 void keyboard_handler(uint8_t scancode);
-void write_to_keyboard_buffer(char c);
-void set_foreground_pid(int pid);
-int  read_from_keyboard_buffer(char* out);
-int  get_foreground_pid();
-void add_to_waiting_queue(int pid);
+void keyboard_write_to_buffer(char c);
+void keyboard_set_foreground_pid(int pid);
+int  keyboard_read_from_buffer(char* out, uint32_t pid);
+int  keyboard_get_foreground_pid();
+void keyboard_add_to_waiting_queue(int pid);
 
 #endif

@@ -47,8 +47,9 @@ static void merge() {
     block_header_t *current = free_list;
     while (current != NULL && current->next != NULL) {
         if((block_header_t*)((uint8_t*)current + sizeof(block_header_t) + current->size) == current->next) {
-            DEBUG("[KMALLOC] Merging blocks at 0x%x and 0x%x\n", current, current->next);
+            DEBUG("[KMALLOC]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
             current->size += sizeof(block_header_t) + current->next->size;
+            DEBUG("[Kmalloc]: Currents size after merge: %x\n", current->size);
             current->next = current->next->next;
         } else {
             current = current->next;

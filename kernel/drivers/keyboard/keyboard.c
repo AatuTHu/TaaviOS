@@ -19,7 +19,7 @@ void keyboard_irq_handler(void) {
     keyboard_handler(scancode);
 }
 
-void write_to_keyboard_buffer(char c) {
+void keyboard_write_to_buffer(char c) {
         if ((keyboard_buffer->write - keyboard_buffer->read) == KEYBOARD_BUFFER_SIZE) {
         return;
     }
@@ -27,10 +27,22 @@ void write_to_keyboard_buffer(char c) {
     keyboard_buffer->write++;
 }
 
-int read_from_keyboard_buffer(char* out) {
+int keyboard_read_from_buffer(char* out, uint32_t pid) {
+    
+    if(keyboard_get_foreground_pid() == -1) {
+        keyboard_set_foreground_pid(pid);
+    }
+
+    if(keyboard_get_foreground_pid() != pid) {
+        keyboard_add_to_waiting_queue(pid);
+        return 0;
+    }
+
     if (keyboard_buffer->read == keyboard_buffer->write) {
         return 0;
     }
+
+
     
     *out = keyboard_buffer->buf[keyboard_buffer->read % KEYBOARD_BUFFER_SIZE];
     keyboard_buffer->read++;
@@ -58,17 +70,17 @@ void keyboard_handler(uint8_t scancode) {
         }
         
         if (c != 0) {
-            write_to_keyboard_buffer(c);
+            keyboard_write_to_buffer(c);
             scheduler_wake_task(keyboard_buffer->foreground_pid);
         }
     }
 }
 
-int get_foreground_pid() {
+int keyboard_get_foreground_pid() {
     return keyboard_buffer->foreground_pid;
 }
 
-void set_foreground_pid(int pid) {
+void keyboard_set_foreground_pid(int pid) {
     if(pid == -1) {
         if(waiting_queue_count > 0) {
             pid = waiting_queue[0];
@@ -82,7 +94,7 @@ void set_foreground_pid(int pid) {
     keyboard_buffer->foreground_pid = pid;
 }
 
-void add_to_waiting_queue(int pid) {
+void keyboard_add_to_waiting_queue(int pid) {
     if(pid == -1) return;
     for(int i = 0; i < waiting_queue_count; i++) {
         if(waiting_queue[i] == pid) return; // already queued

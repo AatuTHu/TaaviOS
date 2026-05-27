@@ -24,6 +24,8 @@ Some would say that this is just and abstraction layer over the drivers and what
 
 A task like *fs_task*s (short for filesystem_task) job is to take in requests from userspace applications. When a request is made, the task wakes up from sleep state and places itself as high priority. These requests are basically CRUD operations for the filesystem. So it does as requested and returns the result to the caller. After that, the caller can continue its life, but here is the catch: The *fs_task* continues to do other services for the filesystem. After requests are done the task can do some background work like:
 
+**these are a work in progress still**
+
 - Open the connection for filesystem. Warm it up for usage.
 
 - Keeping a virtual */sys_info* file updated.
@@ -40,9 +42,8 @@ Design Decisions & Tradeoffs:
 - No IPC overhead: Kernel tasks share address space. Messages are dropped into task queues instantly during system calls (like sys_write) without unnecessary context switches.
 - Isolation without virtualization: Software-level validation inside the tasks, instead of relying solely on expensive hardware page table swaps for internal jobs.
 - No privilege separation inside Ring 0: A severe bug in fs_task can corrupt other kernel memory if the software-level borders fail.
-- Single-threaded kernel: Kernel tasks run scheduled, not concurrently on multiple cores.
 
-I call it a Microlithic kernel. In my mind, it combines the microkernel design and the monolith as everything important is in the kernel space, but those important things are isolated into independent tasks. While trying to have a good memory ***"safety"***
+I call it a Microlithic kernel. In my mind, it combines the microkernel design and the monolith as everything important is in the kernel space, but those important things are isolated into independent tasks.
 
 ## 2. Opportunistic Scheduler
 
@@ -56,13 +57,12 @@ I learn concepts by reading other people's work, books, the OSDev wiki, YouTube 
 
 I have mostly enjoyed the making and designing the scheduler and the *"microlithic"* kernel type model. 
 
-
 ### Current Status
 
 * Arch: 32-bit Protected Mode (Flat model using Paging).
-* FS: Custom FAT32 driver barely running inside fs_task.
+* Working memory management.
 * Multitasking: Preemptive, task-isolated architecture.
 * userspace
 * small c libs
 
-Author: A.H ~ 26.05.2026
+Author: A.H ~ 27.05.2026

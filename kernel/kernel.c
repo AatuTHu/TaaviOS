@@ -67,7 +67,7 @@ void check_for_modules (uint32_t *mboot_info) {
             uint32_t start_page = mods[i].mod_start / PAGE_SIZE;
             uint32_t end_page = (mods[i].mod_end + PAGE_SIZE - 1) / PAGE_SIZE;
             for (uint32_t p = start_page; p < end_page; p++) {
-                pmm_set_bit(p);
+                __pmm_set_bit(p);
             }
         }
     } else {

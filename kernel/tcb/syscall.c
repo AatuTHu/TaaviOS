@@ -21,9 +21,9 @@ static int32_t sys_exit(struct registers *r) {
     
     task_t *current = scheduler_get_current_task();
 
-    if(get_foreground_pid() == current->pid) {
+    if(keyboard_get_foreground_pid() == current->pid) {
         DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
-        set_foreground_pid(-1);
+        keyboard_set_foreground_pid(-1);
     }
 
     scheduler_switch_context(r, scheduler_find_next_task());
@@ -50,7 +50,7 @@ static int32_t sys_write(struct registers *r) {
     default:
         task_t *current = scheduler_get_current_task();
         scheduler_block_task();
-        add_request_to_queue(current->pid, 1, fd," ",buf);
+        add_request_to_queue(current->pid, WRITE, fd," ",buf);
         break;
     }
 
@@ -81,30 +81,15 @@ static int32_t sys_read(struct registers *r) {
             DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
             return -1;
         }
-
-         if(get_foreground_pid() == -1) {
-        set_foreground_pid(current->pid);
-        }
-    
-        if(get_foreground_pid() != current->pid) {
-            scheduler_block_task();
-            add_to_waiting_queue(current->pid);
-            int next_idx = scheduler_find_next_task();
-            scheduler_switch_context(r, next_idx);
-            return -1;
-        }
         
-        int nread = read_from_keyboard_buffer(buf);
-        if (nread > 0) {
-            //DEBUG("[SYS_READ]: returning char '%c'\n", buf[0]);
-            return nread;
-        }
+        int nread = keyboard_read_from_buffer(buf, current->pid);
+        if (nread > 0) return nread; //buffer had something so 
+
 
         if(current->state != TASK_BLOCKED) {
             scheduler_block_task();
             r->eax = 0;
-            int next_idx = scheduler_find_next_task();
-            scheduler_switch_context(r, next_idx);
+            scheduler_switch_context(r, scheduler_find_next_task());
         }
         break;
     
@@ -140,7 +125,7 @@ static int32_t sys_yield(struct registers *r) {
 } //sys_yield
 
 static int32_t sys_idle(struct registers *r) {
-    __asm__ __volatile__("sti; hlt");
+    while(1) __asm__ __volatile__("sti; hlt");
     return 0;
 } //sys_idle
 

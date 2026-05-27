@@ -43,7 +43,6 @@ void pit_sleep_ms(uint32_t ms) {
 
     // Loop until the required time has elapsed in the background
     while ((tick_count - tick_count_start) < ticks_to_wait) {
-        // We could add 'hlt' or 'pause' here to save power/cycles
         __asm__ __volatile__("pause");
     }
 }

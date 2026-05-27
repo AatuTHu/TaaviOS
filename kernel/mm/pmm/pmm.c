@@ -1,5 +1,6 @@
 #include "pmm.h"
 #include "kstring.h"
+#include "mm.h"
 #include "config.h"
 #include "klog.h"
 
@@ -8,26 +9,17 @@ static uint32_t used_pages = 0;
 static uint32_t free_pages = 0;
 static uint32_t last_found = 0;
 
-/**
- * Marks a page as "In Use" (Set bit to 1).
- */
-void pmm_set_bit(uint32_t page) {
+void __pmm_set_bit(uint32_t page) {
     uint32_t ind = page / 32; 
     bitmap[ind] = bitmap[ind] | (1 << (page % 32));
 }
 
-/**
- * Marks a page as "Available" (Clear bit to 0).
- */
-void pmm_clear_bit(uint32_t page) {
+void __pmm_clear_bit(uint32_t page) {
     uint32_t ind = page / 32; 
     bitmap[ind] = bitmap[ind] & ~(1 << (page % 32));
 }
 
-/**
- * Checks the status of a specific physical frame.
- */
-int pmm_test_bit(uint32_t page) {
+int __pmm_test_bit(uint32_t page) {
     uint32_t ind = page / 32; 
     return bitmap[ind] & (1 << (page % 32));
 }
@@ -40,11 +32,11 @@ void pmm_init(struct multiboot_info *mboot) {
 
     memset(bitmap, 0, (total_pages / 8));
 
-    uint32_t addr = mboot->mmap_addr + KERNEL_VIRTUAL_BASE;
-    uint32_t end = addr + mboot->mmap_length;
+    uint32_t vaddr = phys_to_virt(mboot->mmap_addr); 
+    uint32_t vend = vaddr + mboot->mmap_length;
     DEBUG("[PMM] Memory map entries:\n");
-    while (addr < end) {
-        struct mmap_entry *entry = (struct mmap_entry *)addr;
+    while (vaddr < vend) {
+        struct mmap_entry *entry = (struct mmap_entry *)vaddr;
         DEBUG("[PMM] [%s] base=0x%x length=0x%x\n",
             entry->type == 1 ? "AVAILABLE" : "RESERVED ",
             entry->base_low,
@@ -53,15 +45,15 @@ void pmm_init(struct multiboot_info *mboot) {
             uint32_t start_page = entry->base_low / PAGE_SIZE;
             uint32_t num_pages = entry->length_low / PAGE_SIZE;
             for (uint32_t i = 0; i < num_pages; i++) {
-                pmm_clear_bit(start_page + i);
+                __pmm_clear_bit(start_page + i);
             }
         }
-        addr = addr + entry->size + 4;
+        vaddr = vaddr + entry->size + 4;
     }
 
     DEBUG("[PMM] Reserving low memory (pages 0-%d)\n", RESERVED_LOW_PAGES - 1);
     for (uint32_t i = 0; i < RESERVED_LOW_PAGES; i++) {
-        pmm_set_bit(i);
+        __pmm_set_bit(i);
     }
 
     extern uint32_t _kernel_start;
@@ -73,7 +65,7 @@ void pmm_init(struct multiboot_info *mboot) {
         kernel_start_page * PAGE_SIZE,
         kernel_end_page   * PAGE_SIZE);
     for (uint32_t i = kernel_start_page; i < kernel_end_page; i++) {
-        pmm_set_bit(i);
+        __pmm_set_bit(i);
     }
 
     uint32_t bitmap_phys  = (uint32_t)bitmap - KERNEL_VIRTUAL_BASE;
@@ -84,11 +76,11 @@ void pmm_init(struct multiboot_info *mboot) {
         bitmap_start, bitmap_end,
         bitmap_phys, bitmap_size);
     for (uint32_t i = bitmap_start; i < bitmap_end; i++) {
-        pmm_set_bit(i);
+        __pmm_set_bit(i);
     }
 
     for (uint32_t i = 0; i < MAX_PAGES; i++) {
-        if (pmm_test_bit(i)) used_pages++;
+        if (__pmm_test_bit(i)) used_pages++;
         else free_pages++;
     }
     DEBUG("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
@@ -100,8 +92,8 @@ uint32_t pmm_alloc() {
     uint32_t page_index = last_found;
    
     while (page_index < MAX_PAGES) {
-        if(pmm_test_bit(page_index) == 0) {
-            pmm_set_bit(page_index);
+        if(__pmm_test_bit(page_index) == 0) {
+            __pmm_set_bit(page_index);
             used_pages++;
             free_pages--;
             last_found = page_index + 1;
@@ -112,8 +104,8 @@ uint32_t pmm_alloc() {
 
     page_index = 0;
     while(page_index < last_found) {
-        if(pmm_test_bit(page_index) == 0) {
-            pmm_set_bit(page_index);
+        if(__pmm_test_bit(page_index) == 0) {
+            __pmm_set_bit(page_index);
             used_pages++;
             free_pages--;
             last_found = page_index + 1;
@@ -128,11 +120,11 @@ uint32_t pmm_alloc() {
 void pmm_free(uint32_t addr) {
     uint32_t page_index = addr / PAGE_SIZE;
     DEBUG("[PMM]: freeing page index: %d\n", page_index);
-    if(!pmm_test_bit(page_index)) { 
+    if(!__pmm_test_bit(page_index)) { 
         DEBUG("[PMM]: No page at that index\n");
         return; 
     }
-    pmm_clear_bit(page_index);
+    __pmm_clear_bit(page_index);
     used_pages--;
     free_pages++;
     DEBUG("[PMM]: page freed\n");

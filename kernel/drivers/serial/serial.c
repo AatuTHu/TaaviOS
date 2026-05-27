@@ -3,6 +3,10 @@
 
 #define COM1 0x3F8
 
+/*
+* Most generic serial thingy
+*/
+
 static int serial_is_ready(void) {
     return inb(COM1 + 5) & 0x20;
 }

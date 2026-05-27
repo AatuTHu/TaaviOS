@@ -2,6 +2,8 @@
 #define GDT_H
 #include <stdint.h>
 
+#define GDT_ENTRIES 6
+
 struct gdt_entry {
     uint16_t limit_low;
     uint16_t base_low;

@@ -75,7 +75,7 @@ int elf_load(void *data, page_directory_t *page_dir) {
         if(phdr->p_type != PT_LOAD) continue;
 
 
-        uint32_t pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
+        uint32_t pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE; //this is the one that calculates and round up the size
 		uint32_t size = (phdr->p_memsz + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 		
 		if(vmm_alloc(page_dir, phdr->p_vaddr, size, PAGE_USER | PAGE_PRESENT) == STATUS_ERROR) {

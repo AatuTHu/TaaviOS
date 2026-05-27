@@ -52,7 +52,7 @@ void isr_handler(struct registers *r) {
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     ERROR("System halted.\n");
 
-while(1) { __asm__ __volatile__("hlt"); }
+    while(1) { __asm__ __volatile__("hlt"); }
 }
 
 void irq_handler(struct registers *r) {
@@ -67,6 +67,7 @@ void irq_handler(struct registers *r) {
        scheduler_tick(r);
     }
 
+    
     if (irq_callbacks[irq_index] != 0) {
         irq_callbacks[irq_index]();
     }

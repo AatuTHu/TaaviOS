@@ -10,12 +10,14 @@
 
 /* 
 * Author: A.H - 20.4.2026
-* modified continuesly from 20.4 till ---
+* modified continuesly from 20.4 till --- rest of time
 */
 
 static task_t *tasks[MAX_TASKS];
 static int task_count = 0;
-static int dead_task_count = 0;
+static int dead_task_count = 0; 
+static int kernel_task_count = 0; 
+static int user_task_count = 0;
 static int current_idx = -1;
 volatile static uint8_t scheduler_on = 0;
 
@@ -107,12 +109,14 @@ void _scheduler_remove_task() {
     DEBUG("[SCHEDULER][REMOVE]: Deleting task at current idx %d with name: %s\n", delete_candidate, tasks[delete_candidate]->name);
     vmm_switch(&kernel_page_dir);
     task_destroy(tasks[delete_candidate], USER_TASK);
+    tasks[delete_candidate]->task_mode == USER_TASK ? user_task_count++ : kernel_task_count++;
     tasks[delete_candidate] = NULL;
    
     DEBUG("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
     for (int i = delete_candidate; i < task_count - 1; i++) {
         tasks[i] = tasks[i + 1];
     }
+
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
@@ -303,33 +307,35 @@ void scheduler_wake_task(int pid) {
     }
 }
 
-void scheduler_add(task_t *task) {
-    if(task_count >= MAX_TASKS) {
-        ERROR("[SCHEDULER]: Too many tasks added to scheduler\n");
-        return;
-    }
-
-    if(scheduler_does_exist(task->pid) != -1) {
-        tasks[task_count] = task;
-        task_count++;
-        if(current_idx == -1) {
-            current_idx = 0;
-        }
-    } else {
-        DEBUG("[SCHEDULER][ADD]: Task with the same pid exists\n");
-    }
-
-}
 
 int scheduler_does_exist(int pid) {
     for(int i = 0; i < task_count; i++) {
         if(tasks[i]->pid == pid) {
             DEBUG("[SCHEDULER][DOES_EXIST]: Task exists\n");
-            return -1;
+            return STATUS_ERROR;
         }
     }
-    //DEBUG("[SCHEDULER]: Task does not exists\n");
-    return 0;
+    DEBUG("[SCHEDULER][DOES_EXIST]: Task does not exists\n");
+    return STATUS_OK;
+}
+
+void scheduler_add(task_t *task) {
+    if(task_count >= MAX_TASKS) {
+        ERROR("[SCHEDULER][ADD]: Too many tasks added to scheduler\n");
+        return;
+    }
+
+    if(scheduler_does_exist(task->pid) == STATUS_ERROR) {
+        DEBUG("[SCHEDULER][ADD]: Aborting\n");
+        return;
+    }
+
+    tasks[task_count] = task;
+    task_count++;
+    if(current_idx == -1) {
+        current_idx = 0;
+    }
+
 }
 
 int scheduler_get_idx_off_pid(int pid) {
@@ -344,8 +350,6 @@ int scheduler_get_idx_off_pid(int pid) {
 void _set_scheduler_on() {
     scheduler_on = 1;
 }
-
-
 
 void scheduler_init() {
     DEBUG("[SCHEDULER] SCHEDULER INITIALIZED\n");

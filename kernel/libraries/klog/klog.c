@@ -3,6 +3,10 @@
 #include "serial.h"
 #include <stdarg.h>
 
+/*
+* Good enough
+*/
+
 //start from zero dunno where go. Zero is the level where write to both vga and serial.
 //Level one is for serial only
 uint8_t PRINT_LEVEL = 0;

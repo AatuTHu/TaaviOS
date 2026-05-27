@@ -5,6 +5,10 @@
 #include "kstring.h"
 #include "kmalloc.h"
 
+/*
+* Author: A.H, started 27.5.2026
+*/
+
 static int request_queue_count = -1;
 static int last_request_index = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
@@ -37,9 +41,11 @@ int fs_handle_request(fs_mailbox_queue *req) {
 * 
 */
 void fs_remove_from_queue() {
+    DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
+    kfree(request_queue[last_request_index]);
+    
+    DEBUG("[FS_TASK][REMOVE]: Deleting at req_index and shifting rest of the array to the left\n");
     request_queue[last_request_index] = NULL;
-
-    DEBUG("[FS_TASK][REMOVE]: Shifting rest of the array to the left\n");
     for (int i = last_request_index; i < request_queue_count - 1; i++) {
         request_queue[i] = request_queue[i + 1];
     }
@@ -47,30 +53,30 @@ void fs_remove_from_queue() {
     request_queue[request_queue_count - 1] = NULL;
     request_queue_count--;
     last_request_index = -1;
+    DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
 }
 
 
 //reguest types can be 1 write, 2 read, 3 update and 4 delete
 //Pid is the id from the caller and path is naturally the file
-int add_request_to_queue(uint32_t pid, uint8_t request_type, uint32_t fd, const char* path, char *buf) {
+int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, char *buf) {
 
     DEBUG("[FS_TASK][artq]: adding a request for fs_task\n");
 
     fs_mailbox_queue *new_request = (fs_mailbox_queue *)kmalloc(sizeof(fs_mailbox_queue));
 
     new_request->caller_pid = pid;
-    new_request->request_type = request_type;
+    new_request->request_type = type;
     strncpy(new_request->path, path, sizeof(new_request->path));
     new_request->fd = fd;
     new_request->status = PENDING;
-
     request_queue_count++;
     request_queue[request_queue_count] = new_request;
     
     scheduler_wake_task(1);
 
     DEBUG("[FS_TASK][artq]: pid: %d\n", pid);
-    DEBUG("[FS_TASK][artq]: request_typ: %d\n", request_queue);
+    DEBUG("[FS_TASK][artq]: request_type: %d\n", type);
     DEBUG("[FS_TASK][artq]: fd: %d\n", fd);
     DEBUG("[FS_TASK][artq]: path: %s\n", path);
     DEBUG("[FS_TASK][artq]: buf: %s\n", buf);

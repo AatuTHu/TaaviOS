@@ -21,6 +21,7 @@ task_t *task_create(uint32_t entry, const char *name, page_directory_t *page_dir
     }
     
     if (slot == -1) return NULL;
+
     task_t *task = (task_t *)kmalloc(sizeof(task_t));
 
     if(task == NULL) return NULL;
@@ -80,7 +81,7 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     kfree(task);
 }
 
-task_t *get_task_by_name(char *name) {
+task_t *get_task_by_name(char *name) { //A helper function not inteded to stay. Doesn't feel like the best solution
     if (name == NULL) return NULL;
 
     for(int i = 0; i < MAX_TASKS; i++) {
@@ -95,7 +96,7 @@ task_t *get_task_by_name(char *name) {
     return NULL;
 }
  
-task_t *task_get(int index) {
+task_t *task_get(int index) { //Id' like this to be pid. Who the heck know the index?
     if(index >= 0 && index <= MAX_TASKS-1) {
         return task_table[index];
     }
