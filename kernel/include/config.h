@@ -43,7 +43,8 @@ typedef enum {
   WRITE,
   READ,
   UPDATE, // this I hear is not a thing with filesystem
-  DELETE
+  DELETE,
+  OPEN
 } operations_t;
 
 #endif

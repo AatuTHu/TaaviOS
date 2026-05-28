@@ -57,19 +57,25 @@ void fs_remove_from_queue() {
 }
 
 
-//reguest types can be 1 write, 2 read, 3 update and 4 delete
-//Pid is the id from the caller and path is naturally the file
+
 int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, char *buf) {
 
     DEBUG("[FS_TASK][artq]: adding a request for fs_task\n");
 
     fs_mailbox_queue *new_request = (fs_mailbox_queue *)kmalloc(sizeof(fs_mailbox_queue));
 
+    if(new_request == NULL) {
+        DEBUG("[FS_TASK][artq]: Could on allocate new requestat this time. Aborting\n");
+        return STATUS_ERROR;
+    }
+
     new_request->caller_pid = pid;
     new_request->request_type = type;
     strncpy(new_request->path, path, sizeof(new_request->path));
+    new_request->buf = buf;
     new_request->fd = fd;
     new_request->status = PENDING;
+
     request_queue_count++;
     request_queue[request_queue_count] = new_request;
     
@@ -82,6 +88,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
     DEBUG("[FS_TASK][artq]: buf: %s\n", buf);
 
     DEBUG("[FS_TASK][artq]: request added\n");
+    return STATUS_OK;
 }
 
 fs_mailbox_queue *find_next_request() {
@@ -132,8 +139,8 @@ void fs_task_loop() {
                 
                 if(request->status == COMPLETE) {
                     DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
-                    fs_remove_from_queue();
                     fs_wake_task(request);
+                    fs_remove_from_queue();
                 }
                 
             } else {

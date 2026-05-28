@@ -110,12 +110,12 @@ static int sys_exec(struct registers *r) {
     char *filename = (char *)r->ecx;
     task_t *task = get_task_by_name(filename);
     if(task == NULL) {
-        return 0;
+        return -1;
     }
     
     scheduler_add(task);
     scheduler_switch_context(r, scheduler_find_next_task());
-    return 1;
+    return 0;
 } //sys_exec
 
 static int32_t sys_yield(struct registers *r) {

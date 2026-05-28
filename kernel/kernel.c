@@ -114,37 +114,16 @@ void init_filesystems() {
 }
 
 void init_kernel_tasks() {
-    DEBUG("[SCHEDULER][INIT]: Creating an idle kernel task\n");
+    DEBUG("[KERNEL]: Creating an idle kernel task\n");
     task_t *idle_task = task_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_TASK);
     fs_init();
-    DEBUG("[SCHEDULER][INIT]: Creating an filesystem kernel task\n");
+    DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
     task_t *fs_task = task_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_TASK);
     
     scheduler_add(idle_task);
     scheduler_add(fs_task);
 }
 
-void draw_logo() {
-    vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
-    klog("----------------------------------------------------------------------------\n");
-    vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-    klog("  |=====|    |====|    |====|                                               \n");
-    klog(" |=|   |=|  |=|  |=|  |=|  |=|                                              \n");
-    klog(" |=|       |=|    |=| |=----=|                                              \n");
-    klog(" |=|       |=------=| |=|===|                                               \n");
-    klog(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
-    klog("  |=====|  |=|    |=| |=|   |==|                                            \n");
-    vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-    klog("                               |====|     |====| |=======|  |=====|        \n");
-    klog("                              |=|  |=|   |=|  |=|   |=|    |=|   |=|       \n");
-    klog("                              |=----=|   |=|  |=|   |=|    |=|___          \n");
-    klog("                              |=|===|    |=|  |=|   |=|          |=|       \n");
-    klog("                              |=|  |==|  |=|  |=|   |=|    |=|   |=|       \n");
-    klog("                              |=|   |==|  |====|    |=|     |=====|        \n");
-    vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
-    klog("---------------------------------------------------------------------------\n");
-    vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-}
 
 void kernel_main(uint32_t *mboot_info) {
 
@@ -164,25 +143,23 @@ void kernel_main(uint32_t *mboot_info) {
     scheduler_init();
     syscall_init();
     init_kernel_tasks();
-
-    draw_logo();
-
-
+    
     task_t *first_task = NULL;
 
     if(total_mods > 0) {
         page_directory_t *init_pd = vmm_create_directory();
         uint32_t init_phys = module_starts[0];
         uint32_t entry = elf_load((void*)phys_to_virt(init_phys), init_pd);
-        if(entry == ET_NONE) {
-            DEBUG("[KERNEL]: ELF load failed!\n");
-        } else {
+        if(entry != ET_NONE) {
             DEBUG("[KERNEL]: ELF loaded.\n");
             DEBUG("[KERNEL]: Creating init task\n");
             first_task = task_create(entry, "init", init_pd, USER_TASK);
-            first_task->priority = PRIORITY_LOW;
+            first_task->priority = PRIORITY_HIGH;
             scheduler_add(first_task);
+        } else {
+            DEBUG("[KERNEL]: ELF load failed!\n");
         }
+        
     }
 
     if(total_mods > 1) {
@@ -202,7 +179,7 @@ void kernel_main(uint32_t *mboot_info) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         _set_scheduler_on();
         vmm_switch(first_task->page_dir);
-        DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x\n", first_task->context.eip, first_task->context.useresp);
+        DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n", first_task->context.eip, first_task->context.useresp, first_task->name);
         enter_usermode(first_task->context.eip, first_task->context.useresp, first_task->kernel_stack);
     }
 }

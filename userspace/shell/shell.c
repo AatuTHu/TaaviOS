@@ -60,6 +60,25 @@ void exec_cmd(char *buf) {
 }
 
 void main(void) {
+    //vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
+    write("----------------------------------------------------------------------------\n");
+    //vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+    write("  |=====|    |====|    |====|                                               \n");
+    write(" |=|   |=|  |=|  |=|  |=|  |=|                                              \n");
+    write(" |=|       |=|    |=| |=----=|                                              \n");
+    write(" |=|       |=------=| |=|===|                                               \n");
+    write(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
+    write("  |=====|  |=|    |=| |=|   |==|                                            \n");
+    //vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+    write("                               |====|     |====| |=======|  |=====|        \n");
+    write("                              |=|  |=|   |=|  |=|   |=|    |=|   |=|       \n");
+    write("                              |=----=|   |=|  |=|   |=|    |=|___          \n");
+    write("                              |=|===|    |=|  |=|   |=|          |=|       \n");
+    write("                              |=|  |==|  |=|  |=|   |=|    |=|   |=|       \n");
+    write("                              |=|   |==|  |====|    |=|     |=====|        \n");
+    //vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
+    write("---------------------------------------------------------------------------\n");
+    //vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     write("Carrots Shell\n");
     write("Type 'help' to see all commands\n");
     

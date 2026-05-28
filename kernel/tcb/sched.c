@@ -25,7 +25,7 @@ int scheduler_find_next_task() {
     __asm__ __volatile__("cli");
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
-            if (tasks[next_idx]->priority == PRIORITY_HIGH) {
+            if (tasks[next_idx]->priority == PRIORITY_HIGH && tasks[next_idx]->state != TASK_DEAD) {
                 return next_idx;
             }
     }
@@ -101,15 +101,15 @@ void _scheduler_remove_task() {
     DEBUG("[SCHEDULER][REMOVE]: Searching for a dead task\n");
     int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
    
-   if(delete_candidate == -1) {
+    if(delete_candidate == -1) {
         DEBUG("[SCHEDULER][REMOVE]: No deletable task found.\n");
         return;
-   }
+    }
     
     DEBUG("[SCHEDULER][REMOVE]: Deleting task at current idx %d with name: %s\n", delete_candidate, tasks[delete_candidate]->name);
     vmm_switch(&kernel_page_dir);
     task_destroy(tasks[delete_candidate], USER_TASK);
-    tasks[delete_candidate]->task_mode == USER_TASK ? user_task_count++ : kernel_task_count++;
+    tasks[delete_candidate]->task_mode == USER_TASK ? user_task_count-- : kernel_task_count--;
     tasks[delete_candidate] = NULL;
    
     DEBUG("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
@@ -184,10 +184,16 @@ void scheduler_switch_context(struct registers *r, int idx) {
 */
 void scheduler_tick(struct registers *r) {
     __asm__ __volatile__("cli");
-    if(current_idx == -1 || task_count == 0 || scheduler_on == 0) return;
+    if(current_idx == -1 || task_count == 0 || scheduler_on == 0) {
+        __asm__ __volatile__("sti");
+        return;
+    }
 
     task_t *current = scheduler_get_current_task();
-    if(current == NULL) return;
+    if(current == NULL) {
+        __asm__ __volatile__("sti");
+        return;
+    }
     
     if(current->started) {
         //DEBUG("[SCHEDULER][TICK]: saving: %s\n", current->name);
@@ -215,7 +221,7 @@ void scheduler_tick(struct registers *r) {
     
     //DEBUG("[SCHEDULER][TICK]: finding next task to run\n");
     int next_idx = scheduler_find_next_task();
-
+    //DEBUG("[SCHEDULER][TICK]: new idx: %d\n", next_idx);
     if (next_idx == -1) {
         DEBUG("[SCHEDULER][TICK]: No new task found, fetching idle task to run.\n");
         task_t *idle_task = get_task_by_name("idle");
@@ -223,23 +229,29 @@ void scheduler_tick(struct registers *r) {
             DEBUG("[SCHEDULER][TICK]: Waking idle task\n");
             idle_task->state = TASK_READY;
             next_idx = scheduler_get_idx_off_pid(idle_task->pid);
+            
         }
-       // return;
+       return;
     }
     
     task_t *next = tasks[next_idx];
     
-    if(next == NULL || next->state == TASK_BLOCKED || next->state == TASK_DEAD) return;
+    if(next == NULL) {
+        //DEBUG("[SCHEDULER][TICK]: Something went horribly wrong\n");
+        __asm__ __volatile__("sti");
+        return;
+    }
 
     next->state = TASK_RUNNING;
     
     if(next_idx != current_idx) {
-        //DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
         current_idx = next_idx;
+        //DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
         vmm_switch(next->page_dir);
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }
+    //DEBUG("[SCHEDULER][TICK]: off we go\n");
     __asm__ __volatile__("sti");
 }
 
