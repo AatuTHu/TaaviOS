@@ -27,12 +27,22 @@ int sys_getpid(void) {
     return result;
 }
 
-int sys_read(char *buf, int len) {
+int sys_open(const char *path) {
+    int fd;
+    __asm__ __volatile__(
+        "int $0x80"
+        : "=a"(fd)
+        : "a"(5)
+    );
+    return fd;
+}
+
+int sys_read(char *buf, int len, int fd) {
     int result;
     __asm__ __volatile__(
         "int $0x80"
         : "=a"(result)
-        : "a"(3), "b"(0), "c"(buf), "d"(len)
+        : "a"(3), "b"(fd), "c"(buf), "d"(len)
         : "memory"
     );
     return result;

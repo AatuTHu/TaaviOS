@@ -10,6 +10,7 @@
 
 /* 
 * Author: A.H - 20.4.2026
+* This code is a pile of sticks. 28.5.2026
 * modified continuesly from 20.4 till --- rest of time
 */
 
@@ -185,18 +186,20 @@ void scheduler_switch_context(struct registers *r, int idx) {
 void scheduler_tick(struct registers *r) {
     __asm__ __volatile__("cli");
     if(current_idx == -1 || task_count == 0 || scheduler_on == 0) {
+        DEBUG("[SCHEDULER][TICK]: cidx: %d, count: %d, mode: %d\n", current_idx,task_count,scheduler_on);
         __asm__ __volatile__("sti");
         return;
     }
 
     task_t *current = scheduler_get_current_task();
     if(current == NULL) {
+        DEBUG("[SCHEDULER][TICK]: Did not find current task \n");
         __asm__ __volatile__("sti");
         return;
     }
     
     if(current->started) {
-        //DEBUG("[SCHEDULER][TICK]: saving: %s\n", current->name);
+       // DEBUG("[SCHEDULER][TICK]: saving: %s\n", current->name);
         memcpy(&current->context, r, sizeof(struct registers));
         if(current->state == TASK_RUNNING) {
             current->state = TASK_READY;
@@ -227,9 +230,7 @@ void scheduler_tick(struct registers *r) {
         task_t *idle_task = get_task_by_name("idle");
         if(idle_task != NULL) {
             DEBUG("[SCHEDULER][TICK]: Waking idle task\n");
-            idle_task->state = TASK_READY;
-            next_idx = scheduler_get_idx_off_pid(idle_task->pid);
-            
+            idle_task->state = TASK_READY;    
         }
        return;
     }
@@ -237,7 +238,7 @@ void scheduler_tick(struct registers *r) {
     task_t *next = tasks[next_idx];
     
     if(next == NULL) {
-        //DEBUG("[SCHEDULER][TICK]: Something went horribly wrong\n");
+        DEBUG("[SCHEDULER][TICK]: Something went horribly wrong\n");
         __asm__ __volatile__("sti");
         return;
     }
@@ -246,8 +247,12 @@ void scheduler_tick(struct registers *r) {
     
     if(next_idx != current_idx) {
         current_idx = next_idx;
-        //DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
-        vmm_switch(next->page_dir);
+       // DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
+
+        if(next->task_mode == USER_TASK) {
+            vmm_switch(next->page_dir);
+        }
+
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }

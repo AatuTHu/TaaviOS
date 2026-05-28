@@ -4,46 +4,52 @@
 #include "string.h"
 
 void command_help() {
-    write("\n-------------------------------------------------------------------------------\n");
-    write("Available commands\n");
-    write("- help\n");
-    write("- about\n");
-    write("- exec filename.elf \n");
-    write("- get pid\n");
-    write("- exit\n");
-    write("\n");
+    print("\n-------------------------------------------------------------------------------\n");
+    print("Available commands\n");
+    print("- help\n");
+    print("- about\n");
+    print("- get my pid\n");
+    print("- exec  [task]\n");
+    print("- open  [path]\n");
+    print("- write [text] \n");
+    print("- exit\n");
+    print("\n");
 }
 
 void command_about() {
-    write("\n-------------------------------------------------------------------------------\n");
-    write("Carrots v0.3.0 - Author: Aatu H\n");
-    write("\n");
+    print("\n-------------------------------------------------------------------------------\n");
+    print("Carrots v0.5.0 - Author: Aatu H\n");
+    print("\n");
 }
 
 void command_get_pid() {
     int pid = get_pid();
     char msg[10];
     itoa(pid, msg);
-    write("\n");
-    write("current task pid: ");
-    write(msg);
-    write("\n");
+    print("\n");
+    print("current task pid: ");
+    print(msg);
+    print("\n");
 }
 
 void command_exit() {
-    write("\n");
+    print("\n");
     terminate_program();
-    write("\n");
+    print("\n");
 }
 
 void command_exec(const char *filename) {
-    write("\n");
+    print("\n");
     exec(filename);
-    write("\n");
+    print("\n");
 }
 
 void command_wake() {
-    fwrite(4,"wake!");
+    write(4,"wake!");
+}
+
+void command_open() {
+    open("hello.text");
 }
 
 void exec_cmd(char *buf) {
@@ -52,6 +58,7 @@ void exec_cmd(char *buf) {
     if(str_eq(buf, "get pid") == 1) command_get_pid();
     if(str_eq(buf, "exit") == 1) command_exit();
     if(str_eq(buf, "wake") == 1) command_wake();
+    if(str_eq(buf, "open") == 1) command_open();
     if(str_starts_with(buf, "exec ")==1) {
         command_exec(buf + 5);
         return;
@@ -61,36 +68,36 @@ void exec_cmd(char *buf) {
 
 void main(void) {
     //vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
-    write("----------------------------------------------------------------------------\n");
+    print("----------------------------------------------------------------------------\n");
     //vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-    write("  |=====|    |====|    |====|                                               \n");
-    write(" |=|   |=|  |=|  |=|  |=|  |=|                                              \n");
-    write(" |=|       |=|    |=| |=----=|                                              \n");
-    write(" |=|       |=------=| |=|===|                                               \n");
-    write(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
-    write("  |=====|  |=|    |=| |=|   |==|                                            \n");
+    print("  |=====|    |====|    |====|                                               \n");
+    print(" |=|   |=|  |=|  |=|  |=|  |=|                                              \n");
+    print(" |=|       |=|    |=| |=----=|                                              \n");
+    print(" |=|       |=------=| |=|===|                                               \n");
+    print(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
+    print("  |=====|  |=|    |=| |=|   |==|                                            \n");
     //vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-    write("                               |====|     |====| |=======|  |=====|        \n");
-    write("                              |=|  |=|   |=|  |=|   |=|    |=|   |=|       \n");
-    write("                              |=----=|   |=|  |=|   |=|    |=|___          \n");
-    write("                              |=|===|    |=|  |=|   |=|          |=|       \n");
-    write("                              |=|  |==|  |=|  |=|   |=|    |=|   |=|       \n");
-    write("                              |=|   |==|  |====|    |=|     |=====|        \n");
+    print("                               |====|     |====| |=======|  |=====|        \n");
+    print("                              |=|  |=|   |=|  |=|   |=|    |=|   |=|       \n");
+    print("                              |=----=|   |=|  |=|   |=|    |=|___          \n");
+    print("                              |=|===|    |=|  |=|   |=|          |=|       \n");
+    print("                              |=|  |==|  |=|  |=|   |=|    |=|   |=|       \n");
+    print("                              |=|   |==|  |====|    |=|     |=====|        \n");
     //vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
-    write("---------------------------------------------------------------------------\n");
+    print("---------------------------------------------------------------------------\n");
     //vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    write("Carrots Shell\n");
-    write("Type 'help' to see all commands\n");
+    print("Carrots Shell\n");
+    print("Type 'help' to see all commands\n");
     
     char buf[256];
     int pos = 0;
     char c;
     
     while (1) {
-        write("\n> ");
+        error("\n> ");
         pos = 0;
         while (1) {
-            int n = read(&c);
+            int n = scan(&c);
             if (n > 0) {
                 if (c == '\n') {
                     buf[pos] = 0;
@@ -100,14 +107,14 @@ void main(void) {
                 } else if (c == '\b') {
                    if(pos > 0) {
                         pos--;
-                        write("\b");
+                        print("\b");
                    }
                 } else {
                     buf[pos++] = c;
                     char tmp[2];
                     tmp[0] = c;
                     tmp[1] = 0;
-                    write(tmp);
+                    print(tmp);
                 }
             }
         }

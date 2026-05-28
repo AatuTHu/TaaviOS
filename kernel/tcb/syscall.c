@@ -36,13 +36,16 @@ static int32_t sys_write(struct registers *r) {
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx; //ecx has the string
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
-    
+    char *path   = r->esi;
+
     switch (fd)
     {
     case 1:
+        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
         vga_write(buf);
         break;
     case 2:
+        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         vga_write(buf);
         break;
     case 3:
@@ -68,9 +71,9 @@ static int32_t sys_getpid(struct registers *r) {
 * 2. get fd and the buf. See if keyborad buffer has something for it. It it has return it if not then set caller task blocked, set eax to 0 and yield
 */
 static int32_t sys_read(struct registers *r) {
-
     int fd    = r->ebx;
     char *buf = (char *)r->ecx;
+    char *path   = r->esi;
 
     switch (fd)
     {
@@ -94,6 +97,7 @@ static int32_t sys_read(struct registers *r) {
         break;
     
     default:
+        add_request_to_queue(current->pid, READ, fd, path, buf);
         break;
     }
 
@@ -101,6 +105,20 @@ static int32_t sys_read(struct registers *r) {
     return 0;
     
 } //sys_read
+
+static int32_t sys_open(struct registers *r) {
+    char *path   = r->ecx;
+    task_t *current = scheduler_get_current_task();
+
+    if (!current) {
+        DEBUG("[SYSCALL][SYS_OPEN]: current task not found\n");
+        return -1;
+    }
+    
+    scheduler_block_task();
+    add_request_to_queue(current->pid, OPEN, 0, path, "");
+
+}
 
 /*
 *   This is a hack function. Does not really execute elf binaries. I made it for now so that I could test multitasking. NEEDS TO BE FIXED
@@ -139,6 +157,7 @@ void syscall_init() {
     syscall_table[SYS_READ]     = sys_read;
     syscall_table[SYS_IDLE]     = sys_idle;
     syscall_table[SYS_YIELD]    = sys_yield;
+    syscall_table[SYS_OPEN]     = sys_open;
 }
 
 void syscall_dispatch(struct registers *r) {

@@ -2,20 +2,28 @@
 #include "sys_calls.h"
 #include "string.h"
 
-void write(const char *msg) {
+void print(const char *msg) {
     sys_write(msg, strlen(msg), 1);
 }
 
-void fwrite(int fd, const char *msg) {
-    sys_write(msg, strlen(msg), 4);
+void error(const char *msg) {
+    sys_write(msg, strlen(msg), 2);
 }
 
-int read(char *buf) {
-    return sys_read(buf, 1);
+int scan(char *buf) {
+    return sys_read(buf, 1, 0);
 }
 
-int fread(char *buf) {
-    return sys_read(buf, 1);
+int open(const char* path) {
+    return sys_open(path);
+}
+
+void write(int fd, const char *msg) {
+    sys_write(msg, strlen(msg), fd);
+}
+
+int read(int fd, char *buf) {
+    return sys_read(buf, strlen(buf) ,fd);
 }
 
 void terminate_program() {

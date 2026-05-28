@@ -4,12 +4,21 @@
 #include <stdint.h>
 #include <stddef.h>
 
-void write(const char *msg);
-void fwrite(int fd, const char *msg);
-int read(char *buf);
+void print(const char *msg);
+void error(const char *msg);
+int scan(char *buf);
+
+//file io
+int open(const char* path);
+void write(int fd, const char *msg);
+int read(int fd, char *buf);
+
+//sys
 int exec(const char *filename);
-int get_pid();
-int memcmp(const void *s1, const void *s2, size_t n);
-void terminate_program();
 void idle(void);
+int get_pid();
+void terminate_program();
+
+
+int memcmp(const void *s1, const void *s2, size_t n);
 #endif
