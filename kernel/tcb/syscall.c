@@ -14,25 +14,26 @@
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
-    __asm__ __volatile__("cli");
     DEBUG("[SYSCALL][SYSEXIT]\n");
     task_t *current = scheduler_get_current_task();
 
-    if(current == NULL) { 
-        __asm__ __volatile__("sti");
+    if(current == NULL) {
+        DEBUG("[SYSCALL][SYSEXIT]: current task not found\n");
         return STATUS_ERROR;
     }
-    
-    DEBUG("[SYSCALL][SYSEXIT]\n");
-    scheduler_set_task_state(TASK_DEAD);
+
+    if(current->state == TASK_DEAD) {
+        return STATUS_OK;
+    }
     
     if(keyboard_get_foreground_pid() == current->pid) {
         DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
         keyboard_set_foreground_pid(-1);
     }
 
+    scheduler_set_task_state(TASK_DEAD);
     scheduler_switch_context(r, scheduler_find_next_task());
-    __asm__ __volatile__("sti");
+
     return STATUS_OK;
 } //sys_exit
 
@@ -70,7 +71,7 @@ static int32_t sys_getpid(struct registers *r) {
 } //sys_getpid
 
 /*
-* 1. get current task. See if there is a foreground pid set. If not then set it as the foregroundpid. Otherwhise add it to keyboard waiting queue and switch context
+* 1. get current task. See if there is a foreground pid set. If not then set it as the foreground pid. Otherwhise add it to keyboard waiting queue and switch context
 * 2. get fd and the buf. See if keyborad buffer has something for it. It it has return it if not then set caller task blocked, set eax to 0 and yield
 */
 static int32_t sys_read(struct registers *r) {
