@@ -157,7 +157,7 @@ void fs_task_loop() {
         */
        
        //DEBUG("[FS_TASK][LOOP]: No requests or servicing required. Activating blankie protocol\n");
-       scheduler_set_task_sleeping();
+       scheduler_set_task_state(TASK_SLEEPING);
     }
 }
 

@@ -274,31 +274,43 @@ task_t *scheduler_get_current_task() {
     return tasks[current_idx];
 }
 
-void scheduler_kill_task() {
-    DEBUG("[SCHEDULER]: killing current task: %s\n", tasks[current_idx]->name);
-    if(tasks[current_idx]->state != TASK_DEAD) {
-        tasks[current_idx]->state = TASK_DEAD;
+void scheduler_set_task_state(task_state_t state) {
+    task_t *current = tasks[current_idx];
+
+    if(current->state == state) {
+        DEBUG("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
+        return;
+    }
+
+    switch (state)
+    {
+    case TASK_SLEEPING:
+        DEBUG("[SCHEDULER][STATE_SETTER]: Setting task %s sleeping\n", current->name);
+        current->state = TASK_SLEEPING;
+        break;
+    case TASK_READY:
+        DEBUG("[SCHEDULER][STATE_SETTER]: Setting task %s ready\n", current->name);
+        if(current->state == TASK_DEAD && dead_task_count > 0) {
+            dead_task_count--;
+        }
+        current->state = TASK_READY;
+        break;
+    case TASK_BLOCKED:
+        DEBUG("[SCHEDULER][STATE_SETTER]: Blocking task: %s\n", current->name); 
+        if(current->state != TASK_DEAD) {
+            current->state = TASK_BLOCKED;
+        }
+        break;
+    case TASK_DEAD:
+        DEBUG("[SCHEDULER][STATE_SETTER]: killing task: %s\n", current->name);    
+        current->state = TASK_DEAD;
         dead_task_count++;
+        break;
+    
+    default:
+        break;
     }
-}
 
-void scheduler_block_task() {
-    if(tasks[current_idx]->state != TASK_BLOCKED && tasks[current_idx]->state != TASK_DEAD) {
-        tasks[current_idx]->state = TASK_BLOCKED;
-    }
-}
-
-void scheduler_set_task_sleeping() {
-    //DEBUG("[SCHEDULER][SLEEPING]: Setting task %s sleeping\n", tasks[current_idx]->name);
-    tasks[current_idx]->state = TASK_SLEEPING;
-}
-
-void scheduler_set_task_ready() {
-    if(tasks[current_idx]->state == TASK_DEAD) {
-        dead_task_count--;
-    }
-    DEBUG("[SCHEDULER][set_task_ready]: Setting task %s ready\n", tasks[current_idx]->name);
-    tasks[current_idx]->state = TASK_READY;
 }
 
 int scheduler_get_task_count() { 
@@ -352,7 +364,6 @@ void scheduler_add(task_t *task) {
     if(current_idx == -1) {
         current_idx = 0;
     }
-
 }
 
 int scheduler_get_idx_off_pid(int pid) {

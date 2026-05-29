@@ -16,11 +16,16 @@ static syscall_fn_t syscall_table[MAX_SYSCALLS];
 static int32_t sys_exit(struct registers *r) {
     __asm__ __volatile__("cli");
     DEBUG("[SYSCALL][SYSEXIT]\n");
-
-    scheduler_kill_task();
-    
     task_t *current = scheduler_get_current_task();
 
+    if(current == NULL) { 
+        __asm__ __volatile__("sti");
+        return STATUS_ERROR;
+    }
+    
+    DEBUG("[SYSCALL][SYSEXIT]\n");
+    scheduler_set_task_state(TASK_DEAD);
+    
     if(keyboard_get_foreground_pid() == current->pid) {
         DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
         keyboard_set_foreground_pid(-1);
@@ -28,7 +33,7 @@ static int32_t sys_exit(struct registers *r) {
 
     scheduler_switch_context(r, scheduler_find_next_task());
     __asm__ __volatile__("sti");
-    return 0;
+    return STATUS_OK;
 } //sys_exit
 
 
@@ -47,12 +52,10 @@ static int32_t sys_write(struct registers *r) {
     case 2:
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         vga_write(buf);
-        break;
-    case 3:
-        
+        break;    
     default:
         task_t *current = scheduler_get_current_task();
-        scheduler_block_task();
+        scheduler_set_task_state(TASK_BLOCKED);
         add_request_to_queue(current->pid, WRITE, fd," ",buf);
         break;
     }
@@ -80,9 +83,9 @@ static int32_t sys_read(struct registers *r) {
     case 0: //stdin
          task_t *current = scheduler_get_current_task();
 
-        if (!current) {
+        if(current == NULL) {
             DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-            return -1;
+            return STATUS_ERROR;
         }
         
         int nread = keyboard_read_from_buffer(buf, current->pid);
@@ -90,8 +93,8 @@ static int32_t sys_read(struct registers *r) {
 
 
         if(current->state != TASK_BLOCKED) {
-            scheduler_block_task();
-            r->eax = 0;
+            scheduler_set_task_state(TASK_BLOCKED);
+            r->eax =  STATUS_OK;
             scheduler_switch_context(r, scheduler_find_next_task());
         }
         break;
@@ -102,7 +105,7 @@ static int32_t sys_read(struct registers *r) {
     }
 
    
-    return 0;
+    return STATUS_OK;
     
 } //sys_read
 
@@ -112,12 +115,12 @@ static int32_t sys_open(struct registers *r) {
 
     if (!current) {
         DEBUG("[SYSCALL][SYS_OPEN]: current task not found\n");
-        return -1;
+        return STATUS_ERROR;
     }
     
-    scheduler_block_task();
+    scheduler_set_task_state(TASK_BLOCKED);
     add_request_to_queue(current->pid, OPEN, 0, path, "");
-
+    return STATUS_OK;
 }
 
 /*
@@ -128,23 +131,22 @@ static int sys_exec(struct registers *r) {
     char *filename = (char *)r->ecx;
     task_t *task = get_task_by_name(filename);
     if(task == NULL) {
-        return -1;
+        return STATUS_ERROR;
     }
     
     scheduler_add(task);
     scheduler_switch_context(r, scheduler_find_next_task());
-    return 0;
+    return STATUS_OK;
 } //sys_exec
 
 static int32_t sys_yield(struct registers *r) {
-    //r->eax = 0;
     scheduler_switch_context(r, scheduler_find_next_task());
-    return 0;
+    return STATUS_OK;
 } //sys_yield
 
 static int32_t sys_idle(struct registers *r) {
     while(1) __asm__ __volatile__("sti; hlt");
-    return 0;
+    return STATUS_OK;
 } //sys_idle
 
 void syscall_init() {
@@ -162,7 +164,7 @@ void syscall_init() {
 
 void syscall_dispatch(struct registers *r) {
     if (r->eax >= MAX_SYSCALLS || syscall_table[r->eax] == NULL) {
-        r->eax = -1;
+        return STATUS_ERROR;
         return;
     }
 
