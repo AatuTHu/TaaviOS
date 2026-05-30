@@ -76,7 +76,7 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     uint32_t phys = virt_to_phys(task->kernel_stack - KERNEL_STACK_SIZE);
     pmm_free(phys);
     DEBUG("[TASK]: Freeing physical page directory\n");
-    pmm_free(virt_to_phys(task->page_dir));
+    pmm_free(virt_to_phys((uint32_t)task->page_dir));
     DEBUG("[TASK]: Freeing task\n");
     kfree(task);
 }

@@ -28,11 +28,11 @@ int sys_getpid(void) {
 }
 
 int sys_open(const char *path) {
-    int fd;
+    int fd = -1;
     __asm__ __volatile__(
         "int $0x80"
         : "=a"(fd)
-        : "a"(5)
+        : "a"(5), "b"(path)
     );
     return fd;
 }

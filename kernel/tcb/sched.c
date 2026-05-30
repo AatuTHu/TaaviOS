@@ -82,7 +82,7 @@ int scheduler_find_first_task_based_on_state(task_state_t state) {
 /*
 * 
 */
-void _scheduler_remove_task(struct registers *r) {
+void _scheduler_remove_task() {
     
     //edge case for when there is only one task and it is dead
     if(tasks[current_idx]->state == TASK_DEAD && task_count == 1 && dead_task_count == 1) {
@@ -197,8 +197,10 @@ int scheduler_set_current_task(uint32_t pid) {
         int next_idx = (current_idx + i) % task_count;
         if (tasks[next_idx]->pid == pid) {
             current_idx = next_idx;
+            return STATUS_OK;
         }
     }
+    return STATUS_ERROR;
 }
 
 task_t *scheduler_get_current_task() {
@@ -272,33 +274,23 @@ void scheduler_wake_task(uint32_t pid) {
     }
 }
 
-
-int scheduler_does_exist(int pid) {
-    for(int i = 0; i < task_count; i++) {
-        if(tasks[i]->pid == pid) {
-            //DEBUG("[SCHEDULER][DOES_EXIST]: Task exists\n");
-            return STATUS_ERROR;
-        }
-    }
-    //DEBUG("[SCHEDULER][DOES_EXIST]: Task does not exists\n");
-    return STATUS_OK;
-}
-
 void scheduler_add(task_t *task) {
     
     if(task_count >= MAX_TASKS) {
         ERROR("[SCHEDULER][ADD]: Too many tasks added to scheduler\n");
         return;
     }
-    
-    if(scheduler_does_exist(task->pid) == STATUS_ERROR) {
-       // DEBUG("[SCHEDULER][ADD]: Aborting\n");
-        return;
+
+    for(int i = 0; i < task_count; i++) {
+        if(tasks[i]->pid == task->pid) {
+            DEBUG("[SCHEDULER][ADD]: Task exists\n");
+            return;
+        }
     }
-    
+
     tasks[task_count] = task;
-    
     task_count++;
+    
     if(current_idx == -1) {
         current_idx = 0;
     }
@@ -311,6 +303,7 @@ int scheduler_get_idx_off_pid(uint32_t pid) {
             return pids_idx;      
         }
     }
+    return STATUS_ERROR;
 }
 
 void _set_scheduler_on() {

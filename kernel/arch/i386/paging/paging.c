@@ -60,7 +60,7 @@ page_directory_t *paging_create_directory() {
 }
 
 void paging_switch(page_directory_t *dir) {
-    uint32_t phys = virt_to_phys((uint32_t *)dir);
+    uint32_t phys = virt_to_phys((uint32_t)dir);
     __asm__ __volatile__("mov %0, %%cr3" :: "r"(phys));
 }
 

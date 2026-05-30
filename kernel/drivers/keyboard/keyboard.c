@@ -13,6 +13,35 @@ static int caps_lock_pressed = 0;
 static int waiting_queue_count = 0;
 static int waiting_queue[MAX_TASKS];
 
+int keyboard_get_foreground_pid() {
+    return keyboard_buffer->foreground_pid;
+}
+
+void keyboard_clear_buffer() {
+    keyboard_buffer->read = keyboard_buffer->write;
+}
+
+void keyboard_set_foreground_pid(int pid) {
+    if(pid == -1) {
+        if(waiting_queue_count > 0) {
+            pid = waiting_queue[0];
+            for(int i = 0; i < waiting_queue_count - 1; i++) {
+                waiting_queue[i] = waiting_queue[i+1];
+            }
+            waiting_queue_count--;
+        }
+    }
+    keyboard_clear_buffer();
+    keyboard_buffer->foreground_pid = pid;
+}
+
+void keyboard_add_to_waiting_queue(int pid) {
+    if(pid == -1) return;
+    for(int i = 0; i < waiting_queue_count; i++) {
+        if(waiting_queue[i] == pid) return; // already queued
+    }
+    waiting_queue[waiting_queue_count++] = pid;
+}
 
 void keyboard_irq_handler(void) {
     uint8_t scancode = inb(0x60);
@@ -33,7 +62,7 @@ int keyboard_read_from_buffer(char* out, uint32_t pid) {
         keyboard_set_foreground_pid(pid);
     }
 
-    if(keyboard_get_foreground_pid() != pid) {
+    if(keyboard_get_foreground_pid() != (int)pid) {
         keyboard_add_to_waiting_queue(pid);
         return 0;
     }
@@ -76,35 +105,6 @@ void keyboard_handler(uint8_t scancode) {
     }
 }
 
-int keyboard_get_foreground_pid() {
-    return keyboard_buffer->foreground_pid;
-}
-
-void keyboard_set_foreground_pid(int pid) {
-    if(pid == -1) {
-        if(waiting_queue_count > 0) {
-            pid = waiting_queue[0];
-            for(int i = 0; i < waiting_queue_count - 1; i++) {
-                waiting_queue[i] = waiting_queue[i+1];
-            }
-            waiting_queue_count--;
-        }
-    }
-    keyboard_clear_buffer();
-    keyboard_buffer->foreground_pid = pid;
-}
-
-void keyboard_add_to_waiting_queue(int pid) {
-    if(pid == -1) return;
-    for(int i = 0; i < waiting_queue_count; i++) {
-        if(waiting_queue[i] == pid) return; // already queued
-    }
-    waiting_queue[waiting_queue_count++] = pid;
-}
-
-void keyboard_clear_buffer() {
-    keyboard_buffer->read = keyboard_buffer->write;
-}
 
 void keyboard_init() {
     keyboard_buffer->read = 0;

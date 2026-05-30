@@ -14,7 +14,7 @@ void memset(void *ptr, int value, int size)
     }
 }
 
-int strlen(char *s) {
+int strlen(const char *s) {
   int len = 0;
   while(*s != '\0') {
     len++;
@@ -32,8 +32,8 @@ void strcpy(char *dest, char *src) {
   *dest = '\0';
 }
 
-void strncpy(char *dest,const char *src, uint8_t size) {
-  uint8_t i;
+void strncpy(char *dest,const char *src, uint32_t size) {
+  uint32_t i;
   for(i = 0; i < size-1; i++) {
     if(src[i] == '\0') break;
     dest[i] = src[i];

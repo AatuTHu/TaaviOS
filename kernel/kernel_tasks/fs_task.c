@@ -36,6 +36,7 @@ int fs_handle_request(fs_mailbox_queue *req) {
 
     //stub. to. be. continued
     req->status = COMPLETE;
+    return STATUS_OK;
 }
 
 /*
