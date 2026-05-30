@@ -4,6 +4,7 @@
 #include "klog.h"
 #include "kstring.h"
 #include "kmalloc.h"
+#include "blankie.h"
 
 /*
 * Author: A.H, started 27.5.2026
@@ -43,15 +44,15 @@ int fs_handle_request(fs_mailbox_queue *req) {
 * 
 */
 void fs_remove_from_queue() {
-
+    
     if (last_request_index == -1 || request_queue_count == 0) {
         return;
     }
 
-    DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
-    kfree(request_queue[last_request_index]);
+    __asm__ __volatile__("cli");
+
+    void *ptr_to_free = (void *)request_queue[last_request_index];
     
-    DEBUG("[FS_TASK][REMOVE]: Deleting at req_index and shifting rest of the array to the left\n");
     for (int i = last_request_index; i < request_queue_count - 1; i++) {
         request_queue[i] = request_queue[i + 1];
     }
@@ -59,6 +60,14 @@ void fs_remove_from_queue() {
     request_queue[request_queue_count - 1] = NULL;
     request_queue_count--;
     last_request_index = -1;
+
+    __asm__ __volatile__("sti");
+
+    if (ptr_to_free != NULL) {
+        DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
+        kfree(ptr_to_free);
+    }
+    
     DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
 }
 
@@ -90,22 +99,19 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
     if(buf != NULL) {
         strncpy(new_request->buf, buf, sizeof(new_request->buf) - 1);
         new_request->buf[sizeof(new_request->buf) - 1] = '\0';
-    } else {
-        new_request->buf[0] = '\0';
     }
     
     
     DEBUG("[FS_TASK][artq]: pid: %d\n", new_request->caller_pid);
     DEBUG("[FS_TASK][artq]: request_type: %d\n", new_request->request_type);
     DEBUG("[FS_TASK][artq]: fd: %d\n", new_request->fd);
-    DEBUG("[FS_TASK][artq]: path: %s\n", new_request->path);
     DEBUG("[FS_TASK][artq]: buf: %s\n", new_request->buf);
+    DEBUG("[FS_TASK][artq]: path: %s\n", new_request->path);
     new_request->status = PENDING;
     request_queue[request_queue_count] = new_request;
     request_queue_count++;
     
     scheduler_wake_task(fs_task_pid);
-
 
     DEBUG("[FS_TASK][artq]: request added\n");
     __asm__ __volatile__("sti");
@@ -143,27 +149,23 @@ fs_mailbox_queue *find_next_request() {
 
 void fs_task_loop() {
     //DEBUG("[FS_TASK]: \n");
-    while(1) {
-        if(request_queue_count > 0) {
-            __asm__ __volatile__("cli");
-            fs_mailbox_queue *request = find_next_request();;
-            if(request != NULL) {
-                if(request->status == PENDING || request->status == IN_PROGRESS) {
-                    DEBUG("[FS_TASK][LOOP]: handling request\n");
-                    fs_handle_request(request);
+        while(1) {
+            if(request_queue_count > 0) {
+                fs_mailbox_queue *request = find_next_request();
+                if(request != NULL) {
+                    if(request->status == PENDING || request->status == IN_PROGRESS) {
+                        DEBUG("[FS_TASK][LOOP]: handling request\n");
+                        fs_handle_request(request);
+                        fs_wake_task(request);
+                    }
+                    
+                    if(request->status == COMPLETE) {
+                        DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
+                        fs_remove_from_queue();
+                        request = NULL;
+                    }
                 }
-                
-                if(request->status == COMPLETE) {
-                    DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
-                    fs_wake_task(request);
-                    fs_remove_from_queue();
-                }
-
-            } else {
-                DEBUG("[FS_TASK][LOOP]: No new request found.\n");
             }
-            __asm__ __volatile__("sti");
-        }
         
         
         /*
@@ -171,14 +173,16 @@ void fs_task_loop() {
         * calculate next possible cluster/file
         * close / delete
         */
-       
-       //DEBUG("[FS_TASK][LOOP]: No requests or servicing required. Activating blankie protocol\n");
-       scheduler_set_task_state(TASK_SLEEPING);
+
+        if (request_queue_count == 0) {
+            blankie_activate(fs_task_pid);
+        }
     }
 }
 
-void fs_init(uint32_t pid) {
+void fs_init(task_t *fs_task) {
     mem_start   = (uint32_t)kmalloc(FS_TASK_REGION_SIZE);
     mem_end     = mem_start + FS_TASK_REGION_SIZE;
-    fs_task_pid = pid;
+    fs_task_pid = fs_task->pid;
+    blankie_register(fs_task_pid, fs_task->context.eip, fs_task->kernel_stack);
 }

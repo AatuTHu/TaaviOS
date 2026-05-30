@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "config.h"
+#include "task.h"
 
 typedef enum  {
     PENDING,
@@ -28,7 +29,7 @@ typedef struct fs_mailbox_queue {
     
 } fs_mailbox_queue;
 
-void fs_init(uint32_t pid);
+void fs_init(task_t *fs_task);
 void fs_task_loop();
 int add_request_to_queue(uint32_t pid,operations_t type,uint32_t fd, const char* path,const char *buf);
 

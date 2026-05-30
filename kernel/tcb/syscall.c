@@ -147,6 +147,8 @@ static int32_t sys_exec(struct registers *r) {
 } //sys_exec
 
 static int32_t sys_yield(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_yield]: caller: %s\n", scheduler_get_current_task()->name);
+    r->eax = STATUS_OK;
     scheduler_yield(r);
     return STATUS_OK;
 } //sys_yield

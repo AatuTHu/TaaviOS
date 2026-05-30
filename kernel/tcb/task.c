@@ -96,9 +96,13 @@ task_t *get_task_by_name(char *name) { //A helper function not inteded to stay. 
     return NULL;
 }
  
-task_t *task_get(int index) { //Id' like this to be pid. Who the heck know the index?
-    if(index >= 0 && index <= MAX_TASKS-1) {
-        return task_table[index];
+task_t *task_get(uint32_t pid) {
+    if(pid <= MAX_TASKS) {    
+        for(int i = 0; i <= MAX_TASKS; i++) {
+            if(task_table[i] != NULL && task_table[i]->pid == pid) {
+                return task_table[i];
+            }
+        }
     }
     return NULL;
 }

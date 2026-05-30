@@ -120,7 +120,7 @@ void init_kernel_tasks() {
     DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
     task_t *fs_task = task_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_TASK);
     
-    fs_init(fs_task->pid);
+    fs_init(fs_task);
     
     scheduler_add(idle_task);
     scheduler_add(fs_task);
