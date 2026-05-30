@@ -11,6 +11,7 @@
 
 static int request_queue_count = 0;
 static int last_request_index = -1;
+static uint32_t fs_task_pid = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
 static const int FS_TASK_QUEUE_SIZE = MAX_TASKS * sizeof(fs_mailbox_queue);
 static const int FS_TASK_TABLE_SIZE = 64 * sizeof(fd_entry_t);
@@ -62,36 +63,51 @@ void fs_remove_from_queue() {
 
 
 
-int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, char *buf) {
-
+int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path,const char *buf) {
+    __asm__ __volatile__("cli");
     DEBUG("[FS_TASK][artq]: adding a request for fs_task\n");
 
     fs_mailbox_queue *new_request = (fs_mailbox_queue *)kmalloc(sizeof(fs_mailbox_queue));
 
     if(new_request == NULL) {
         DEBUG("[FS_TASK][artq]: Could on allocate new requestat this time. Aborting\n");
+        __asm__ __volatile__("sti");
         return STATUS_ERROR;
     }
 
     new_request->caller_pid = pid;
     new_request->request_type = type;
-    strncpy(new_request->path, path, sizeof(new_request->path));
-    new_request->buf = buf;
     new_request->fd = fd;
+    
+    if (path != NULL) {
+        strncpy(new_request->path, path, sizeof(new_request->path) - 1);
+        new_request->path[sizeof(new_request->path) - 1] = '\0';
+    } else {
+        new_request->path[0] = '\0';
+    }
+    
+    if(buf != NULL) {
+        strncpy(new_request->buf, buf, sizeof(new_request->buf) - 1);
+        new_request->buf[sizeof(new_request->buf) - 1] = '\0';
+    } else {
+        new_request->buf[0] = '\0';
+    }
+    
+    
+    DEBUG("[FS_TASK][artq]: pid: %d\n", new_request->caller_pid);
+    DEBUG("[FS_TASK][artq]: request_type: %d\n", new_request->request_type);
+    DEBUG("[FS_TASK][artq]: fd: %d\n", new_request->fd);
+    DEBUG("[FS_TASK][artq]: path: %s\n", new_request->path);
+    DEBUG("[FS_TASK][artq]: buf: %s\n", new_request->buf);
     new_request->status = PENDING;
-
     request_queue[request_queue_count] = new_request;
     request_queue_count++;
     
-    //scheduler_wake_task(1);
+    scheduler_wake_task(fs_task_pid);
 
-    DEBUG("[FS_TASK][artq]: pid: %d\n", pid);
-    DEBUG("[FS_TASK][artq]: request_type: %d\n", type);
-    DEBUG("[FS_TASK][artq]: fd: %d\n", fd);
-    DEBUG("[FS_TASK][artq]: path: %s\n", path);
-    DEBUG("[FS_TASK][artq]: buf: %s\n", buf);
 
     DEBUG("[FS_TASK][artq]: request added\n");
+    __asm__ __volatile__("sti");
     return STATUS_OK;
 }
 
@@ -160,7 +176,8 @@ void fs_task_loop() {
     }
 }
 
-void fs_init() {
-    mem_start = (uint32_t *)kmalloc(FS_TASK_REGION_SIZE);
-    mem_end   = mem_start + FS_TASK_REGION_SIZE; 
+void fs_init(uint32_t pid) {
+    mem_start   = (uint32_t)kmalloc(FS_TASK_REGION_SIZE);
+    mem_end     = mem_start + FS_TASK_REGION_SIZE;
+    fs_task_pid = pid;
 }

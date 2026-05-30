@@ -32,7 +32,7 @@ static int32_t sys_exit(struct registers *r) {
     }
 
     scheduler_set_task_state(TASK_DEAD);
-    scheduler_switch_context(r, scheduler_find_next_task());
+    scheduler_yield(r);
 
     return STATUS_OK;
 } //sys_exit
@@ -40,7 +40,7 @@ static int32_t sys_exit(struct registers *r) {
 
 static int32_t sys_write(struct registers *r) {
     int fd       = r->ebx;
-    char *buf    = (char *)r->ecx; //ecx has the string
+    char *buf    = r->ecx; //ecx has the string
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
     char *path   = r->esi;
 
@@ -57,9 +57,9 @@ static int32_t sys_write(struct registers *r) {
     default:
         task_t *current = scheduler_get_current_task();
         scheduler_set_task_state(TASK_BLOCKED);
-        add_request_to_queue(current->pid, WRITE, fd," ",buf);
+        add_request_to_queue(current->pid, WRITE, fd, path, buf);
         r->eax =  STATUS_OK;
-        scheduler_switch_context(r, scheduler_find_next_task());
+        scheduler_yield(r);
         break;
     }
 
@@ -98,7 +98,7 @@ static int32_t sys_read(struct registers *r) {
         if(current->state != TASK_BLOCKED) {
             scheduler_set_task_state(TASK_BLOCKED);
             r->eax =  STATUS_OK;
-            scheduler_switch_context(r, scheduler_find_next_task());
+            scheduler_yield(r);
         }
         break;
     
@@ -138,12 +138,12 @@ static int sys_exec(struct registers *r) {
     }
     
     scheduler_add(task);
-    scheduler_switch_context(r, scheduler_find_next_task());
+    scheduler_yield(r);
     return STATUS_OK;
 } //sys_exec
 
 static int32_t sys_yield(struct registers *r) {
-    scheduler_switch_context(r, scheduler_find_next_task());
+    scheduler_yield(r);
     return STATUS_OK;
 } //sys_yield
 

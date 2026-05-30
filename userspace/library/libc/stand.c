@@ -3,27 +3,27 @@
 #include "string.h"
 
 void print(const char *msg) {
-    sys_write(msg, strlen(msg), 1);
+    sys_write(msg, strlen(msg), 1, NULL);
 }
 
 void error(const char *msg) {
-    sys_write(msg, strlen(msg), 2);
+    sys_write(msg, strlen(msg), 2, NULL);
 }
 
 int scan(char *buf) {
-    return sys_read(buf, 1, 0);
+    return sys_read(buf, 1, 0, NULL);
 }
 
 int open(const char* path) {
     return sys_open(path);
 }
 
-void write(int fd, const char *msg) {
-    sys_write(msg, strlen(msg), fd);
+void write(int fd, const char *msg, const char *path) {
+    sys_write(msg, strlen(msg), fd, path);
 }
 
-int read(int fd, char *buf) {
-    return sys_read(buf, strlen(buf) ,fd);
+int read(int fd, char *buf, const char *path) {
+    return sys_read(buf, strlen(buf), fd, path);
 }
 
 void terminate_program() {

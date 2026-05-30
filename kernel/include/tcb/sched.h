@@ -14,7 +14,7 @@ void scheduler_set_task_state(task_state_t state);
 void scheduler_wake_task(uint32_t pid);
 int scheduler_get_idx_off_pid(uint32_t pid);
 int scheduler_set_current_task(uint32_t pid);
-void scheduler_switch_context(struct registers *r, int idx);
+void scheduler_yield(struct registers *r);
 int  scheduler_get_task_count();
 int scheduler_find_next_task();
 int scheduler_find_first_task_based_on_state(task_state_t state);

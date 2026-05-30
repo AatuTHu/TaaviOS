@@ -45,7 +45,7 @@ void command_exec(const char *filename) {
 }
 
 void command_wake() {
-    write(4,"wake!");
+    write(4,"wake!", "hello.txt");
 }
 
 void command_open() {

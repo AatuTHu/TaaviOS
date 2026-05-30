@@ -22,14 +22,14 @@ typedef struct fs_mailbox_queue {
     uint32_t caller_pid;
     operations_t  request_type;
     char     path[128];
-    char    *buf;
+    char     buf[512];
     uint32_t fd;
     fs_task_queue_status_t  status;
     
 } fs_mailbox_queue;
 
-void fs_init();
+void fs_init(uint32_t pid);
 void fs_task_loop();
-int add_request_to_queue(uint32_t pid,operations_t type,uint32_t fd, const char* path, char *buf);
+int add_request_to_queue(uint32_t pid,operations_t type,uint32_t fd, const char* path,const char *buf);
 
 #endif

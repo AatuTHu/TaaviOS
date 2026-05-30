@@ -1,7 +1,7 @@
 #ifndef SYS_CALLS_H
 #define SYS_CALLS_H
 
-void sys_write(const char *msg, int len, int fd);
+void sys_write(const char *msg, int len, int fd, const char *path);
 
 void sys_exit(void);
 
@@ -11,7 +11,7 @@ void sys_idle(void);
 
 void sys_yield(void);
 
-int sys_read(char *buf, int len, int fd);
+int sys_read(char *buf, int len, int fd, const char *path);
 
 int sys_open(const char *path);
 
