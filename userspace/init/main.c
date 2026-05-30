@@ -3,9 +3,7 @@
 #include "stand.h"
 
 void main(void) {
+    print("Starting shell\n");
     exec("shell");
-    //exec("shell2");
-    //while(1) {
-     //   idle();
-   // }
+    
 }

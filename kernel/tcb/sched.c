@@ -20,26 +20,31 @@ static int dead_task_count = 0;
 static int kernel_task_count = 0; 
 static int user_task_count = 0;
 static int current_idx = -1;
-volatile static uint8_t scheduler_on = 0;
+static volatile uint8_t scheduler_on = 0;
+
+static void scheduler_spawn_idle_task() {
+    
+    //DEBUG("[SCHEDULER][SPAWN IDLE TASK]: finding idle task\n");
+
+    task_t *idle_task = tasks[0];
+
+    if(idle_task == NULL && idle_task->task_mode == USER_TASK) {
+        DEBUG("[SCHEDULER][SPAWN IDLE TASK]: Did not find idle task\n");
+        
+        return;
+    }
+
+    //DEBUG("[SCHEDULER][SPAWN IDLE TASK]: Idle task found, setting it ready\n");
+    idle_task->state = TASK_READY;
+    
+}
 
 int scheduler_find_next_task() {
-    __asm__ __volatile__("cli");
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
             if (tasks[next_idx]->priority == PRIORITY_HIGH && tasks[next_idx]->state != TASK_DEAD) {
                 return next_idx;
             }
-    }
-
-    if(dead_task_count > 0) {
-        DEBUG("[SCHEDULER][SEARCH]: Searching for someone to clean up tasks\n");
-        for(int i = 1; i <= task_count; i++) { 
-            int next_idx = (current_idx + i) % task_count;
-            if (tasks[next_idx]->state == TASK_BLOCKED || tasks[next_idx]->state == TASK_DEAD) {
-                DEBUG("[SCHEDULER][SEARCH]: Cleaner found %s\n", tasks[next_idx]->name);
-                return next_idx;
-            }
-        }
     }
 
     for(int i = 1; i <= task_count; i++) { 
@@ -56,7 +61,6 @@ int scheduler_find_next_task() {
             }
     }
 
-    __asm__ __volatile__("sti");
     return -1;
 }
 
@@ -64,7 +68,7 @@ int scheduler_find_next_task() {
 *   Scheduler finder func. Give it a state you want to find and id finds the next one based from the current_idx
 *   IF candidate is not found it returns as -1
 */
-int scheduler_find_first_task_based_on_state(task_state_t state) {
+int scheduler_find_first_task_based_on_state(task_state_t state) {  
     int candidate = -1;
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
@@ -76,15 +80,8 @@ int scheduler_find_first_task_based_on_state(task_state_t state) {
     return candidate;
 }
 
-/*
-*   First we try and find next task from the list to run. Beacouse once we delete task we cannot know for certain what was the next one.
-*   If we don't find tasks that are ready to run we are going to run DEAD task next, so that scheduler comes here again. [THIS SHOULD BE CHANGED TO BLOCKED?]
-*   ---
-*   Second we are going to find a task that is in a dead state and we delete it.
-*   Thirdy we shift the old list on left so that there are no nulls
-*   Fourth we find the idx which corresponds to our next_pid
-*/
-void _scheduler_remove_task() {
+
+void _scheduler_remove_task(struct registers *r) {
     
     //edge case for when there is only one task and it is dead
     if(tasks[current_idx]->state == TASK_DEAD && task_count == 1 && dead_task_count == 1) {
@@ -131,20 +128,22 @@ void _scheduler_remove_task() {
     }
 }
 
-/*
-*   If scheduler is not on go to sleep. This is because in kernel main when we jump to usermode we jump with a task that is added to scheduler.
-*   if other tasks are added to scheduler then this func wil find and run them when the task makes a sys_exit call.
-*/
+
 void scheduler_switch_context(struct registers *r, int idx) { 
     __asm__ __volatile__("cli");
+
     if(scheduler_on == 0) {
-        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: scheudler_on: %d\n", scheduler_on);
+        DEBUG("[SCHEDULER][SWITCH_CONTEXT]: scheudler_on: %d\n", scheduler_on);
+    }
+    
+    
+    if(idx < 0 || idx >= MAX_TASKS) {
+        idx = scheduler_find_first_task_based_on_state(TASK_READY);
     }
 
-    
-    task_t *current = tasks[current_idx];
-    if(current != NULL) {
-        //DEBUG("[SCHEDULER][CONTEXT_SWITCH]: saving: %s\n", current->name);
+    if(current_idx >= 0 && current_idx < MAX_TASKS) {
+        task_t *current = tasks[current_idx];
+        DEBUG("[SCHEDULER][SWITCH_CONTEXT]: saving: %s\n", current->name);
         if(current->started) {
             memcpy(&current->context, r, sizeof(struct registers));
         }
@@ -153,110 +152,98 @@ void scheduler_switch_context(struct registers *r, int idx) {
         }
     }
     
-    if(idx < 0 || idx >= MAX_TASKS) {
-        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: CANNOT SWITCH CONTEXT\n");
-        DEBUG("[SCHEDULER][CONTEXT_SWITCH]: trying to switch to idx: %d\n", idx);
-        return;
+    task_t *next = (idx >= 0 && idx < MAX_TASKS) ? tasks[idx] : NULL;
+
+    if(next == NULL || next->state == TASK_DEAD || next->state == TASK_BLOCKED) {
+        DEBUG("[SCHEDULER][SWITCH_CONTEXT]: Next task is DEAD, BLOCKED or NULL. seeking a new task to run\n");
+
+        if(scheduler_has_runnable_task() == 0) {
+            DEBUG("[SCHEDULER][SWITCH_CONTEXT]: There is no tasks to switch to spawning idle task\n");
+            scheduler_spawn_idle_task();
+        }
+
+        idx = scheduler_find_first_task_based_on_state(TASK_READY);
+        
+        if(idx == -1 || idx >= MAX_TASKS) {
+            DEBUG("[SCHEDULER][SWITCH_CONTEXT]: Not tasks found. Shutting down\n");
+            __asm__ __volatile__("sti; hlt");
+            return;
+        }
+
+        next = tasks[idx];
     }
     
-    task_t *next = tasks[idx];
-
     if(current_idx != idx) {
-        //DEBUG("[SCHEDULER][CONTEXT_SWITCH]: now running: %s\n", next->name);
+        DEBUG("[SCHEDULER][SWITCH_CONTEXT]: now running: %s\n", next->name);
         current_idx = idx;
         vmm_switch(next->page_dir);
-        next->started = 1;
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
-        if(next->state == TASK_READY) {
-            next->state = TASK_RUNNING;
-        }
+        
     }
+
+    if(next->state == TASK_READY) {
+        next->state = TASK_RUNNING;
+    }
+
     __asm__ __volatile__("sti");
 }
 
 
-/*
-* First we make the basic checks so that we know if there is a reason to switch task on this tick.
-* scheduler_on is a master switch if that I could see as a syscall that init task makes when everything is ready.
-* Second Then if tasks state is blocked or dead we can use that timespace to delete task.
-* Third Then basic context-switch. If task is started we save registers to tasks context.
-* Fourth see if next idx is the same as now. if it is then no need to switch context.
-*/
+
 void scheduler_tick(struct registers *r) {
     __asm__ __volatile__("cli");
-    if(current_idx == -1 || task_count == 0 || scheduler_on == 0) {
-        DEBUG("[SCHEDULER][TICK]: cidx: %d, count: %d, mode: %d\n", current_idx,task_count,scheduler_on);
+
+    if(task_count == 0 || scheduler_on == 0) {
+        DEBUG("[SCHEDULER][TICK]: task_count: %d, mode: %d\n",task_count, scheduler_on);
         __asm__ __volatile__("sti");
         return;
     }
 
-    task_t *current = scheduler_get_current_task();
-    if(current == NULL) {
-        DEBUG("[SCHEDULER][TICK]: Did not find current task \n");
-        __asm__ __volatile__("sti");
-        return;
-    }
-    
-    if(current->started) {
-       // DEBUG("[SCHEDULER][TICK]: saving: %s\n", current->name);
-        memcpy(&current->context, r, sizeof(struct registers));
+    task_t *current = (current_idx >= 0 && current_idx < MAX_TASKS) ? tasks[current_idx] : NULL;
+
+    if(current != NULL) {
+        if(current->started) {
+            DEBUG("[SCHEDULER][TICK]: Saving: %s\n", current->name);
+            memcpy(&current->context, r, sizeof(struct registers));
+        }
         if(current->state == TASK_RUNNING) {
             current->state = TASK_READY;
         }
+    } 
+      
+    if(scheduler_has_runnable_task() == 0) {
+        DEBUG("[SCHEDULER][TICK]: There is no tasks to switch to spawning idle task\n");
+        scheduler_spawn_idle_task();
+    }
 
-        //LEGACY CODE FOR NOW KEEPING IT FOR ISNPIRATION
-        /*if(current->pid == 0 && task_count == 1 && dead_task_count == 0) {
-            DEBUG("[SCHEDULER][TICK]: idle is the only task remaining. Shutting down\n");
-            scheduler_kill_task();
-            _scheduler_remove_task();
-            __asm__ __volatile__("sti; hlt");
-        }*/
-    }
-    current->started = 1;
-    
-    
-    if((current->state == TASK_DEAD || current->state == TASK_BLOCKED) && dead_task_count > 0) {
-        DEBUG("[SCHEDULER][TICK]: Going for clean up with %s\n", current->name);
-        DEBUG("[SCHEDULER][TICK]: Dead task count %d\n", dead_task_count);
-        _scheduler_remove_task();
-    }
-    
     //DEBUG("[SCHEDULER][TICK]: finding next task to run\n");
     int next_idx = scheduler_find_next_task();
     //DEBUG("[SCHEDULER][TICK]: new idx: %d\n", next_idx);
-    if (next_idx == -1) {
-        DEBUG("[SCHEDULER][TICK]: No new task found, fetching idle task to run.\n");
-        task_t *idle_task = get_task_by_name("idle");
-        if(idle_task != NULL) {
-            DEBUG("[SCHEDULER][TICK]: Waking idle task\n");
-            idle_task->state = TASK_READY;    
+    task_t *next = (next_idx >= 0 && next_idx < MAX_TASKS) ? tasks[next_idx] : NULL;
+    
+    if(next == NULL || next->state == TASK_DEAD || next->state == TASK_BLOCKED) {
+        DEBUG("[SCHEDULER][TICK]: Invalid next task returned. Falling back to first READY.\n");
+        next_idx = scheduler_find_first_task_based_on_state(TASK_READY);
+        
+        if (next_idx == -1) {
+            DEBUG("[SCHEDULER][TICK]: Critical failure finding next task. Halting.\n");
+            __asm__ __volatile__("sti; hlt");
+            return;
         }
-       return;
-    }
-    
-    task_t *next = tasks[next_idx];
-    
-    if(next == NULL) {
-        DEBUG("[SCHEDULER][TICK]: Something went horribly wrong\n");
-        __asm__ __volatile__("sti");
-        return;
+        next = tasks[next_idx];
     }
 
     next->state = TASK_RUNNING;
-    
+    next->started = 1;
+
     if(next_idx != current_idx) {
+        DEBUG("[SCHEDULER][TICK]: Next running %s\n", next->name);
         current_idx = next_idx;
-       // DEBUG("[SCHEDULER][TICK]: Now running: %s\n", next->name);
-
-        if(next->task_mode == USER_TASK) {
-            vmm_switch(next->page_dir);
-        }
-
+        vmm_switch(next->page_dir);
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }
-    //DEBUG("[SCHEDULER][TICK]: off we go\n");
     __asm__ __volatile__("sti");
 }
 
@@ -266,6 +253,16 @@ void scheduler_tick(struct registers *r) {
 /*
 * HELPER FUNCTIONS
 */
+
+int scheduler_set_current_task(uint32_t pid) {
+     for(int i = 1; i <= task_count; i++) { 
+        int next_idx = (current_idx + i) % task_count;
+        if (tasks[next_idx]->pid == pid) {
+            current_idx = next_idx;
+        }
+    }
+}
+
 task_t *scheduler_get_current_task() {
     if(current_idx == -1) {
         ERROR("[SCHEDULER]: no tasks added to scheduler yet\n");
@@ -318,15 +315,16 @@ int scheduler_get_task_count() {
 }
 
 int scheduler_has_runnable_task() {
+
     for (int i = 0; i < task_count; i++) {
-        if (tasks[i] && tasks[i]->state == TASK_READY && tasks[i]->pid != tasks[current_idx]->pid) {
+        if (tasks[i] && tasks[i]->state == TASK_READY) {
             return 1;
         }
     }
     return 0;
 }
 
-void scheduler_wake_task(int pid) {
+void scheduler_wake_task(uint32_t pid) {
     for(int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->pid == pid) {
             //DEBUG("[SCHEDULER]: Waking task %s\n", tasks[i]->name);
@@ -349,24 +347,26 @@ int scheduler_does_exist(int pid) {
 }
 
 void scheduler_add(task_t *task) {
+    
     if(task_count >= MAX_TASKS) {
         ERROR("[SCHEDULER][ADD]: Too many tasks added to scheduler\n");
         return;
     }
-
+    
     if(scheduler_does_exist(task->pid) == STATUS_ERROR) {
         DEBUG("[SCHEDULER][ADD]: Aborting\n");
         return;
     }
-
+    
     tasks[task_count] = task;
+    
     task_count++;
     if(current_idx == -1) {
         current_idx = 0;
     }
 }
 
-int scheduler_get_idx_off_pid(int pid) {
+int scheduler_get_idx_off_pid(uint32_t pid) {
      for(int i = 1; i <= task_count; i++) { 
         int pids_idx = (current_idx + i) % task_count;
         if (tasks[pids_idx]->pid == pid) {

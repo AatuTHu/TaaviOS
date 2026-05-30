@@ -154,7 +154,7 @@ void kernel_main(uint32_t *mboot_info) {
             DEBUG("[KERNEL]: ELF loaded.\n");
             DEBUG("[KERNEL]: Creating init task\n");
             first_task = task_create(entry, "init", init_pd, USER_TASK);
-            first_task->priority = PRIORITY_HIGH;
+            //first_task->priority = PRIORITY_HIGH;
             scheduler_add(first_task);
         } else {
             DEBUG("[KERNEL]: ELF load failed!\n");
@@ -177,6 +177,7 @@ void kernel_main(uint32_t *mboot_info) {
     
     if(first_task != NULL) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
+        scheduler_set_current_task(first_task->pid);
         _set_scheduler_on();
         vmm_switch(first_task->page_dir);
         DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n", first_task->context.eip, first_task->context.useresp, first_task->name);

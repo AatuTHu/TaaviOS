@@ -78,11 +78,11 @@ static int32_t sys_read(struct registers *r) {
     int fd    = r->ebx;
     char *buf = (char *)r->ecx;
     char *path   = r->esi;
+    task_t *current = scheduler_get_current_task();
 
     switch (fd)
     {
     case 0: //stdin
-         task_t *current = scheduler_get_current_task();
 
         if(current == NULL) {
             DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
@@ -128,7 +128,7 @@ static int32_t sys_open(struct registers *r) {
 *   This is a hack function. Does not really execute elf binaries. I made it for now so that I could test multitasking. NEEDS TO BE FIXED
 */
 static int sys_exec(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_EXEC]\n");
+    DEBUG("[SYSCALL][SYS_EXEC]: caller: %s\n", scheduler_get_current_task()->name);
     char *filename = (char *)r->ecx;
     task_t *task = get_task_by_name(filename);
     if(task == NULL) {
