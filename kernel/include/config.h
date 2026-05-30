@@ -47,4 +47,8 @@ typedef enum {
   OPEN
 } operations_t;
 
+#define idle_task_pid 0
+#define fs_task_pid 1
+#define reaper_task_pid 2
+
 #endif

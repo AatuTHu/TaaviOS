@@ -23,6 +23,7 @@
 #include "fat32.h"
 #include "fs_task.h"
 #include "idle_task.h"
+#include "reaper_task.h"
 
 #define MAX_MODS 10
 uint32_t module_starts[MAX_MODS];
@@ -116,14 +117,27 @@ void init_filesystems() {
 void init_kernel_tasks() {
     DEBUG("[KERNEL]: --INIT KERNEL TASKS--\n");
     DEBUG("[KERNEL]: Creating an idle kernel task\n");
-    task_t *idle_task = task_create((uint32_t)idle, "idle", &kernel_page_dir, KERNEL_TASK);
+    task_t *kernel_task = task_create(idle_task_pid,(uint32_t)idle, "idle", &kernel_page_dir, KERNEL_TASK);
+
+    if(kernel_task != NULL) {
+        scheduler_add(kernel_task);
+    }
+    
     DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
-    task_t *fs_task = task_create((uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_TASK);
+    kernel_task = task_create(fs_task_pid,(uint32_t)fs_task_loop, "fs_task", &kernel_page_dir, KERNEL_TASK);
     
-    fs_init(fs_task);
+    if(kernel_task != NULL) {
+        fs_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
     
-    scheduler_add(idle_task);
-    scheduler_add(fs_task);
+    DEBUG("[KERNEL]: Creating an reaper kernel task\n");
+    kernel_task = task_create(reaper_task_pid,(uint32_t)reaper_task_loop, "reaper_task", &kernel_page_dir, KERNEL_TASK);
+    
+    if(kernel_task != NULL) {
+        reaper_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
 }
 
 
@@ -155,7 +169,7 @@ void kernel_main(uint32_t *mboot_info) {
         if(entry != ET_NONE) {
             DEBUG("[KERNEL]: ELF loaded.\n");
             DEBUG("[KERNEL]: Creating init task\n");
-            first_task = task_create(entry, "init", init_pd, USER_TASK);
+            first_task = task_create(-1,entry, "init", init_pd, USER_TASK);
             //first_task->priority = PRIORITY_HIGH;
             scheduler_add(first_task);
         } else {
@@ -169,7 +183,7 @@ void kernel_main(uint32_t *mboot_info) {
         uint32_t shell_phys = module_starts[1];
         uint32_t entry = elf_load((void*)phys_to_virt(shell_phys), shell_pd);    
         if (entry != ET_NONE) {
-            task_create(entry, "shell", shell_pd, USER_TASK);
+            task_create(-1,entry, "shell", shell_pd, USER_TASK);
         }
     }
 

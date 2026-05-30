@@ -12,7 +12,6 @@
 
 static int request_queue_count = 0;
 static int last_request_index = -1;
-static uint32_t fs_task_pid = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
 static const int FS_TASK_QUEUE_SIZE = MAX_TASKS * sizeof(fs_mailbox_queue);
 static const int FS_TASK_TABLE_SIZE = 64 * sizeof(fd_entry_t);
@@ -183,6 +182,5 @@ void fs_task_loop() {
 void fs_init(task_t *fs_task) {
     mem_start   = (uint32_t)kmalloc(FS_TASK_REGION_SIZE);
     mem_end     = mem_start + FS_TASK_REGION_SIZE;
-    fs_task_pid = fs_task->pid;
     blankie_register(fs_task_pid, fs_task->context.eip, fs_task->kernel_stack);
 }

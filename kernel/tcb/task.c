@@ -9,19 +9,23 @@
 
 static task_t *task_table[MAX_TASKS];
 
-task_t *task_create(uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
+task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
 
     int slot = -1;
 
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (task_table[i] == NULL) {
-            slot = i;
-            break;
+    if(reserved_pid != -1) {
+        slot = reserved_pid;
+    } else {
+        for (int i = 0; i < MAX_TASKS; i++) {
+            if (task_table[i] == NULL) {
+                slot = i;
+                break;
+            }
         }
     }
-    
-    if (slot == -1) return NULL;
 
+    if (slot == -1) return NULL;
+    
     task_t *task = (task_t *)kmalloc(sizeof(task_t));
 
     if(task == NULL) return NULL;
