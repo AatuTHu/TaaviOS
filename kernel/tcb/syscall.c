@@ -58,6 +58,8 @@ static int32_t sys_write(struct registers *r) {
         task_t *current = scheduler_get_current_task();
         scheduler_set_task_state(TASK_BLOCKED);
         add_request_to_queue(current->pid, WRITE, fd," ",buf);
+        r->eax =  STATUS_OK;
+        scheduler_switch_context(r, scheduler_find_next_task());
         break;
     }
 

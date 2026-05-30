@@ -9,7 +9,7 @@
 * Author: A.H, started 27.5.2026
 */
 
-static int request_queue_count = -1;
+static int request_queue_count = 0;
 static int last_request_index = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
 static const int FS_TASK_QUEUE_SIZE = MAX_TASKS * sizeof(fs_mailbox_queue);
@@ -41,11 +41,15 @@ int fs_handle_request(fs_mailbox_queue *req) {
 * 
 */
 void fs_remove_from_queue() {
+
+    if (last_request_index == -1 || request_queue_count == 0) {
+        return;
+    }
+
     DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
     kfree(request_queue[last_request_index]);
     
     DEBUG("[FS_TASK][REMOVE]: Deleting at req_index and shifting rest of the array to the left\n");
-    request_queue[last_request_index] = NULL;
     for (int i = last_request_index; i < request_queue_count - 1; i++) {
         request_queue[i] = request_queue[i + 1];
     }
@@ -76,10 +80,10 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
     new_request->fd = fd;
     new_request->status = PENDING;
 
-    request_queue_count++;
     request_queue[request_queue_count] = new_request;
+    request_queue_count++;
     
-    scheduler_wake_task(1);
+    //scheduler_wake_task(1);
 
     DEBUG("[FS_TASK][artq]: pid: %d\n", pid);
     DEBUG("[FS_TASK][artq]: request_type: %d\n", type);
@@ -93,22 +97,24 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
 
 fs_mailbox_queue *find_next_request() {
 
-    for(int i = 0; i <= request_queue_count; i++) {
-        if(request_queue[i]->status == IN_PROGRESS) {
+    if (request_queue_count == 0) return NULL;
+
+    for(int i = 0; i < request_queue_count; i++) {
+        if(request_queue[i] != NULL && request_queue[i]->status == IN_PROGRESS) {
             last_request_index = i;
             return request_queue[i];
         }
     }
 
-    for(int i = 0; i <= request_queue_count; i++) {
-        if(request_queue[i]->status == PENDING) {
+    for(int i = 0; i < request_queue_count; i++) {
+        if(request_queue[i] != NULL && request_queue[i]->status == PENDING) {
             last_request_index = i;
             return request_queue[i];
         }
     }
 
-    for(int i = 0; i <= request_queue_count; i++) {
-        if(request_queue[i]->status == COMPLETE) {
+    for(int i = 0; i < request_queue_count; i++) {
+        if(request_queue[i] != NULL && request_queue[i]->status == COMPLETE) {
             last_request_index = i;
             return request_queue[i];
         }
@@ -119,18 +125,11 @@ fs_mailbox_queue *find_next_request() {
 }
 
 void fs_task_loop() {
-    DEBUG("[FS_TASK]: \n");
+    //DEBUG("[FS_TASK]: \n");
     while(1) {
-        
-        if(request_queue_count != -1) {
-            fs_mailbox_queue *request = NULL;
-    
-            if(last_request_index == -1) {
-                request = find_next_request();
-            } else {
-                request = request_queue[last_request_index];
-            }
-    
+        if(request_queue_count > 0) {
+            __asm__ __volatile__("cli");
+            fs_mailbox_queue *request = find_next_request();;
             if(request != NULL) {
                 if(request->status == PENDING || request->status == IN_PROGRESS) {
                     DEBUG("[FS_TASK][LOOP]: handling request\n");
@@ -142,11 +141,11 @@ void fs_task_loop() {
                     fs_wake_task(request);
                     fs_remove_from_queue();
                 }
-                
+
             } else {
                 DEBUG("[FS_TASK][LOOP]: No new request found.\n");
             }
-            
+            __asm__ __volatile__("sti");
         }
         
         
