@@ -4,8 +4,19 @@
 #include "config.h"
 #include "task.h"
 
-#define MAX_LOGS 20
+/*
+* Blankie protocol
+* Design & Implementation: A.H, 2026
+*/
 
+/*
+* This file contains the implementation of the blankie protocol. It was designed for a need to reset kernel tasks
+* so that their stack would not get corrupted. It also stores their initial state so when kernel_task is awaken again it starts with a clean slate
+* from its entry point. 
+*/
+
+
+#define MAX_LOGS 20
 static blankie_registry_t *b_registry[MAX_LOGS];
 static uint8_t req_slot = 0;
 

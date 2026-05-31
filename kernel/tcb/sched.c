@@ -7,9 +7,17 @@
 #include <stddef.h>
 
 /* 
-* Author: A.H - 20.4.2026
-* This code is a pile of sticks. 28.5.2026
-* modified continuesly from 20.4 till --- rest of time
+ * Scheduler
+ * This code is a pile of sticks. 28.5.2026
+ * Design & Implementation: A.H, 2026
+*/
+
+/*
+* This file contains the implementation and design of an opportunistic scheduler.
+* This exceeds the very basic idea of a scheduler in a way that it uses the "microlithic" kernel "clerks" or "tasks" as runnable tasks
+* For example the os has two userspace tasks. The init and the shell. Init starts the shell and then kills itself via syscall exit
+* the shell is the only one that can be picked to run. But what if shell is blocked? What does the scheduler do then? My asnwer is to
+* activate kernel clerks like reaper_task, fs_task or if there is literally nothing else to do then activate idle_task.
 */
 
 static task_t *tasks[MAX_TASKS];

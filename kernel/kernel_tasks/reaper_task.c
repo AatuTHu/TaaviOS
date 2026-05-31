@@ -3,6 +3,17 @@
 #include "blankie.h"
 #include "klog.h"
 
+/*
+ * Reaper_task
+ * Design & Implementation: A.H, 2026
+*/
+
+/*
+* This file contains the implementation of the reaper. Its job is to delete dead things. For now it's only doing it to schedulers dead tasks
+* but it can be expanded on.
+*
+* Otherwise it follows the blankie_protocol
+*/
 
 void reaper_task_loop() {
     while(1) {

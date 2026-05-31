@@ -7,7 +7,16 @@
 #include "blankie.h"
 
 /*
-* Author: A.H, started 27.5.2026
+* Fs_task
+* Design & Implementation: A.H, 2026
+*/
+
+/*
+* This file contains the implementation of filesystem_task. Its job is to talk to filesystem driver. For now it is hardcoded to be fat32 but can be
+* expanded for other filesystems once the need arises.
+*
+* The basic idea is that it performs crud operations for userspace tasks. Taking in requests via syscalls. After completing said request
+* it wakes the caller and if everything is completed it follows the blankie protocol.
 */
 
 static int request_queue_count = 0;
