@@ -174,7 +174,17 @@ static int __fat32_format_83(const char *filename, uint8_t *dst) {
         }
     }
 
-    if(index_of_dot == -1) return STATUS_ERROR;
+    if(index_of_dot == -1) {
+        for(uint8_t i = 0; i < strlen(filename); i++) {
+            if(i == 8) break;
+            if (filename[i] >= 'a' && filename[i] <= 'z') {
+                dst[i] = filename[i] - ASCII_CASE_DIFF;
+            } else {
+                dst[i] = filename[i];
+            }
+        }
+        return STATUS_OK;
+    }
     
     for(uint8_t i = 0; i < index_of_dot; i++) {
         if(i == 8) break;
@@ -194,6 +204,65 @@ static int __fat32_format_83(const char *filename, uint8_t *dst) {
     }
 
     return STATUS_OK;
+}
+
+static int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint32_t *out_cluster, uint32_t *out_size, uint8_t  *out_attr) {
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
+
+    if(!buf) {
+        return STATUS_ERROR;
+    }
+
+    uint8_t is_done = 0;
+    uint32_t current = dir_cluster;
+
+    while(is_done != 1) {
+        if(__fat32_read_cluster(current, buf) == STATUS_ERROR) {
+            DEBUG("[FAT32][FIND_FILE]: Could not read cluster\n");
+            kfree(buf);
+            return STATUS_ERROR;
+        }
+        fat32_dirent_t* dir_entry = (fat32_dirent_t*)buf;
+         uint32_t dirent_size = (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE;
+
+        for(uint32_t i = 0; i < dirent_size; i++) {
+            if(dir_entry[i].name[0] == FAT32_DIRENT_FREE) {
+                is_done = 1;
+                break;
+            }
+
+            if(dir_entry[i].name[0] == FAT32_DIRENT_DELETED) continue;
+            if ((dir_entry[i].attributes & 0x0F) == 0x0F) continue;
+            if(memcmp(dir_entry[i].name, name83, 11) == 0) {
+                *out_cluster = (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
+                *out_size = dir_entry[i].size;
+                *out_attr = dir_entry[i].attributes;
+                DEBUG("[FAT32][FIND_FILE]: file found!\n");
+                DEBUG("[FAT32][FIND_FILE]: cluster: %d\n", *out_cluster);
+                DEBUG("[FAT32][FIND_FILE]: size: %d\n", *out_size);
+                kfree(buf);
+                return STATUS_OK;
+            }
+        }
+
+        if(is_done == 1) {
+            break;
+        }
+
+        uint32_t next_cluster = __fat32_next_cluster(current);
+        DEBUG("[FAT32][FIND_FILE]: Next cluster number: %d\n", next_cluster);
+
+        if(next_cluster >= FAT32_CLUSTER_EOC_MIN) {
+            DEBUG("[FAT32][FIND_FILE]: End of the cluster chain\n");
+            kfree(buf);
+            return STATUS_ERROR;
+        }
+        current = next_cluster;
+    }
+
+    kfree(buf);
+    return STATUS_ERROR;
 }
 
 /*
@@ -259,57 +328,68 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
     return STATUS_OK;
 } //read_file
 
-
-int fat32_find_file(uint32_t dir_cluster, const char *name, const char *ext, uint32_t *out_cluster, uint32_t *out_size) {
-   uint32_t cluster_size = __fat32_calculate_cluster_size();
-   uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
-   //uint8_t buf[FAT32_SECTOR_SIZE];
-
-    if(!buf) return STATUS_ERROR;
-    uint32_t current = dir_cluster;
-    uint32_t dirent_size = (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE;
-
-    DEBUG("[FAT32][FIND_FILE]: current cluster: %d\n", current);
-    DEBUG("[FAT32][FIND_FILE]: cluster size %d\n", dirent_size);
-
-    while(1) {
-        if(__fat32_read_cluster(current, buf) == STATUS_ERROR) {
-            DEBUG("[FAT32][FIND_FILE]: Could not read cluster\n");
-            kfree(buf);
-            return STATUS_ERROR;
-        }
-        fat32_dirent_t* dir_entry = (fat32_dirent_t*)buf;
-
-        for(uint32_t i = 0; i < dirent_size; i++) {
-            if(dir_entry[i].name[0] == FAT32_DIRENT_FREE) break;
-            if(dir_entry[i].name[0] == FAT32_DIRENT_DELETED) continue;
-            if ((dir_entry[i].attributes & 0x0F) == 0x0F) continue;
-            if(memcmp(dir_entry[i].name, name, 8) == 0 && memcmp(dir_entry[i].ext,  ext, 3) == 0) {
-                *out_cluster = (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
-                *out_size = dir_entry[i].size;
-                DEBUG("[FAT32][FIND_FILE]: file found!\n");
-                DEBUG("[FAT32][FIND_FILE]: cluster: %d\n", *out_cluster);
-                DEBUG("[FAT32][FIND_FILE]: size: %d\n", *out_size);
-                kfree(buf);
-                return STATUS_OK;
-            }
-        }
-
-        uint32_t next_cluster = __fat32_next_cluster(current);
-        DEBUG("[FAT32][FIND_FILE]: Next cluster number: %d\n", next_cluster);
-
-        if(next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG("[FAT32][FIND_FILE]: End of the cluster chain\n");
-            kfree(buf);
-            return STATUS_ERROR;
-        }
-        current = next_cluster;
+int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size) {
+    
+    if(path == NULL) {
+        DEBUG("[FAT32][FIND_FILE]: Given path was invalid\n");
+        return STATUS_ERROR;
     }
 
-    kfree(buf);
-    return STATUS_ERROR;
-} //find_file
+    uint32_t current_cluster = f32_fs.root_cluster;
+    const char *p = path;
 
+    if(p[0] == '/') p++;
+
+    while (*p) {
+        char segment[13];
+        uint8_t index = 0;
+        while(index < 12) {
+            if(p[index] == '\0' || p[index] == '/') {
+                segment[index] = '\0';
+                break;
+            }
+
+            segment[index] = p[index];
+            index++;
+        }
+
+        segment[index] = '\0';
+        p += index;  
+
+        uint8_t name83[11];
+            if(__fat32_format_83(segment, name83) == STATUS_ERROR) {
+                DEBUG("[FAT32][FIND_FILE]: was Unable to format the filename\n");
+                return STATUS_ERROR;
+            }
+
+        uint32_t found_cluster, found_size;
+        uint8_t  found_attr;
+        if(__fat32_search_dir(current_cluster, name83, &found_cluster, &found_size, &found_attr) == STATUS_ERROR) {
+            DEBUG("[FAT32][FIND_FILE]: Unable to find the directory\n");
+            return STATUS_ERROR;
+        }
+
+        if (*p == '\0') {
+            DEBUG("[FAT32][FIND_FILE]: Directory cluster found: %d\n", found_cluster);
+            DEBUG("[FAT32][FIND_FILE]: Size: %d\n", found_size);
+            *out_cluster = found_cluster;
+            *out_size    = found_size;
+            return STATUS_OK;
+        } else {
+
+
+            if(p[0] == '/') p++;
+            //See if directory bit is present
+            if(!(found_attr & FAT32_ATTR_DIRECTORY)) { 
+                DEBUG("[FAT32][FIND_FILE]: Found invalid attributes\n");
+                return STATUS_ERROR;
+            }
+            current_cluster = found_cluster;
+        }
+    }
+
+    return STATUS_ERROR;
+}
 
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
     uint32_t cluster_size = __fat32_calculate_cluster_size();
