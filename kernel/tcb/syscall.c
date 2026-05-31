@@ -115,6 +115,7 @@ static int32_t sys_read(struct registers *r) {
 } //sys_read
 
 static int32_t sys_open(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_OPEN]\n");
     char *path   = (char *)r->ebx;
     task_t *current = scheduler_get_current_task();
 
@@ -125,9 +126,16 @@ static int32_t sys_open(struct registers *r) {
     
     scheduler_set_task_state(TASK_BLOCKED);
     add_request_to_queue(current->pid, OPEN, 0, path, NULL);
-    r->eax = STATUS_OK;
     scheduler_yield(r);
-    return STATUS_OK;
+    
+    int fd = collect_request(current->pid);
+
+    if(fd == STATUS_ERROR) {
+        DEBUG("[SYSCALL][SYS_OPEN]: Invalid fd\n");
+        return STATUS_ERROR;
+    }
+    DEBUG("[SYSCALL][SYS_OPEN]: Returning fd: %d\n", fd);
+    return fd;
 }
 
 /*

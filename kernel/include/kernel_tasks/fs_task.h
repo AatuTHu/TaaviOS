@@ -9,6 +9,7 @@ typedef enum  {
     PENDING,
     IN_PROGRESS,
     COMPLETE,
+    TERMINATED,
 } fs_task_queue_status_t;
 
 typedef struct fd_entry_t {
@@ -30,6 +31,7 @@ typedef struct fs_mailbox_queue {
 
 void fs_init(task_t *fs_task);
 void fs_task_loop();
+int collect_request(uint32_t pid);
 int add_request_to_queue(uint32_t pid,operations_t type,uint32_t fd, const char* path,const char *buf);
 
 #endif
