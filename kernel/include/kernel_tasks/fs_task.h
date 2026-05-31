@@ -26,7 +26,6 @@ typedef struct fs_mailbox_queue {
     char     buf[512];
     uint32_t fd;
     fs_task_queue_status_t  status;
-    
 } fs_mailbox_queue;
 
 void fs_init(task_t *fs_task);

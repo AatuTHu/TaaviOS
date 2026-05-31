@@ -49,7 +49,7 @@ void command_wake() {
 }
 
 void command_open() {
-    open("hello.text");
+    open("hello.txt");
 }
 
 void exec_cmd(char *buf) {

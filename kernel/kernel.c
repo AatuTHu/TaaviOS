@@ -91,7 +91,7 @@ void init_filesystems() {
     }
     fat32_init(fat32_lba);
 
-    //fat32_list_dir(f32_fs.root_cluster);
+    fat32_list_dir(f32_fs.root_cluster);
     
     /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;
@@ -151,10 +151,11 @@ void kernel_main(uint32_t *mboot_info) {
     check_for_modules(mboot_info);
     
     init_arch();
+    kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
+    
     init_drivers();
     init_filesystems();
     
-    kmalloc_init((void*)HEAP_START, HEAP_PAGES * PAGE_SIZE);
     
     scheduler_init();
     syscall_init();

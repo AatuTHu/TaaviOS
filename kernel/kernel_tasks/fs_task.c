@@ -32,11 +32,27 @@ void fs_wake_task(fs_mailbox_queue *req) {
     scheduler_wake_task(req->caller_pid);
 }
 
-int fs_handle_request(fs_mailbox_queue *req) {
+void fs_handle_request(fs_mailbox_queue *req) {
+
+    if(req->request_type == OPEN) {
+        uint32_t file_cluster = 0;
+        uint32_t file_size = 0;
+        char *path = (char *)req->path;
+
+        if(fat32_find_file(path, &file_cluster, &file_size) != STATUS_ERROR) {
+            DEBUG("[FS_TASK][handle_request]: File found succesfully, Completing request\n");
+            req->status = COMPLETE;
+            return;
+        }
+
+        DEBUG("[FS_TASK][handle_request]: Was unable to read file, Terminating request\n");
+        req->status = COMPLETE;
+        return;
+    }
 
     //stub. to. be. continued
     req->status = COMPLETE;
-    return STATUS_OK;
+    return;
 }
 
 /*
@@ -153,13 +169,15 @@ void fs_task_loop() {
                 fs_mailbox_queue *request = find_next_request();
                 if(request != NULL) {
                     if(request->status == PENDING || request->status == IN_PROGRESS) {
+                        __asm__ __volatile__("cli");
                         DEBUG("[FS_TASK][LOOP]: handling request\n");
                         fs_handle_request(request);
-                        fs_wake_task(request);
+                        __asm__ __volatile__("sti");
                     }
                     
                     if(request->status == COMPLETE) {
                         DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
+                        fs_wake_task(request);
                         fs_remove_from_queue();
                         request = NULL;
                     }
