@@ -34,6 +34,10 @@ enum Elf_Type {
 #define ELFMAG3	'F'  // e_ident[EI_MAG3]
 #define PT_LOAD 1
 
+#define PF_X        (1 << 0)    // Execute
+#define PF_W        (1 << 1)    // Write
+#define PF_R        (1 << 2)    // Read
+
 #define ELFDATA2LSB	(1)  // Little Endian
 #define ELFCLASS32	(1)  // 32-bit Architecture
 

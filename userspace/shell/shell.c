@@ -3,6 +3,9 @@
 #include "stand.h"
 #include "string.h"
 
+static int fd = -1;
+
+
 void command_help() {
     print("\n-------------------------------------------------------------------------------\n");
     print("Available commands\n");
@@ -44,12 +47,32 @@ void command_exec(const char *filename) {
     print("\n");
 }
 
-void command_wake() {
-    write(4,"wake!", "hello.txt");
+void command_write(const char *buf) {
+    write(4,"wake!");
 }
 
-void command_open() {
-    open("hello.txt");
+void command_open(const char *filename) {
+    print("\n");
+    fd = open(filename);
+
+    
+    if(fd != -1) {
+        print("Succesfully opened the file\n");
+    } else {
+        print("Error on opening the file\n");
+    }
+}
+
+void command_read() {
+    print("\n");
+    if(fd == -1) {
+        print("Cant read the file\n");
+    } else if (fd != -1) {
+        print("Reading the file\n");
+        char buf[512];
+        read(fd, buf);
+        print(buf);
+    }
 }
 
 void exec_cmd(char *buf) {
@@ -57,8 +80,16 @@ void exec_cmd(char *buf) {
     if(str_eq(buf, "about") == 1) command_about();
     if(str_eq(buf, "get pid") == 1) command_get_pid();
     if(str_eq(buf, "exit") == 1) command_exit();
-    if(str_eq(buf, "wake") == 1) command_wake();
-    if(str_eq(buf, "open") == 1) command_open();
+    if(str_eq(buf, "read")==1) command_read();
+
+    if(str_starts_with(buf, "write ")==1) {
+            command_write(buf + 6);
+            return;
+    }
+    if(str_starts_with(buf, "open ")==1) {
+        command_open(buf + 5);
+        return;
+    }
     if(str_starts_with(buf, "exec ")==1) {
         command_exec(buf + 5);
         return;

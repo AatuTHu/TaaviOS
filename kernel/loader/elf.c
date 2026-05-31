@@ -77,8 +77,14 @@ int elf_load(void *data, page_directory_t *page_dir) {
 
         uint32_t pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE; //this is the one that calculates and round up the size
 		uint32_t size = (phdr->p_memsz + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+		uint32_t page_flags = PAGE_PRESENT | PAGE_USER;
+
+		if (phdr->p_flags & PF_W) {
+			page_flags |= PAGE_RW;
+		}
 		
-		if(vmm_alloc(page_dir, phdr->p_vaddr, size, PAGE_USER | PAGE_PRESENT) == STATUS_ERROR) {
+		if(vmm_alloc(page_dir, phdr->p_vaddr, size, page_flags) == STATUS_ERROR) {
 			DEBUG("[ELF]: virtual memory allocation failed\n");
 			return STATUS_ERROR;
 		}

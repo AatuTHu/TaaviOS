@@ -1,10 +1,10 @@
 #include "sys_calls.h"
 
-void sys_write(const char *msg, int len, int fd, const char* path) {
+void sys_write(const char *msg, int len, int fd) {
     __asm__ __volatile__(
         "int $0x80"
         :
-        : "a"(4), "b"(fd), "c"(msg), "d"(len),"S"(path)
+        : "a"(4), "b"(fd), "c"(msg), "d"(len)
         : "memory"
     );
 }
@@ -37,12 +37,12 @@ int sys_open(const char *path) {
     return fd;
 }
 
-int sys_read(char *buf, int len, int fd, const char* path) {
+int sys_read(char *buf, int len, int fd) {
     int result;
     __asm__ __volatile__(
         "int $0x80"
         : "=a"(result)
-        : "a"(3), "b"(fd), "c"(buf), "d"(len),"S"(path)
+        : "a"(3), "b"(fd), "c"(buf), "d"(len)
         : "memory"
     );
     return result;

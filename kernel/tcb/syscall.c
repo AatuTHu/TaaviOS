@@ -41,7 +41,6 @@ static int32_t sys_exit(struct registers *r) {
 static int32_t sys_write(struct registers *r) {
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx; //ecx has the string
-    char *path   = (char *)r->esi;
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
 
     switch (fd)
@@ -58,10 +57,9 @@ static int32_t sys_write(struct registers *r) {
             break;    
         default:
             task_t *current = scheduler_get_current_task();
-            scheduler_set_task_state(TASK_BLOCKED);
-            add_request_to_queue(current->pid, WRITE, fd, path, buf);
+            add_request_to_queue(current->pid, WRITE, fd, NULL, buf);
             r->eax =  STATUS_OK;
-            scheduler_yield(r);
+            return len;
             break;
     }
 
@@ -81,19 +79,20 @@ static int32_t sys_getpid(struct registers *r) {
 static int32_t sys_read(struct registers *r) {
     int fd      = r->ebx;
     char *buf   = (char *)r->ecx;
-    char *path  = (char *)r->esi;
+    uint32_t len = r->edx; 
+
     task_t *current = scheduler_get_current_task();
+    int nread   = -1;
+
+    if(current == NULL) {
+        DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
+        return STATUS_ERROR;
+    }
 
     switch (fd)
     {
     case 0: //stdin
-
-        if(current == NULL) {
-            DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-            return STATUS_ERROR;
-        }
-        
-        int nread = keyboard_read_from_buffer(buf, current->pid);
+        nread = keyboard_read_from_buffer(buf, current->pid);
         if (nread > 0) return nread; //buffer had something so 
 
 
@@ -105,11 +104,25 @@ static int32_t sys_read(struct registers *r) {
         break;
     
     default:
-        add_request_to_queue(current->pid, READ, fd, path, buf);
+        DEBUG("[SYSCALL][SYS_READ]\n");
+        scheduler_set_task_state(TASK_BLOCKED);
+        add_request_to_queue(current->pid, READ, fd, NULL, buf);
+        
+        scheduler_yield(r);
+  
+        DEBUG("[SYSCALL][SYS_READ]: buf %s", buf);
+        if(collect_request(current->pid, buf) == STATUS_OK) {
+
+            return STATUS_OK;
+        } else {
+            DEBUG("[SYSCALL][SYS_READ]: collecting went wrong %d\n");
+            return STATUS_ERROR;
+        }
+        
         break;
     }
 
-   
+   __asm__ __volatile__("sti");
     return STATUS_OK;
     
 } //sys_read
@@ -128,7 +141,7 @@ static int32_t sys_open(struct registers *r) {
     add_request_to_queue(current->pid, OPEN, 0, path, NULL);
     scheduler_yield(r);
     
-    int fd = collect_request(current->pid);
+    int fd = collect_request(current->pid, NULL);
 
     if(fd == STATUS_ERROR) {
         DEBUG("[SYSCALL][SYS_OPEN]: Invalid fd\n");

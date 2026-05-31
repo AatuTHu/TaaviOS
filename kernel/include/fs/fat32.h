@@ -88,6 +88,8 @@ typedef struct __attribute__((packed)) {
     uint32_t size;
 } fat32_dirent_t;
 
+uint32_t fat32_calculate_cluster_size();
+
 /* Read */
 int      fat32_init(uint32_t partition_lba);
 void     fat32_list_dir(uint32_t cluster);

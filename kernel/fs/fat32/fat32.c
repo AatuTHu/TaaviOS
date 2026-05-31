@@ -42,7 +42,7 @@ static uint32_t __fat32_calculate_offset(uint32_t cluster) {
     return (cluster * FAT32_FAT_ENTRY_SIZE) % f32_fs.bytes_per_sector;
 }
 
-static uint32_t __fat32_calculate_cluster_size() {
+uint32_t fat32_calculate_cluster_size() {
     return f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
 }
 
@@ -207,7 +207,7 @@ static int __fat32_format_83(const char *filename, uint8_t *dst) {
 }
 
 static int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint32_t *out_cluster, uint32_t *out_size, uint8_t  *out_attr) {
-    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint32_t cluster_size = fat32_calculate_cluster_size();
     uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
 
     if(!buf) {
@@ -272,7 +272,7 @@ static int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint3
 
 
 void fat32_list_dir(uint32_t cluster) {
-    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint32_t cluster_size = fat32_calculate_cluster_size();
     uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
     //uint8_t buf[FAT32_SECTOR_SIZE];
 
@@ -313,15 +313,43 @@ void fat32_list_dir(uint32_t cluster) {
 int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
 
     uint32_t bytes_read = 0;
-    uint32_t cluster_size = f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
+    uint32_t cluster_size = fat32_calculate_cluster_size();
     uint32_t current_cluster = start_cluster;
+
+    uint8_t *temp_buf = (uint8_t *)kmalloc(cluster_size);
+    if (temp_buf == NULL) {
+        DEBUG("[FAT32][READ_FILE]: Failed to allocate temporary buffer\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG("[FAT32][READ_FILE]: Cluster_size: %d and original size: %d\n", cluster_size, size);
+    DEBUG("[FAT32][READ_FILE]: Current_cluster: %d\n", current_cluster);
+
     while(1) {
-        __fat32_read_cluster(current_cluster, buf + bytes_read);
-        bytes_read += cluster_size;
+        if(__fat32_read_cluster(current_cluster, buf + bytes_read) == STATUS_ERROR) {
+            DEBUG("[FAT32][READ_FILE]: Error reading cluster\n");
+            kfree(temp_buf);
+            return STATUS_ERROR;
+        }
         
-        if(bytes_read >= size) break;
+        uint32_t bytes_left = size - bytes_read;
+        uint32_t bytes_to_copy = (bytes_left > cluster_size) ? cluster_size : bytes_left;
+        
+        memcpy(buf + bytes_read, temp_buf, bytes_to_copy);
+        bytes_read += bytes_to_copy;
+
+        if(bytes_read >= size) {
+            DEBUG("[FAT32][READ_FILE]: All requested bytes read successfully.\n");
+            return STATUS_OK;
+        }
+
         uint32_t next = __fat32_next_cluster(current_cluster);
-        if(next >= FAT32_CLUSTER_EOC_MIN) break;
+        
+        if(next >= FAT32_CLUSTER_EOC_MIN) {
+            DEBUG("[FAT32][READ_FILE]: End of cluster chain reached. Aborting\n");
+            return STATUS_ERROR;
+        }
+        DEBUG("[FAT32][READ_FILE]: Continuing the chaing");
         current_cluster = next;
     }
 
@@ -392,7 +420,7 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size)
 }
 
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
-    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint32_t cluster_size = fat32_calculate_cluster_size();
     uint32_t clusters_needed = (size + (cluster_size - 1)) / cluster_size;
     DEBUG("[FAT32][WRITE_FILE]: clusters needed for the file %d\n", clusters_needed);
     uint32_t first_cluster = 0, prev_cluster = 0;
@@ -426,7 +454,7 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 
 
 int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t first_cluster, uint32_t size) {
-    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint32_t cluster_size = fat32_calculate_cluster_size();
     uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
     //uint8_t buf[FAT32_SECTOR_SIZE];
     if(!buf) return STATUS_ERROR;

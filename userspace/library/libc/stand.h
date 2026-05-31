@@ -10,8 +10,8 @@ int scan(char *buf);
 
 //file io
 int open(const char* path);
-void write(int fd, const char *msg, const char *path);
-int read(int fd, char *buf, const char *path);
+void write(int fd, const char *msg);
+int read(int fd, char *buf);
 
 //sys
 int exec(const char *filename);

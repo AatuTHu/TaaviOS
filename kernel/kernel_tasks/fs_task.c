@@ -19,6 +19,7 @@
 * it wakes the caller and if everything is completed it follows the blankie protocol.
 */
 
+#define free_slot 3
 static int request_queue_count = 0;
 static int last_request_index = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
@@ -38,14 +39,14 @@ int check_boundaries(void *ptr, uint32_t size) {
   return STATUS_OK;
 }
 
-static void fs_wake_task(fs_mailbox_queue *req) {
-  scheduler_wake_task(req->caller_pid);
+static void fs_wake_task(uint32_t caller_pid) {
+  scheduler_wake_task(caller_pid);
 }
 
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
   int slot = -1;
-  for (int i = 0; i < MAX_TASKS; i++) {
+  for (int i = free_slot; i < MAX_TASKS; i++) {
       if (fd_entry_table[i] == NULL) {
           slot = i;
           break;
@@ -76,7 +77,6 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
 }
 
 void fs_handle_request(fs_mailbox_queue *req) {
-
   if(req->request_type == OPEN) {
       uint32_t file_cluster = 0;
       uint32_t file_size = 0;
@@ -98,6 +98,52 @@ void fs_handle_request(fs_mailbox_queue *req) {
 
       }
 
+    }
+
+    if(req->request_type == READ) {
+      if(req->fd >= MAX_TASKS) {
+        DEBUG("[FS_TASK][handle_request]: fd number invalid\n");
+        return;
+      }
+
+      fd_entry_t *entry = fd_entry_table[req->fd];
+
+      if(entry == NULL) {
+        DEBUG("[FS_TASK][handle_request]: entry not found\n");
+        req->status = TERMINATED;
+        return;
+      }
+
+      uint8_t *buf = (uint8_t *)kmalloc(entry->size);
+
+      if(buf == NULL) {
+        DEBUG("[FS_TASK][handle_request]: buffer unallocated\n");
+        req->status = TERMINATED;
+        return;
+      }
+
+      if(fat32_read_file(entry->cluster, entry->size, buf) != STATUS_ERROR) {
+        DEBUG("[FS_TASK][handle_request]: file read succesfully %d\n", req->caller_pid);
+
+        uint32_t bytes_to_copy = entry->size;
+        if (bytes_to_copy > sizeof(req->buf)) {
+            bytes_to_copy = sizeof(req->buf) - 1;
+        }
+        memcpy(req->buf, (char*)buf, bytes_to_copy);
+        bytes_to_copy = sizeof(req->buf) - 1;
+
+        req->fd = bytes_to_copy;
+
+        kfree(buf);
+        DEBUG("[FS_TASK][handle_request]: file read succesfully %s\n", req->buf);
+        req->status = COMPLETE;
+        return;
+      } else {
+        DEBUG("[FS_TASK][handle_request]: Reading the file did not succeed\n");
+        kfree(buf);
+        req->status = TERMINATED;
+        return;
+      }
     }
     
     DEBUG("[FS_TASK][handle_request]: Request type was invalid. Terminating request\n");
@@ -136,14 +182,22 @@ void fs_remove_from_queue() {
   DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
 }
 
-int collect_request(uint32_t pid) {
+int collect_request(uint32_t pid, char *out) {
   //DEBUG("[FS_TASK][COLLECT_REQUEST]: Fetching request\n");
 
-  for(uint32_t i = 0; i < request_queue_count; i++) {
+  for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i]->caller_pid == pid && request_queue[i]->status == COMPLETE) {
       DEBUG("[FS_TASK][COLLECT_REQUEST]: Request found!\n");
-      request_queue[i]->status = TERMINATED;
-      return request_queue[i]->fd;
+      if(request_queue[i]->request_type == OPEN) {
+        request_queue[i]->status = TERMINATED;
+        return request_queue[i]->fd;
+      }
+      if(request_queue[i]->request_type == READ) {
+        uint32_t read_bytes = request_queue[i]->fd; // Haetaan tallennettu pituus
+        memcpy(out, request_queue[i]->buf, read_bytes);
+        out[read_bytes] = '\0';
+        return read_bytes;
+      }
     }
   }
 
@@ -163,6 +217,8 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
       return STATUS_ERROR;
   }
 
+  memset(new_request, 0, sizeof(fs_mailbox_queue));
+
   new_request->caller_pid = pid;
   new_request->request_type = type;
   new_request->fd = fd;
@@ -174,7 +230,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
       new_request->path[0] = '\0';
   }
   
-  if(buf != NULL) {
+  if(type != READ && buf != NULL) {
       strncpy(new_request->buf, buf, sizeof(new_request->buf) - 1);
       new_request->buf[sizeof(new_request->buf) - 1] = '\0';
   }
@@ -197,7 +253,10 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
 }
 
 fs_mailbox_queue *find_next_request() {
-  if (request_queue_count == 0) return NULL;
+  if (request_queue_count == 0) {
+    DEBUG("[FS_TASK][NEXT_REQUEST]: queue count is null\n");
+    return NULL;
+  }
 
   for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i] != NULL && request_queue[i]->status == IN_PROGRESS) {
@@ -209,6 +268,7 @@ fs_mailbox_queue *find_next_request() {
   for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i] != NULL && request_queue[i]->status == PENDING) {
       last_request_index = i;
+      DEBUG("[FS_TASK][NEW_REQUEST]: new found with pid %d\n", request_queue[i]->caller_pid);
       return request_queue[i];
     }
   }
@@ -234,7 +294,7 @@ void fs_task_loop() {
             __asm__ __volatile__("cli");
             DEBUG("[FS_TASK][LOOP]: handling request\n");
             fs_handle_request(request);
-            fs_wake_task(request);
+            fs_wake_task(request->caller_pid);
             __asm__ __volatile__("sti");
           }
           
