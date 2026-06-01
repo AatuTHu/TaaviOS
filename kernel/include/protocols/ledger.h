@@ -4,27 +4,30 @@
 #include <stdint.h>
 #include "config.h"
 
-#define POLICE_BASE       0xD0000000
-#define POLICE_FLOOR_SIZE 0x40000
-#define MAX_POLICE_TASKS  15
+#define LEDGER_BASE       0xD0000000
+#define LEDGER_FLOOR_SIZE 0x40000
+#define MAX_LEDGER_TASKS  15
+#define MAX_LEDGER_ALLOCS 256
+#define ACTIVE            1
+#define INACTIVE          0
 
 typedef struct {
     uint32_t protocol_addr;
     uint32_t real_addr;
     uint32_t size;
-} police_alloc_t;
+} ledger_alloc_t;
 
 typedef struct {
     uint32_t pid;
     uint32_t task_base;
     uint32_t mem_cursor;
     uint8_t  active;
-    police_alloc_t allocations[MAX_TASKS];
-} police_ledger_t;
+    ledger_alloc_t allocations[MAX_LEDGER_ALLOCS];
+} ledger_t;
 
-int police_register(uint32_t pid);
-uint32_t police_alloc(uint32_t pid, uint32_t size);
-uint32_t police_validate(uint32_t pid, uint32_t protocol_addr);
-int police_free(uint32_t pid, uint32_t protocol_addr);
+int ledger_register(uint32_t pid);
+uint32_t ledger_alloc(uint32_t pid, uint32_t size);
+uint32_t ledger_validate(uint32_t pid, uint32_t protocol_addr);
+int ledger_free(uint32_t pid, uint32_t protocol_addr);
 
 #endif

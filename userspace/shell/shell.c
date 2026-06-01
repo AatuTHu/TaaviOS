@@ -9,19 +9,20 @@ static int fd = -1;
 void command_help() {
     print("\n-------------------------------------------------------------------------------\n");
     print("Available commands\n");
-    print("- help\n");
-    print("- about\n");
-    print("- get my pid\n");
-    print("- exec  [task]\n");
-    print("- open  [path]\n");
-    print("- write [text] \n");
-    print("- exit\n");
+    print("- help               'Prints this list'\n");
+    print("- about              'Useless function'\n");
+    print("- get my pid         'Shells pid'\n");
+    print("- exec  [task]       'Executes a task'\n");
+    print("- open  [path]       'Open a file'\n");
+    print("- write [text]       'Writes to opened file \n");
+    print("- read               'Reads the opened file'\n");
+    print("- exit               'Exits and kills shell'\n");
     print("\n");
 }
 
 void command_about() {
     print("\n-------------------------------------------------------------------------------\n");
-    print("Carrots v0.5.0 - Author: Aatu H\n");
+    print("TaaviOS v0.6.0 - Author: Aatu H\n");
     print("\n");
 }
 
@@ -106,25 +107,27 @@ void exec_cmd(char *buf) {
 
 void main(void) {
     //vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
+//vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     print("----------------------------------------------------------------------------\n");
     //vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-    print("  |=====|    |====|    |====|                                               \n");
-    print(" |=|   |=|  |=|  |=|  |=|  |=|                                              \n");
-    print(" |=|       |=|    |=| |=----=|                                              \n");
-    print(" |=|       |=------=| |=|===|                                               \n");
-    print(" |=|   |=| |=|    |=| |=|  |==|                                             \n");
-    print("  |=====|  |=|    |=| |=|   |==|                                            \n");
+    print("|=======|  |====|    |====|   |=|     |=|  |=======|        |====|    |====|  \n");
+    print("   |=|    |=|  |=|  |=|  |=|  |=|     |=|     |=|          |=|  |=|  |=|  |=| \n");
+    print("   |=|    |=----=|  |=----=|  |=|     |=|     |=|          |=|  |=|   |____   \n");
+    print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=|        |=|\n");
+    print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=|  |=|  |=| \n");
+    print("   |=|    |=|  |=|  |_|  |_|     |===|     |=======|        |====|    |====|  \n");
+    print("\n");
     //vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-    print("                               |====|     |====| |=======|  |=====|        \n");
-    print("                              |=|  |=|   |=|  |=|   |=|    |=|   |=|       \n");
-    print("                              |=----=|   |=|  |=|   |=|    |=|___          \n");
-    print("                              |=|===|    |=|  |=|   |=|          |=|       \n");
-    print("                              |=|  |==|  |=|  |=|   |=|    |=|   |=|       \n");
-    print("                              |=|   |==|  |====|    |=|     |=====|        \n");
+    /*print("                                               |====|     |====|            \n");
+    print("                                              |=|  |=|   |=|  |=|           \n");
+    print("                                              |=|  |=|    |____             \n");
+    print("                                              |=|  |=|         |=|          \n");
+    print("                                              |=|  |=|   |=|  |=|           \n");
+    print("                                               |====|     |====|            \n");*/
     //vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
     print("---------------------------------------------------------------------------\n");
     //vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    print("Carrots Shell\n");
+    print("TaaviOS Shell\n");
     print("Type 'help' to see all commands\n");
     
     char buf[256];

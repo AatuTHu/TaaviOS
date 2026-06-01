@@ -1,4 +1,4 @@
-# Carrots - 32bit x86 operating system
+# TaaviOS - 32bit x86 operating system
 
 ### Yet another x86 operating system?
 
@@ -12,7 +12,7 @@ Yes.
 
 ### The Microlithic Kernel
 
-Carrots uses a kernel architecture I designed called the **Microlithic Kernel**. a Monolithic foundation organised around microkernel-inspired, domain-owning tasks.
+TaaviOS uses a kernel architecture I designed called the **Microlithic Kernel**. a Monolithic foundation organised around microkernel-inspired, domain-owning tasks.
 
 Everything lives in kernel space and shares a single page directory, as in a monolithic kernel. But rather than one large undifferentiated body of code, the kernel is divided into autonomous tasks each one the sole owner of a specific domain. A filesystem task owns all filesystem state. A future network task would own all network state. No kernel task reaches into another's domain. Userspace acts as the conductor, making vertical requests to each task independently. Kernel tasks never talk to each other horizontally.
 

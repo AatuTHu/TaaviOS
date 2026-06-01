@@ -5,6 +5,7 @@
 #include "kstring.h"
 #include "kmalloc.h"
 #include "blankie.h"
+#include "ledger.h"
 
 /*
 * Fs_task
@@ -24,20 +25,6 @@ static int request_queue_count = 0;
 static int last_request_index = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
 static fd_entry_t *fd_entry_table[MAX_TASKS];
-static const int FS_TASK_QUEUE_SIZE = MAX_TASKS * sizeof(fs_mailbox_queue);
-static const int FS_TASK_TABLE_SIZE = 64 * sizeof(fd_entry_t);
-static const int FS_TASK_BUFFER_SIZE = 4096;
-static const int FS_TASK_REGION_SIZE = FS_TASK_QUEUE_SIZE + FS_TASK_BUFFER_SIZE + FS_TASK_TABLE_SIZE;
-static uint32_t mem_start;
-static uint32_t mem_end;
-
-int check_boundaries(void *ptr, uint32_t size) {
-  uint32_t addr = (uint32_t)ptr;
-  if(addr < mem_start || addr + size > mem_end) {
-      return STATUS_ERROR;
-  }
-  return STATUS_OK;
-}
 
 static void fs_wake_task(uint32_t pid) {
   scheduler_wake_task(pid);
@@ -58,12 +45,15 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
     return STATUS_ERROR;
   }
 
-  fd_entry_t *entry = (fd_entry_t *)kmalloc(sizeof(fd_entry_t));
+  uint32_t protocol_addr = ledger_alloc(fs_task_pid, sizeof(fd_entry_t));
 
-  if(entry == NULL) {
+  if(protocol_addr == 0) {
     DEBUG("[FS_TASK][ALLOC_FD]: could on allocate entry. Aborting\n");
     return STATUS_ERROR;
   }
+
+  fd_entry_t *entry = (fd_entry_t *)ledger_validate(fs_task_pid, protocol_addr);
+
 
   entry->owner_pid    = owner_pid;
   entry->cluster      = cluster;
@@ -71,7 +61,7 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   entry->fd           = slot;
   entry->curr_offset  = 0;
 
-  fd_entry_table[slot] = entry;
+  fd_entry_table[slot] = (fd_entry_t *)protocol_addr;
   DEBUG("[FS_TASK][ALLOC_FD]: Allocating successfull\n");
   return slot;
 }
@@ -108,9 +98,9 @@ void fs_handle_request(fs_mailbox_queue *req) {
         return;
       }
 
-      fd_entry_t *entry = fd_entry_table[req->fd];
+      fd_entry_t *entry = (fd_entry_t *)ledger_validate(fs_task_pid, (uint32_t)fd_entry_table[req->fd]);
 
-      if(entry == NULL) {
+      if(entry == 0) {
         DEBUG("[FS_TASK][handle_request]: entry not found\n");
         req->status = TERMINATED;
         return;
@@ -153,12 +143,12 @@ void fs_handle_request(fs_mailbox_queue *req) {
 * 
 */
 void fs_remove_from_queue() {
+  __asm__ __volatile__("cli");
   
   if (last_request_index == -1 || request_queue_count == 0) {
       return;
   }
 
-  __asm__ __volatile__("cli");
 
   void *ptr_to_free = (void *)request_queue[last_request_index];
   
@@ -170,14 +160,14 @@ void fs_remove_from_queue() {
   request_queue_count--;
   last_request_index = -1;
 
-  __asm__ __volatile__("sti");
-
+  
   if (ptr_to_free != NULL) {
-      DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
-      kfree(ptr_to_free);
+    DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
+    ledger_free(fs_task_pid, (uint32_t)ptr_to_free);
   }
   
   DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
+  __asm__ __volatile__("sti");
 }
 
 
@@ -187,14 +177,23 @@ void fs_remove_from_queue() {
 int collect_request(uint32_t pid, char *out) {
   //DEBUG("[FS_TASK][COLLECT_REQUEST]: Fetching request\n");
 
+  
   for(uint32_t i = 0; i < request_queue_count; i++) {
-    if(request_queue[i]->caller_pid == pid && request_queue[i]->status == COMPLETE) {
+    fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
+
+    if(req == 0) {
+      DEBUG("[FS_TASK][COLLECT_REQUEST]: Invalid address");
+      continue;
+    }
+    
+
+    if(req->caller_pid == pid && req->status == COMPLETE) {
       DEBUG("[FS_TASK][COLLECT_REQUEST]: Request found!\n");
-      request_queue[i]->status = TERMINATED;
-      if(request_queue[i]->request_type == OPEN) return request_queue[i]->fd;
-      if(request_queue[i]->request_type == READ) {
+      req->status = TERMINATED;
+      if(req->request_type == OPEN) return req->fd;
+      if(req->request_type == READ) {
         uint32_t buf_size = fat32_calculate_cluster_size();
-        memcpy(out, request_queue[i]->buf, buf_size-1);
+        memcpy(out, req->buf, buf_size-1);
         DEBUG("[FS_TASK][COLLECT_REQUEST]: copied size: %d\n", buf_size-1);
         DEBUG("[FS_TASK][COLLECT_REQUEST]: buffer content %s", out);
         return STATUS_OK;
@@ -214,13 +213,15 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   __asm__ __volatile__("cli");
   DEBUG("[FS_TASK][ADD_REQUEST]: adding a request for fs_task\n");
 
-  fs_mailbox_queue *new_request = (fs_mailbox_queue *)kmalloc(sizeof(fs_mailbox_queue));
+  uint32_t protocol_addr = ledger_alloc(fs_task_pid, sizeof(fs_mailbox_queue));
 
-  if(new_request == NULL) {
+  if(protocol_addr == 0) {
       DEBUG("[FS_TASK][ADD_REQUEST]: could on allocate new requestat this time. Aborting\n");
       __asm__ __volatile__("sti");
       return STATUS_ERROR;
   }
+
+  fs_mailbox_queue *new_request =  (fs_mailbox_queue *)ledger_validate(fs_task_pid, protocol_addr);
 
   new_request->caller_pid = pid;
   new_request->request_type = type;
@@ -245,7 +246,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
 
   new_request->status = PENDING;
-  request_queue[request_queue_count] = new_request;
+  request_queue[request_queue_count] = (fs_mailbox_queue *)protocol_addr;
   request_queue_count++;
   
   DEBUG("[FS_TASK][ADD_REQUEST]: request added\n");
@@ -263,23 +264,26 @@ fs_mailbox_queue *find_next_request() {
   if (request_queue_count == 0) return NULL;
 
   for(int i = 0; i < request_queue_count; i++) {
-    if(request_queue[i] != NULL && request_queue[i]->status == IN_PROGRESS) {
+    fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
+    if(req != 0 && req->status == IN_PROGRESS) {
       last_request_index = i;
-      return request_queue[i];
+      return req;
     }
   }
 
   for(int i = 0; i < request_queue_count; i++) {
-    if(request_queue[i] != NULL && request_queue[i]->status == PENDING) {
+    fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
+    if(req != 0 && req->status == PENDING) {
       last_request_index = i;
-      return request_queue[i];
+      return req;
     }
   }
 
   for(int i = 0; i < request_queue_count; i++) {
-    if(request_queue[i] != NULL && request_queue[i]->status == TERMINATED) {
+    fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
+    if(req != 0 && req->status == TERMINATED) {
       last_request_index = i;
-      return request_queue[i];
+      return req;
     }
   }
 
@@ -325,8 +329,8 @@ void fs_task_loop() {
   }
 }
 
+
 void fs_init(task_t *fs_task) {
-  mem_start   = (uint32_t)kmalloc(FS_TASK_REGION_SIZE);
-  mem_end     = mem_start + FS_TASK_REGION_SIZE;
+  ledger_register(fs_task_pid);
   blankie_register(fs_task_pid, fs_task->context.eip, fs_task->kernel_stack);
 }

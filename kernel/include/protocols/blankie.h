@@ -9,6 +9,8 @@ typedef struct {
     uint32_t stack_top;
 } blankie_registry_t;
 
+#define MAX_LOGS 20
+
 int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top);
 int blankie_activate(uint32_t pid);
 

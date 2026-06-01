@@ -4,6 +4,7 @@
 #include "kstring.h"
 #include "tss.h"
 #include "vmm.h"
+#include "task.h"
 #include <stddef.h>
 
 /* 
@@ -30,7 +31,7 @@ static volatile uint8_t scheduler_on = 0;
 
 static void scheduler_check_clerks() {
     
-    DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
+    //DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
     if(dead_task_count > 0) {
         clerk = tasks[reaper_task_pid];   
@@ -112,7 +113,7 @@ static void scheduler_switch(struct registers *r) {
 
     
     if(scheduler_has_runnable_task() == 0 || dead_task_count > 0) {
-        DEBUG("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
+        //DEBUG("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
         scheduler_check_clerks();
     }
 
@@ -129,7 +130,7 @@ static void scheduler_switch(struct registers *r) {
     next->started = 1;
     
     if(next_idx != current_idx) {
-        DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
+        //DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
         
         if(next->task_mode == USER_TASK) {
@@ -216,7 +217,7 @@ task_t *scheduler_get_current_task() {
 void scheduler_set_task_state(task_state_t state) {
     task_t *current = tasks[current_idx];
     if(current->state == state) {
-        DEBUG("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
+        //DEBUG("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
         return;
     }
 
@@ -269,7 +270,7 @@ void scheduler_wake_task(uint32_t pid) {
     //DEBUG("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for(int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->pid == pid) {
-            DEBUG("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
+            //DEBUG("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
             tasks[i]->state = TASK_READY;
             return;
         }

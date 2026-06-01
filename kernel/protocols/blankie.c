@@ -15,8 +15,6 @@
 * from its entry point. 
 */
 
-
-#define MAX_LOGS 20
 static blankie_registry_t *b_registry[MAX_LOGS];
 static uint8_t req_slot = 0;
 
