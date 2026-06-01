@@ -10,67 +10,66 @@ Yes.
 
 ### Does it have anything special?
 
-#### 1. Microlithic Kernel & The Blankie Protocol
+### The Microlithic Kernel
 
-A kernel architecture designed by me. Well, others have done it for sure, but the gist is that the kernel has tasks similar to userspace, but they share a single page directory. You might now wonder what stops a bug in one task from corrupting another. The answer is **trying** a strict software-level isolation. Each kernel task operates as its own police state. Before doing anything critical, the task actively checks and validates its own allocated memory boundaries.
+Carrots uses a kernel architecture I designed called the **Microlithic Kernel**. a Monolithic foundation organised around microkernel-inspired, domain-owning tasks.
 
-The idea of this kernel type came from backend and frontend web framework paradigms. I wanted the kernel to be an asynchronous servant of the user.
+Everything lives in kernel space and shares a single page directory, as in a monolithic kernel. But rather than one large undifferentiated body of code, the kernel is divided into autonomous tasks each one the sole owner of a specific domain. A filesystem task owns all filesystem state. A future network task would own all network state. No kernel task reaches into another's domain. Userspace acts as the conductor, making vertical requests to each task independently. Kernel tasks never talk to each other horizontally.
 
-Since all kernel tasks share the same memory space, the usertasks can contact them without unnecessary context switches.
+The design was inspired by asynchronous backend service models. A kernel task is essentially a long-running background service: it sleeps when idle, wakes on demand, does its work, and goes back to sleep. The goal was a kernel that feels like an asynchronous servant of userspace rather than a synchronous gatekeeper.
 
-Some would say that this is just an abstraction layer over the drivers and whatnot. To that I say: that it is. I have made **complicated simplicity**.
+Since all kernel tasks share the same address space, userspace requests can be dropped directly into task queues during a syscall no expensive context switches, no message-passing overhead. Each task enforces its own memory boundaries in software, actively validating allocations before operating on them. This is not hardware-enforced isolation it is a deliberate tradeoff: less overhead, higher trust requirements per task.
 
-#### What does a kernel task do?
+I call it Microlithic monolithic in structure, microkernel-inspired in organisation.
 
-A task like *fs_task* (short for filesystem_task) takes in requests from userspace applications. When a request is made, the task wakes up from sleep state and places itself as high priority. These requests are basically CRUD operations for the filesystem. It does as requested and returns the result to the caller. After that, the caller can continue its life — but here is the catch: *fs_task* continues to do other services for the filesystem. After requests are done the task can do background work like:
+### The Blankie Protocol
 
-**these are a work in progress still**
+After all requests are handled and any background services are complete, each kernel task performs the **Blankie Protocol**.
 
-- Opening the connection for the filesystem. Warming it up for usage.
-- Keeping a virtual */sys_info* file updated.
-- Delayed disk writes: When an app saves data, *fs_task* doesn't write to disk immediately. It dumps the data into RAM first so the app can continue instantly, and handles the actual slow disk write later as a background service.
-- Cleaning up and compacting directory caches.
+The task resets its own execution context back to its entry point with a clean stack, marks itself as *sleeping*, and halts. The scheduler ignores sleeping tasks entirely not blocked waiting for something, but intentionally dormant with nothing left to do. When new work arrives and the task is woken, it resumes fresh with no leftover stack state from the previous run cycle.
 
-Other tasks planned for this model: a GUI task and a network task. To keep the code clean and avoid locking hell, kernel tasks never talk to each other horizontally. The userspace app acts as the conductor, making vertical requests to each task independently.
-
-#### The Blankie Protocol
-
-After all requests are served and background services are complete, each kernel task performs what I call the **Blankie Protocol**. The task resets its own execution context back to its entry point with a clean stack, marks itself as sleeping, and halts. The scheduler ignores sleeping tasks entirely. When new work arrives and the task is woken, it resumes fresh — as if it just started — with no leftover state or stack corruption from the previous run cycle.
-
-This is an important distinction from blocked. Blocked means waiting for something. Sleeping means done and intentionally dormant.
+This eliminates an entire class of hard-to-reproduce bugs: stale stack frames, stale local state, and unbounded stack growth across many request cycles all become impossible by design.
 
 The protocol is registered at task init time via `blankie_register` and activated via `blankie_activate`. Any kernel task gets it for free.
 
-#### Design Decisions & Tradeoffs
+### Tradeoffs
 
-- No IPC overhead: Kernel tasks share address space. Messages are dropped into task queues instantly during system calls without unnecessary context switches.
-- Isolation without virtualization: Software-level validation inside the tasks, instead of relying solely on expensive hardware page table swaps for internal jobs.
-- No privilege separation inside Ring 0: A severe bug in a kernel task can corrupt other kernel memory if the software-level borders fail. While memory corruption is a risk in any kernel, the shared address space makes it a higher likelihood here. It is an accepted tradeoff.
-
-I call it a **Microlithic kernel**. Monolithic in that everything important lives in kernel space. Microkernel-inspired in that those important things are organized into independent, domain-owning tasks.
+1. Shared kernel address space -> No IPC serialisation or context-switch overhead for kernel requests 
+2. Software-level task isolation -> Lower hardware cost; relies on disciplined boundary checking per task 
+3. No horizontal task communication -> Eliminates locking complexity; userspace coordinates instead 
+4. No privilege separation inside Ring 0 -> A severe task bug can corrupt other kernel memory. accepted risk 
 
 #### 2. Scheduler
 
-The scheduler is a round-robin, priority-aware design. It only considers tasks that are ready to run — dead, blocked, and sleeping tasks are simply skipped. Task cleanup is intentionally separated from scheduling, keeping the context switch logic focused and predictable.
+The scheduler is a preemptive, priority-aware round-robin design driven by the PIT at 1000Hz.
+At each tick, the scheduler considers only tasks that are genuinely ready to run. Dead tasks, blocked tasks, and sleeping tasks are skipped entirely so they do not consume scheduling time. The ready queue is the only thing that matters at switch time.
+
+Priority levels exist but do not override fairness within a level. A higher-priority task gets preference when it is ready, but tasks at the same priority rotate equally. This keeps the design predictable: nothing starves, and the behaviour under load is easy to reason about.
+
+Task cleanup is deliberately separated from the scheduler. A dead task is not destroyed at the moment it exits. It is marked dead and left for a dedicated reaper task to collect. This keeps the context switch path short and free of allocation or deallocation work. A context switch does one thing: pick the next ready task and switch to it.
+
+The distinction between blocked and sleeping is intentional and meaningful. A blocked task is waiting for something external like a keyboard input, a filesystem response, an event. A sleeping task, by contrast, is a kernel task that has finished all its current work and gone dormant via the Blankie Protocol. Both are invisible to the scheduler, but for different reasons. Blocked tasks are woken by external events. Sleeping tasks are woken by new work arriving in their queue.
+
+Kernel clerk tasks interact with the scheduler through a separate check that runs alongside the normal scheduling pass. If a clerk has pending work, it is activated before the next userspace task runs. This ensures filesystem requests, and eventually network or GUI work, are serviced promptly without giving kernel tasks unconditional scheduling priority over userspace.
 
 
 #### 3. The "Learn as You Go" Engineer
 
-I have an engineering degree in Information and Communications Technology, but my background is making web and mobile apps using JS and React. Before this project I had no real prior experience in low-level C or NASM, and nothing to do with OS development.
+My background is in web and mobile development. JavaScript, React, React-native. I have an engineering degree in Information and Communications Technology, but nothing in my education (only had a one course in C :D) or day job pointed toward operating systems, low-level C, or NASM assembly. I started this project knowing none of it.
 
-I learn by reading other people's work, books, the OSDev wiki, YouTube videos, and using AI to explain abstract concepts and bounce ideas around.
+The learning process has been books, the OSDev wiki, other people's source code, YouTube, and using AI as a sounding board for concepts that wouldn't click from text alone. Every part of this kernel was written after educating myself on the topic, writing it, failing and then writing it again. So not just copying a working black box implementation.
 
-I have mostly enjoyed designing the scheduler and the microlithic kernel model.
-
+The parts I have enjoyed most are the ones that required the most original thinking: the scheduler and the Microlithic Kernel model. Getting preemptive multitasking or the asynchronous open request working for the first time was a particular milestone.
 
 ### Current Status
 
 - Arch: 32-bit Protected Mode, higher-half kernel, paging enabled
-- Working memory management: PMM, VMM, kmalloc
-- Preemptive multitasking with task-isolated address spaces
-- Microlithic kernel with working fs_task and blankie protocol
-- FAT32 read/write driver
-- Userspace with shell
+- Memory management: PMM with bitmap allocation, VMM, kmalloc/kfree with block splitting and merging
+- Preemptive round-robin scheduler at 1000Hz with task-isolated address spaces
+- Microlithic kernel with fs_task, full request queue, fd table, and Blankie Protocol
+- FAT32 read/write driver with path resolver and subdirectory traversal
+- `sys_open`, `sys_read`, `sys_write` syscall interface via `int 0x80`
+- ELF loader, init process, interactive shell
 - Small C userspace library
 
 *Author: A.H ~ 2026*
