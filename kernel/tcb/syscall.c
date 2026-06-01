@@ -41,6 +41,7 @@ static int32_t sys_exit(struct registers *r) {
 static int32_t sys_write(struct registers *r) {
     int fd       = r->ebx;
     char *buf    = (char *)r->ecx; //ecx has the string
+    char *path   = (char *)r->esi;
     uint32_t len = r->edx; //irrelevant in our case. but it would hold the length of the message
 
     switch (fd)
@@ -79,20 +80,18 @@ static int32_t sys_getpid(struct registers *r) {
 static int32_t sys_read(struct registers *r) {
     int fd      = r->ebx;
     char *buf   = (char *)r->ecx;
-    uint32_t len = r->edx; 
-
     task_t *current = scheduler_get_current_task();
-    int nread   = -1;
-
-    if(current == NULL) {
-        DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-        return STATUS_ERROR;
-    }
 
     switch (fd)
     {
     case 0: //stdin
-        nread = keyboard_read_from_buffer(buf, current->pid);
+
+        if(current == NULL) {
+            DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
+            return STATUS_ERROR;
+        }
+        
+        int nread = keyboard_read_from_buffer(buf, current->pid);
         if (nread > 0) return nread; //buffer had something so 
 
 
@@ -104,25 +103,25 @@ static int32_t sys_read(struct registers *r) {
         break;
     
     default:
-        DEBUG("[SYSCALL][SYS_READ]\n");
         scheduler_set_task_state(TASK_BLOCKED);
-        add_request_to_queue(current->pid, READ, fd, NULL, buf);
-        
+        add_request_to_queue(current->pid, READ, fd, NULL, NULL);
         scheduler_yield(r);
-  
-        DEBUG("[SYSCALL][SYS_READ]: buf %s", buf);
-        if(collect_request(current->pid, buf) == STATUS_OK) {
 
-            return STATUS_OK;
-        } else {
-            DEBUG("[SYSCALL][SYS_READ]: collecting went wrong %d\n");
+        DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
+        if(collect_request(current->pid, buf) == STATUS_ERROR) {
+            DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong");
             return STATUS_ERROR;
         }
-        
+
+        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
+   
+        r->eax =  STATUS_OK;
+        return STATUS_OK;
+
         break;
     }
 
-   __asm__ __volatile__("sti");
+   
     return STATUS_OK;
     
 } //sys_read

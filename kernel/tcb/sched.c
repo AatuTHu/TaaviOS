@@ -102,7 +102,7 @@ static void scheduler_switch(struct registers *r) {
     task_t *current = scheduler_get_current_task();
 
     if(current != NULL && current->started && current->state != TASK_DEAD) {
-        DEBUG("[SCHEDULER][SWITCH]: Saving: %s\n", current->name);
+        //DEBUG("[SCHEDULER][SWITCH]: Saving: %s\n", current->name);
         memcpy(&current->context, r, sizeof(struct registers));
 
         if(current->state == TASK_RUNNING) {
@@ -219,24 +219,24 @@ void scheduler_set_task_state(task_state_t state) {
     switch (state)
     {
     case TASK_SLEEPING:
-        DEBUG("[SCHEDULER][STATE_SETTER]: Setting task %s sleeping\n", current->name);
+       // DEBUG("[SCHEDULER][STATE_SETTER]: Setting task %s sleeping\n", current->name);
         current->state = TASK_SLEEPING;
         break;
     case TASK_READY:
-        DEBUG("[SCHEDULER][STATE_SETTER]: Setting task %s ready\n", current->name);
+       // DEBUG("[SCHEDULER][STATE_SETTER]: Setting task %s ready\n", current->name);
         if(current->state == TASK_DEAD && dead_task_count > 0) {
             dead_task_count--;
         }
         current->state = TASK_READY;
         break;
     case TASK_BLOCKED:
-        DEBUG("[SCHEDULER][STATE_SETTER]: Blocking task: %s\n", current->name); 
+       // DEBUG("[SCHEDULER][STATE_SETTER]: Blocking task: %s\n", current->name); 
         if(current->state != TASK_DEAD) {
             current->state = TASK_BLOCKED;
         }
         break;
     case TASK_DEAD:
-        DEBUG("[SCHEDULER][STATE_SETTER]: killing task: %s\n", current->name);    
+       // DEBUG("[SCHEDULER][STATE_SETTER]: killing task: %s\n", current->name);    
         current->state = TASK_DEAD;
         dead_task_count++;
         __asm__ __volatile__("sti;hlt");
@@ -262,12 +262,12 @@ int scheduler_has_runnable_task() {
 }
 
 void scheduler_wake_task(uint32_t pid) {
-    DEBUG("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
+    //DEBUG("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for(int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->pid == pid) {
             DEBUG("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
             tasks[i]->state = TASK_READY;
-            break;
+            return;
         }
     }
 }

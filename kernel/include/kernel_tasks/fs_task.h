@@ -21,11 +21,11 @@ typedef struct fd_entry_t {
 } fd_entry_t;
 
 typedef struct fs_mailbox_queue {
-    uint32_t caller_pid;
-    operations_t  request_type;
-    char     path[128];
-    char     buf[512];
-    uint32_t fd;
+    uint32_t                caller_pid;
+    operations_t            request_type;
+    char                    path[128];
+    char                    buf[512];
+    uint32_t                fd;
     fs_task_queue_status_t  status;
 } fs_mailbox_queue;
 

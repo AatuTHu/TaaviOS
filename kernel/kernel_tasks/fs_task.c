@@ -19,7 +19,7 @@
 * it wakes the caller and if everything is completed it follows the blankie protocol.
 */
 
-#define free_slot 3
+#define free_starting_slot 3
 static int request_queue_count = 0;
 static int last_request_index = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
@@ -39,14 +39,14 @@ int check_boundaries(void *ptr, uint32_t size) {
   return STATUS_OK;
 }
 
-static void fs_wake_task(uint32_t caller_pid) {
-  scheduler_wake_task(caller_pid);
+static void fs_wake_task(uint32_t pid) {
+  scheduler_wake_task(pid);
 }
 
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
   int slot = -1;
-  for (int i = free_slot; i < MAX_TASKS; i++) {
+  for (int i = free_starting_slot; i < MAX_TASKS; i++) {
       if (fd_entry_table[i] == NULL) {
           slot = i;
           break;
@@ -77,6 +77,7 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
 }
 
 void fs_handle_request(fs_mailbox_queue *req) {
+
   if(req->request_type == OPEN) {
       uint32_t file_cluster = 0;
       uint32_t file_size = 0;
@@ -94,6 +95,7 @@ void fs_handle_request(fs_mailbox_queue *req) {
 
           req->fd     = fd;
           req->status = COMPLETE;
+          fs_wake_task(req->caller_pid);
           return;
 
       }
@@ -114,7 +116,8 @@ void fs_handle_request(fs_mailbox_queue *req) {
         return;
       }
 
-      uint8_t *buf = (uint8_t *)kmalloc(entry->size);
+      uint32_t buf_size = fat32_calculate_cluster_size();
+      uint8_t *buf = (uint8_t *)kmalloc(buf_size);
 
       if(buf == NULL) {
         DEBUG("[FS_TASK][handle_request]: buffer unallocated\n");
@@ -122,29 +125,24 @@ void fs_handle_request(fs_mailbox_queue *req) {
         return;
       }
 
-      if(fat32_read_file(entry->cluster, entry->size, buf) != STATUS_ERROR) {
-        DEBUG("[FS_TASK][handle_request]: file read succesfully %d\n", req->caller_pid);
-
-        uint32_t bytes_to_copy = entry->size;
-        if (bytes_to_copy > sizeof(req->buf)) {
-            bytes_to_copy = sizeof(req->buf) - 1;
-        }
-        memcpy(req->buf, (char*)buf, bytes_to_copy);
-        bytes_to_copy = sizeof(req->buf) - 1;
-
-        req->fd = bytes_to_copy;
-
-        kfree(buf);
-        DEBUG("[FS_TASK][handle_request]: file read succesfully %s\n", req->buf);
-        req->status = COMPLETE;
-        return;
-      } else {
+      if(fat32_read_file(entry->cluster, entry->size, buf) == STATUS_ERROR) {
         DEBUG("[FS_TASK][handle_request]: Reading the file did not succeed\n");
         kfree(buf);
         req->status = TERMINATED;
         return;
-      }
+      } 
+      
+      DEBUG("[FS_TASK][handle_request]: file read succesfully: %s", buf);
+      buf[entry->size] = '\0';
+      memcpy(req->buf, (char*)buf, buf_size-1);
+      
+      kfree(buf);
+      DEBUG("[FS_TASK][handle_request]: Marking request with owner pid %d complete\n", req->caller_pid);
+      req->status = COMPLETE;
+      fs_wake_task(req->caller_pid);
+      return;
     }
+    
     
     DEBUG("[FS_TASK][handle_request]: Request type was invalid. Terminating request\n");
     req->status = TERMINATED;
@@ -182,21 +180,24 @@ void fs_remove_from_queue() {
   DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
 }
 
+
+/*
+* This function gives the result to outside world. Mainly for the caller in syscall
+*/
 int collect_request(uint32_t pid, char *out) {
   //DEBUG("[FS_TASK][COLLECT_REQUEST]: Fetching request\n");
 
-  for(int i = 0; i < request_queue_count; i++) {
+  for(uint32_t i = 0; i < request_queue_count; i++) {
     if(request_queue[i]->caller_pid == pid && request_queue[i]->status == COMPLETE) {
       DEBUG("[FS_TASK][COLLECT_REQUEST]: Request found!\n");
-      if(request_queue[i]->request_type == OPEN) {
-        request_queue[i]->status = TERMINATED;
-        return request_queue[i]->fd;
-      }
+      request_queue[i]->status = TERMINATED;
+      if(request_queue[i]->request_type == OPEN) return request_queue[i]->fd;
       if(request_queue[i]->request_type == READ) {
-        uint32_t read_bytes = request_queue[i]->fd; // Haetaan tallennettu pituus
-        memcpy(out, request_queue[i]->buf, read_bytes);
-        out[read_bytes] = '\0';
-        return read_bytes;
+        uint32_t buf_size = fat32_calculate_cluster_size();
+        memcpy(out, request_queue[i]->buf, buf_size-1);
+        DEBUG("[FS_TASK][COLLECT_REQUEST]: copied size: %d\n", buf_size-1);
+        DEBUG("[FS_TASK][COLLECT_REQUEST]: buffer content %s", out);
+        return STATUS_OK;
       }
     }
   }
@@ -205,7 +206,11 @@ int collect_request(uint32_t pid, char *out) {
   //DEBUG("[FS_TASK][COLLECT_REQUEST]: Unable to fetch request.\n");
 }
 
-int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path,const char *buf) {
+/*
+* ADD_REQUEST_TO_QUEUE
+* Takes the params sent to it via syscall and makes an work "order" for fs_task. 
+*/
+int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf) {
   __asm__ __volatile__("cli");
   DEBUG("[FS_TASK][ADD_REQUEST]: adding a request for fs_task\n");
 
@@ -216,8 +221,6 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
       __asm__ __volatile__("sti");
       return STATUS_ERROR;
   }
-
-  memset(new_request, 0, sizeof(fs_mailbox_queue));
 
   new_request->caller_pid = pid;
   new_request->request_type = type;
@@ -230,33 +233,34 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
       new_request->path[0] = '\0';
   }
   
-  if(type != READ && buf != NULL) {
+  if(buf != NULL && type == WRITE) {
       strncpy(new_request->buf, buf, sizeof(new_request->buf) - 1);
       new_request->buf[sizeof(new_request->buf) - 1] = '\0';
+      DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s\n", new_request->buf);
   }
   
   DEBUG("[FS_TASK][ADD_REQUEST]: pid: %d\n", new_request->caller_pid);
   DEBUG("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
   DEBUG("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
-  DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s\n", new_request->buf);
   DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
 
   new_request->status = PENDING;
   request_queue[request_queue_count] = new_request;
   request_queue_count++;
   
-  scheduler_wake_task(fs_task_pid);
-
   DEBUG("[FS_TASK][ADD_REQUEST]: request added\n");
+  scheduler_wake_task(fs_task_pid);
+  
   __asm__ __volatile__("sti");
   return STATUS_OK;
 }
 
+/*
+* This functions was inspired from schedulers next task find function.
+* 
+*/
 fs_mailbox_queue *find_next_request() {
-  if (request_queue_count == 0) {
-    DEBUG("[FS_TASK][NEXT_REQUEST]: queue count is null\n");
-    return NULL;
-  }
+  if (request_queue_count == 0) return NULL;
 
   for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i] != NULL && request_queue[i]->status == IN_PROGRESS) {
@@ -268,7 +272,6 @@ fs_mailbox_queue *find_next_request() {
   for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i] != NULL && request_queue[i]->status == PENDING) {
       last_request_index = i;
-      DEBUG("[FS_TASK][NEW_REQUEST]: new found with pid %d\n", request_queue[i]->caller_pid);
       return request_queue[i];
     }
   }
@@ -280,10 +283,14 @@ fs_mailbox_queue *find_next_request() {
     }
   }
 
-  DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
+  //DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
   return NULL;
 }
 
+
+/*
+* Main task loop of fs_task the algorithm
+*/
 void fs_task_loop() {
   //DEBUG("[FS_TASK]: \n");
     while(1) {
@@ -294,7 +301,6 @@ void fs_task_loop() {
             __asm__ __volatile__("cli");
             DEBUG("[FS_TASK][LOOP]: handling request\n");
             fs_handle_request(request);
-            fs_wake_task(request->caller_pid);
             __asm__ __volatile__("sti");
           }
           

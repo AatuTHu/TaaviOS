@@ -11,7 +11,7 @@ void error(const char *msg) {
 }
 
 int scan(char *buf) {
-    return sys_read(buf, 1, 0);
+    return sys_read(0, 1, buf);
 }
 
 int open(const char* path) {
@@ -22,8 +22,8 @@ void write(int fd, const char *msg) {
     sys_write(msg, strlen(msg), fd);
 }
 
-int read(int fd, char *buf) {
-    return sys_read(buf, 1, fd);
+int read(int fd, char *buf, uint32_t count) {
+    return sys_read(fd, count, buf); 
 }
 
 void terminate_program() {

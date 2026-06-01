@@ -37,7 +37,7 @@ int sys_open(const char *path) {
     return fd;
 }
 
-int sys_read(char *buf, int len, int fd) {
+int sys_read(int fd, int len, char *buf) {
     int result;
     __asm__ __volatile__(
         "int $0x80"

@@ -67,11 +67,18 @@ void command_read() {
     print("\n");
     if(fd == -1) {
         print("Cant read the file\n");
-    } else if (fd != -1) {
+    } else {
         print("Reading the file\n");
-        char buf[512];
-        read(fd, buf);
-        print(buf);
+        char buf[512] = {0}; 
+
+        int nread = read(fd, buf, 512); 
+        
+        if (nread != -1) {
+            print("File read succesfully\n");
+            print(buf);
+        } else {
+            print("Read failed or file empty\n");
+        }
     }
 }
 
