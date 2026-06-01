@@ -131,7 +131,11 @@ static void scheduler_switch(struct registers *r) {
     if(next_idx != current_idx) {
         DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
-        vmm_switch(next->page_dir);
+        
+        if(next->task_mode == USER_TASK) {
+            vmm_switch(next->page_dir);
+        }
+
         tss_set_kernel_stack(next->kernel_stack);
         memcpy(r, &next->context, sizeof(struct registers));
     }
