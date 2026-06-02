@@ -17,17 +17,22 @@
 */
 
 void reaper_task_loop() {
-    int kills = scheduler_get_dead_task_count();
-
-    while(kills > 0) {
-        if(scheduler_remove_task() != STATUS_ERROR) {
-            kills--;
-        } else {
+    while(1) {
+        int kills = scheduler_get_dead_task_count();
+        
+        if(kills == 0) {
+            blankie_activate(reaper_task_pid);
+        }
+        
+        
+        DEBUG("[REAPER][LOOP]: kill_count %d\n", kills);
+        if(scheduler_remove_task() == STATUS_ERROR) {
             DEBUG("[REAPER][LOOP]: Something went wrong with killing..\n");
         }
+        
+        kills--;
     }
 
-    blankie_activate(reaper_task_pid);
 }
 
 void reaper_init(task_t *reaper_task) {
