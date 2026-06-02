@@ -67,7 +67,7 @@ So we have atleast two kernel tasks that are active simultaneously as is user ta
 
 ### Designer behind this
 
-I have a engineering degree in It and wanted to try my hand at developing an OS. I have had only one course on C and one of assembly. I have never done a days work in a real It company. My skills are (were) in programming with javascript using libraries like React or React native. So I have no hardware experience, no system level thinking skills from any job or Well any chance at all to do this. I have done it anyway 
+I have a engineering degree in tech and wanted to try my hand at developing an OS. I have had only one course on C and none of assembly. I have never done a days work in a real tech company. My skills are (were) in programming with javascript using libraries like React or React native.
 
 The learning process has been books, **the OSDev wiki**, r/osdev on reddit, other people's source code, YouTube, and using AI as a sounding board for concepts that wouldn't click from text alone. I try to not to lean too much on tutorials, others work or the generic way of doing things as I'm at my best doing the things in my own way.
 
