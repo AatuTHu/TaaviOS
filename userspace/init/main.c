@@ -5,5 +5,4 @@
 void main(void) {
     print("Starting shell\n");
     exec("shell");
-    
 }

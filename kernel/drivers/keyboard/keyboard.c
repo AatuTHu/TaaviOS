@@ -99,6 +99,7 @@ void keyboard_handler(uint8_t scancode) {
         }
         
         if (c != 0) {
+            //DEBUG("[KEYBOARD][HANDLER]: fired!\n");
             keyboard_write_to_buffer(c);
             scheduler_wake_task(keyboard_buffer->foreground_pid);
         }

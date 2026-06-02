@@ -6,7 +6,7 @@ LOG_LEVEL ?= 2
 CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
 		 -Ikernel/include/mm -Ikernel/include/tcb -Ikernel/include/loader -Ikernel \
-		 -Ikernel/include/usermode -Ikernel/include/fs -Ikernel/include/kernel_tasks \
+		 -Ikernel/include/usermode -Ikernel/include/fs -Ikernel/include/kernel_clerks \
 		 -Ikernel/include/protocols \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \

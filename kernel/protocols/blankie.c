@@ -21,6 +21,11 @@ static uint8_t req_slot = 0;
 int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top){
     blankie_registry_t *blankie_req = (blankie_registry_t *)kmalloc(sizeof(blankie_registry_t));
 
+    if(req_slot > MAX_LOGS) {
+        DEBUG("[BLANKIE][REGISTER]: Not enough blankies for all. Slots filled");
+        return STATUS_ERROR;
+    }
+
     if(blankie_req == NULL) {
         DEBUG("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
         return STATUS_ERROR;
@@ -47,13 +52,14 @@ int blankie_activate(uint32_t pid) {
 
     for(uint8_t i = 0; i < req_slot; i++) {
         if(b_registry[i]->pid == pid) {
-            DEBUG("[BLANKIE][ACTIVATE]: Task found\n");
+            DEBUG("[BLANKIE][ACTIVATE]: Task found %s\n", task->name);
             task->context.eip = b_registry[i]->entry_point;
             task->context.esp = b_registry[i]->stack_top;
             task->context.ebp = b_registry[i]->stack_top;
             task->started     = 0;
             task->state       = TASK_SLEEPING;
 
+            DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save us\n");
             while(1) {
                 __asm__ __volatile__("sti; hlt");
             }

@@ -7,22 +7,25 @@
 #include "vmm.h"
 #include "config.h"
 #include "keyboard.h"
-#include "idle_task.h"
 #include "fs_task.h"
 
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
-    DEBUG("[SYSCALL][SYSEXIT]\n");
+    __asm__ __volatile__("cli");
     task_t *current = scheduler_get_current_task();
-
+    
     if(current == NULL) {
         DEBUG("[SYSCALL][SYSEXIT]: current task not found\n");
+        __asm__ __volatile__("sti");
         return STATUS_ERROR;
     }
 
+    DEBUG("[SYSCALL][SYSEXIT]: caller %s\n", current->name);
+
     if(current->state == TASK_DEAD) {
+        __asm__ __volatile__("cli");
         return STATUS_OK;
     }
     
@@ -32,6 +35,7 @@ static int32_t sys_exit(struct registers *r) {
     }
 
     scheduler_set_task_state(TASK_DEAD);
+    __asm__ __volatile__("cli");
     scheduler_yield(r);
 
     return STATUS_OK;

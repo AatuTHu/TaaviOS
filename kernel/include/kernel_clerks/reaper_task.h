@@ -2,7 +2,6 @@
 #define REAPER_TASK_H
 
 #include <stdint.h>
-#include "config.h"
 #include "task.h"
 
 void reaper_init(task_t *reaper_task);
