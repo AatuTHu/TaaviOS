@@ -130,11 +130,28 @@ void main(void) {
     print("TaaviOS Shell\n");
     print("Type 'help' to see all commands\n");
     
-    char buf[256];
+    char buf[512] = {0};
     int pos = 0;
     char c;
+
+    fd = open("hello.txt");
+
     
-    while (1) {
+    if(fd != -1) {
+        print("Reading the file\n"); 
+        int nread = read(fd, buf, 512); 
+        
+        if (nread != -1) {
+            print("File read succesfully\n");
+            print(buf);
+        } else {
+            print("Read failed or file empty\n");
+        }
+    } else {
+        print("Error on opening the file\n");
+    }
+    
+    /*while (1) {
         error("\n> ");
         pos = 0;
         while (1) {
@@ -160,5 +177,5 @@ void main(void) {
             }
         }
         buf[pos] = 0;
-    }
+    }*/
 }

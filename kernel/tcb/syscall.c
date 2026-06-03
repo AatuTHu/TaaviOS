@@ -13,15 +13,13 @@
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
-    
+    DEBUG("[SYSCALL][SYSEXIT]\n");
     task_t *current = scheduler_get_current_task();
-    
+
     if(current == NULL) {
         DEBUG("[SYSCALL][SYSEXIT]: current task not found\n");
         return STATUS_ERROR;
     }
-
-    DEBUG("[SYSCALL][SYSEXIT]: caller %s\n", current->name);
 
     if(current->state == TASK_DEAD) {
         return STATUS_OK;
@@ -100,7 +98,6 @@ static int32_t sys_read(struct registers *r) {
             scheduler_set_task_state(TASK_BLOCKED);
             r->eax =  STATUS_OK;
             scheduler_yield(r);
-           
         }
         break;
     

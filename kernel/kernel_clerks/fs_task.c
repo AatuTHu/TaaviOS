@@ -22,7 +22,6 @@
 
 #define free_starting_slot 3
 static int request_queue_count = 0;
-static int last_request_index = -1;
 static fs_mailbox_queue *request_queue[MAX_TASKS];
 static fd_entry_t *fd_entry_table[MAX_TASKS];
 
@@ -142,32 +141,26 @@ void fs_handle_request(fs_mailbox_queue *req) {
 /*
 * 
 */
-void fs_remove_from_queue() {
-  __asm__ __volatile__("cli");
+void fs_remove_from_queue(fs_mailbox_queue *req) {
   
-  if (last_request_index == -1 || request_queue_count == 0) {
+  if (request_queue_count == 0 || req == NULL) {
       return;
   }
 
-
-  void *ptr_to_free = (void *)request_queue[last_request_index];
-  
-  for (int i = last_request_index; i < request_queue_count - 1; i++) {
-      request_queue[i] = request_queue[i + 1];
+  for (int i = 0; i < request_queue_count - 1; i++) {
+    request_queue[i] = request_queue[i + 1];
   }
-
+  
   request_queue[request_queue_count - 1] = NULL;
   request_queue_count--;
-  last_request_index = -1;
-
   
-  if (ptr_to_free != NULL) {
+  
+  if (req != NULL) {
     DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
-    ledger_free(fs_task_pid, (uint32_t)ptr_to_free);
+    ledger_free(fs_task_pid, (uint32_t)req);
   }
   
   DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
-  __asm__ __volatile__("sti");
 }
 
 
@@ -182,7 +175,7 @@ int collect_request(uint32_t pid, char *out) {
     fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
 
     if(req == 0) {
-      DEBUG("[FS_TASK][COLLECT_REQUEST]: Invalid address");
+      DEBUG("[FS_TASK][COLLECT_REQUEST]: Invalid address\n");
       continue;
     }
     
@@ -266,7 +259,6 @@ fs_mailbox_queue *find_next_request() {
   for(int i = 0; i < request_queue_count; i++) {
     fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
     if(req != 0 && req->status == IN_PROGRESS) {
-      last_request_index = i;
       return req;
     }
   }
@@ -274,7 +266,6 @@ fs_mailbox_queue *find_next_request() {
   for(int i = 0; i < request_queue_count; i++) {
     fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
     if(req != 0 && req->status == PENDING) {
-      last_request_index = i;
       return req;
     }
   }
@@ -282,7 +273,6 @@ fs_mailbox_queue *find_next_request() {
   for(int i = 0; i < request_queue_count; i++) {
     fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
     if(req != 0 && req->status == TERMINATED) {
-      last_request_index = i;
       return req;
     }
   }
@@ -309,9 +299,11 @@ void fs_task_loop() {
           }
           
           if(request->status == TERMINATED) {
+            __asm__ __volatile__("cli");
             DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
-            fs_remove_from_queue();
+            fs_remove_from_queue(request);
             request = NULL;
+             __asm__ __volatile__("sti");
           }
         }
       }

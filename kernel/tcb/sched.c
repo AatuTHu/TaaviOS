@@ -27,14 +27,14 @@ static int dead_task_count = 0;
 static int current_idx = -1;
 static volatile uint8_t scheduler_on = 0;
 
-static void scheduler_check_services() {
+static void scheduler_check_clerks() {
     
-    //DEBUG("[SCHEDULER][scheduler_check_services]: Activating Clerks\n");
+    //DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
     if(dead_task_count > 0) {
         clerk = tasks[reaper_task_pid];   
         if(clerk == NULL || clerk->task_mode == USER_TASK) {
-            DEBUG("[SCHEDULER][scheduler_check_services]: Invalid Clerk\n");
+            DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
             return;
         }
         clerk->state = TASK_READY;
@@ -46,7 +46,7 @@ static void scheduler_check_services() {
     if(dead_task_count == 0 && scheduler_has_runnable_task() == 0) {
         clerk = tasks[idle_task_pid];
         if(clerk == NULL || clerk->task_mode == USER_TASK) {
-            DEBUG("[SCHEDULER][scheduler_check_services]: Invalid Clerk\n");
+            DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
             return;
         }
         clerk->state = TASK_READY;
@@ -105,6 +105,7 @@ static void scheduler_switch(struct registers *r) {
         memcpy(&current->context, r, sizeof(struct registers));
 
         if(current->state == TASK_RUNNING) {
+            //DEBUG("[SCHEDULER][SWITCH]: setting: %s ready\n", current->name);
             current->state = TASK_READY;
         }
     }
@@ -112,7 +113,7 @@ static void scheduler_switch(struct registers *r) {
     
     if(scheduler_has_runnable_task() == 0 || dead_task_count > 0) {
         //DEBUG("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
-        scheduler_check_services();
+        scheduler_check_clerks();
     }
 
     int next_idx = scheduler_find_next_task();
@@ -128,7 +129,7 @@ static void scheduler_switch(struct registers *r) {
     next->started = 1;
     
     if(next_idx != current_idx) {
-        //DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
+        DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
         
         if(next->task_mode == USER_TASK) {
@@ -162,15 +163,17 @@ void scheduler_tick(struct registers *r) {
 * HELPER FUNCTIONS
 */
 
-int scheduler_remove_task() {
-    __asm__ __volatile__("cli");
+int scheduler_get_dead_task_count() {
+    return dead_task_count;
+}
+
+void scheduler_remove_task() {
     DEBUG("[SCHEDULER][REMOVE]: Searching for a dead task\n");
     int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
    
     if(delete_candidate == -1) {
         DEBUG("[SCHEDULER][REMOVE]: No deletable task found.\n");
-        __asm__ __volatile__("sti");
-        return STATUS_ERROR;
+        return;
     }
     
     DEBUG("[SCHEDULER][REMOVE]: Deleting task %s\n", tasks[delete_candidate]->name);
@@ -189,8 +192,6 @@ int scheduler_remove_task() {
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
-    __asm__ __volatile__("sti");
-    return STATUS_OK;
 }
 
 int scheduler_set_current_task(uint32_t pid) {
@@ -252,10 +253,6 @@ void scheduler_set_task_state(task_state_t state) {
 
 int scheduler_get_task_count() { 
     return task_count;
-}
-
-int scheduler_get_dead_task_count() { 
-    return dead_task_count;
 }
 
 int scheduler_has_runnable_task() {

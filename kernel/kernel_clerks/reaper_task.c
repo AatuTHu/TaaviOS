@@ -19,20 +19,16 @@
 void reaper_task_loop() {
     while(1) {
         int kills = scheduler_get_dead_task_count();
-        
-        if(kills == 0) {
+        if(kills > 0) {
+            __asm__ __volatile__("cli");
+            scheduler_remove_task();
+            __asm__ __volatile__("sti");
+            kills--;
+        }
+        if(scheduler_get_dead_task_count() == 0) {
             blankie_activate(reaper_task_pid);
         }
-        
-        
-        DEBUG("[REAPER][LOOP]: kill_count %d\n", kills);
-        if(scheduler_remove_task() == STATUS_ERROR) {
-            DEBUG("[REAPER][LOOP]: Something went wrong with killing..\n");
-        }
-        
-        kills--;
     }
-
 }
 
 void reaper_init(task_t *reaper_task) {
