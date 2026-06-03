@@ -16,6 +16,6 @@ void scheduler_wake_task(uint32_t pid);
 int scheduler_set_current_task(uint32_t pid);
 void scheduler_yield(struct registers *r);
 task_t *scheduler_get_current_task();
-static int scheduler_has_runnable_task();
+int scheduler_has_runnable_task();
 
 #endif

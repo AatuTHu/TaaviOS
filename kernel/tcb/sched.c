@@ -255,7 +255,7 @@ int scheduler_get_task_count() {
     return task_count;
 }
 
-static int scheduler_has_runnable_task() {
+int scheduler_has_runnable_task() {
 
     for (int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->state == TASK_READY) {

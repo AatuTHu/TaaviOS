@@ -80,7 +80,7 @@ int keyboard_read_from_buffer(char* out, uint32_t pid) {
 }
 
 
-static void keyboard_handler(uint8_t scancode) {
+void keyboard_handler(uint8_t scancode) {
     
     if ((scancode == 0x2A) || (scancode == 0x36)) { shift_pressed = 1; return; }
     if ((scancode == 0xAA) || (scancode == 0xB6)) { shift_pressed = 0; return; }

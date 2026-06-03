@@ -10,6 +10,7 @@ typedef enum  {
     IN_PROGRESS,
     COMPLETE,
     TERMINATED,
+    FAILED,
 } fs_task_queue_status_t;
 
 typedef struct fd_entry_t {

@@ -49,7 +49,7 @@ static void merge() {
         if((block_header_t*)((uint8_t*)current + sizeof(block_header_t) + current->size) == current->next) {
             DEBUG("[KMALLOC]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
             current->size += sizeof(block_header_t) + current->next->size;
-            DEBUG("[Kmalloc]: Currents size after merge: %x\n", current->size);
+            DEBUG("[KMALLOC]: Currents size after merge: 0x%x\n", current->size);
             current->next = current->next->next;
         } else {
             current = current->next;

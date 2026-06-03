@@ -274,6 +274,8 @@ static fs_mailbox_queue *find_next_request() {
     }
   }
 
+  request_queue_count = 0;
+
   //DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
   return NULL;
 }
