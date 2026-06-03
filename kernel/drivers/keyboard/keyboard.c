@@ -17,7 +17,7 @@ int keyboard_get_foreground_pid() {
     return keyboard_buffer->foreground_pid;
 }
 
-void keyboard_clear_buffer() {
+static void keyboard_clear_buffer() {
     keyboard_buffer->read = keyboard_buffer->write;
 }
 
@@ -35,7 +35,7 @@ void keyboard_set_foreground_pid(int pid) {
     keyboard_buffer->foreground_pid = pid;
 }
 
-void keyboard_add_to_waiting_queue(int pid) {
+static void keyboard_add_to_waiting_queue(int pid) {
     if(pid == -1) return;
     for(int i = 0; i < waiting_queue_count; i++) {
         if(waiting_queue[i] == pid) return; // already queued
@@ -43,12 +43,12 @@ void keyboard_add_to_waiting_queue(int pid) {
     waiting_queue[waiting_queue_count++] = pid;
 }
 
-void keyboard_irq_handler(void) {
+static void keyboard_irq_handler(void) {
     uint8_t scancode = inb(0x60);
     keyboard_handler(scancode);
 }
 
-void keyboard_write_to_buffer(char c) {
+static void keyboard_write_to_buffer(char c) {
         if ((keyboard_buffer->write - keyboard_buffer->read) == KEYBOARD_BUFFER_SIZE) {
         return;
     }
@@ -80,7 +80,7 @@ int keyboard_read_from_buffer(char* out, uint32_t pid) {
 }
 
 
-void keyboard_handler(uint8_t scancode) {
+static void keyboard_handler(uint8_t scancode) {
     
     if ((scancode == 0x2A) || (scancode == 0x36)) { shift_pressed = 1; return; }
     if ((scancode == 0xAA) || (scancode == 0xB6)) { shift_pressed = 0; return; }

@@ -8,7 +8,7 @@
 #define clock_frequency 1193182
 
 void pit_init(uint32_t frequency);
-void pit_irq_handler(void);
+static void pit_irq_handler(void);
 uint32_t pit_get_ticks(void);
 uint32_t pit_get_uptime_s(void);
 void pit_sleep_ms(uint32_t ms);

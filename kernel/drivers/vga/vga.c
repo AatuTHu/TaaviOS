@@ -25,17 +25,17 @@ static uint16_t get_blank_char() {
 }
 
 //calculates current cursos position
-int get_terminal_pos() {
+static int get_terminal_pos() {
     return x_pos + (terminal_width * y_pos);
 }
 
 
 //calculates the "cross" position based on x and y co'oordinates
-int get_pos(int x, int y) {
+static int get_pos(int x, int y) {
     return x + (terminal_width * y); 
 }
 
-void update_cursor() {
+static void update_cursor() {
     uint16_t pos = get_terminal_pos();
     outb(0x3D4, 0x0E);
     outb(0x3D5, (pos >> 8) & 0xFF);
@@ -43,7 +43,7 @@ void update_cursor() {
     outb(0x3D5, pos & 0xFF);
 }
 
-void clear_terminal() {
+static void clear_terminal() {
     x_pos = 0;
     y_pos = 0;
     uint16_t blank = get_blank_char();
@@ -69,7 +69,7 @@ void vga_init() {
     //clear_terminal();
 }
 
-void lift_texts_up() {
+static void lift_texts_up() {
     // Copy rows up
     for(int y = 1; y < terminal_height; y++) {
         for(int x = 0; x < terminal_width; x++) {
@@ -86,7 +86,7 @@ void lift_texts_up() {
     y_pos = 23;
 }
 
-void backspace_pressed() {
+static void backspace_pressed() {
     if (x_pos > 0) {
         x_pos--;
     } else if (y_pos > 0) {
@@ -135,7 +135,7 @@ void vga_putchar(char c) {
     
 }
 
-void vga_write(char *msg) {
+void vga_write(const char *msg) {
     for (int i = 0; msg[i] != '\0'; i++) {
         vga_putchar(msg[i]);
     }

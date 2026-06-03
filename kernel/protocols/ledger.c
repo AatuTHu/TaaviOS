@@ -11,7 +11,6 @@
 
 static ledger_t *ledger_table[MAX_LEDGER_TASKS];
 static uint8_t ledger_slot = 0;
-static uint16_t alloc_slot = 0;
 
 int ledger_register(uint32_t pid) {
     DEBUG("[LEDGER][REGISTER]: Registering new ledger entry\n");
@@ -44,7 +43,7 @@ uint32_t ledger_alloc(uint32_t pid, uint32_t size) {
         if(ledger_table[i] != NULL && ledger_table[i]->pid == pid) {
             uint32_t paddr = (uint32_t)kmalloc(size);
 
-            if(paddr == NULL) {
+            if(paddr == 0) {
                 DEBUG("[LEDGER][ALLOC]: Kmalloc failed. Aborting\n");
                 return 0;
             }
@@ -95,7 +94,7 @@ int ledger_free(uint32_t pid, uint32_t protocol_addr) {
     uint32_t paddr = ledger_validate(pid, protocol_addr);
 
     if(paddr != 0) {
-       kfree(paddr);
+       kfree((uint32_t *)paddr);
 
        for(uint32_t i = 0; i < ledger_slot; i++) {
            if(ledger_table[i] != NULL && ledger_table[i]->pid == pid) {

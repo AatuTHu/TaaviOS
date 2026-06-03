@@ -13,7 +13,6 @@
 #include "task.h"
 #include "sched.h"
 #include "usermode.h"
-#include "stddef.h"
 #include "elf.h"
 #include "syscall.h"
 #include "keyboard.h"
@@ -30,13 +29,13 @@ uint32_t module_starts[MAX_MODS];
 uint32_t module_ends[MAX_MODS];
 uint32_t total_mods = 0;
 
-void init_serial_and_vga() {
+static void init_serial_and_vga() {
     vga_init();
     serial_init();
     DEBUG("[KERNEL]: --INIT SERIAL & VGA--\n");
 }
 
-void init_arch() {
+static void init_arch() {
     DEBUG("[KERNEL]: --INIT ARCH--\n");
     gdt_init();
     tss_init();
@@ -47,18 +46,18 @@ void init_arch() {
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
 }
 
-void init_mm(uint32_t *mboot_info) {
+static void init_mm(const uint32_t *mboot_info) {
     DEBUG("[KERNEL]: --INIT MEMORY MANAGEMENT--\n");
-    struct multiboot_info *mboot = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
+    const struct multiboot_info *mboot = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
 }
 
-void check_for_modules (uint32_t *mboot_info) {
+static void check_for_modules (const uint32_t *mboot_info) {
     DEBUG("[KERNEL]: --CHECKING FOR MODULES--\n");
-    struct multiboot_info *mbi = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
+    const struct multiboot_info *mbi = (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     
     if (mbi->mods_count > 0) {
-        struct multiboot_mod *mods = (struct multiboot_mod *)phys_to_virt(mbi->mods_addr);
+        const struct multiboot_mod *mods = (struct multiboot_mod *)phys_to_virt(mbi->mods_addr);
         total_mods = mbi->mods_count;
 
         for (uint32_t i = 0; i < total_mods && i < MAX_MODS; i++) {
@@ -76,13 +75,13 @@ void check_for_modules (uint32_t *mboot_info) {
     }
 }
 
-void init_drivers() {
+static void init_drivers() {
     keyboard_init();
     ata_init();
     
 }
         
-void init_filesystems() {
+static void init_filesystems() {
     uint32_t fat32_lba = 0;
     uint32_t fat32_sectors = 0;
 
@@ -114,7 +113,7 @@ void init_filesystems() {
     }*/
 }
 
-void init_kernel_tasks() {
+static void init_kernel_tasks() {
     DEBUG("[KERNEL]: --INIT KERNEL TASKS--\n");
     DEBUG("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid,(uint32_t)idle, "idle", &kernel_page_dir, KERNEL_TASK);
@@ -141,7 +140,7 @@ void init_kernel_tasks() {
 }
 
 
-void kernel_main(uint32_t *mboot_info) {
+void kernel_main(const uint32_t *mboot_info) {
 
     set_print_level(2);
 

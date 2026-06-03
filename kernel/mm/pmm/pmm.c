@@ -11,20 +11,20 @@ static uint32_t last_found = 0;
 
 void __pmm_set_bit(uint32_t page) {
     uint32_t ind = page / 32; 
-    bitmap[ind] = bitmap[ind] | (1 << (page % 32));
+    bitmap[ind] = bitmap[ind] | (1U << (page % 32));
 }
 
-void __pmm_clear_bit(uint32_t page) {
+static void __pmm_clear_bit(uint32_t page) {
     uint32_t ind = page / 32; 
-    bitmap[ind] = bitmap[ind] & ~(1 << (page % 32));
+    bitmap[ind] = bitmap[ind] & ~(1U << (page % 32));
 }
 
-int __pmm_test_bit(uint32_t page) {
+static int __pmm_test_bit(uint32_t page) {
     uint32_t ind = page / 32; 
-    return bitmap[ind] & (1 << (page % 32));
+    return bitmap[ind] & (1U << (page % 32));
 }
 
-void pmm_init(struct multiboot_info *mboot) {
+void pmm_init(const struct multiboot_info *mboot) {
     uint32_t total_memory_kb = mboot->mem_upper + CONVENTIONAL_MEMORY_KB;
     uint32_t total_pages = (total_memory_kb * 1024) / PAGE_SIZE;
     DEBUG("[PMM] INITIALIZING PHYSICAL MEMORY TO: %d kb\n", total_memory_kb);
@@ -36,7 +36,7 @@ void pmm_init(struct multiboot_info *mboot) {
     uint32_t vend = vaddr + mboot->mmap_length;
     DEBUG("[PMM] Memory map entries:\n");
     while (vaddr < vend) {
-        struct mmap_entry *entry = (struct mmap_entry *)vaddr;
+        const struct mmap_entry *entry = (struct mmap_entry *)vaddr;
         DEBUG("[PMM] [%s] base=0x%x length=0x%x\n",
             entry->type == 1 ? "AVAILABLE" : "RESERVED ",
             entry->base_low,

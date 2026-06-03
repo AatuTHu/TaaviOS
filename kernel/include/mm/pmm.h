@@ -33,7 +33,7 @@ struct multiboot_mod {
     uint32_t reserved;
 };
 
-void pmm_init(struct multiboot_info *mboot);
+void pmm_init(const struct multiboot_info *mboot);
 uint32_t pmm_alloc(void);
 uint32_t pmm_get_used_pages(void);
 uint32_t pmm_get_free_pages(void);

@@ -13,12 +13,12 @@ void irq_register_handler(int index, irq_callback_t cb) {
     irq_callbacks[index] = cb; 
 }
   
-void isr_handler(struct registers *r) {
+void isr_handler(const struct registers *r) {
     uint32_t cr2;
     __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
 
     int is_user = (r->cs & 0x3) == 3;
-    task_t *current = scheduler_get_current_task();
+    const task_t *current = scheduler_get_current_task();
 
     klog("\n");
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");

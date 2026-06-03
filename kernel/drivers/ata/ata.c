@@ -65,7 +65,7 @@ int ata_write_sector(uint32_t lba, const uint8_t *buf) {
 
     if(ata_poll() == -1) return -1;
 
-    uint16_t *ptr = (uint16_t *)buf; 
+    const uint16_t *ptr = (uint16_t *)buf; 
     for(int i = 0; i < 256;i++) {
       outw(ATA_DATA, ptr[i]);
     }

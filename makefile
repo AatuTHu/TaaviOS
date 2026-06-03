@@ -35,7 +35,7 @@ iso: $(BUILD)/taavi.bin
 	cp userspace/build/bin/*.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/taavi.iso isodir
-	
+
 run: iso
 	qemu-system-i386 \
 		-drive file=$(BUILD)/taavi.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
@@ -47,4 +47,26 @@ clean:
 	find . -name '*.o' -delete
 	rm -f taavi.bin taavi.iso
 	rm -rf $(BUILD) isodir
-.PHONY: all iso run clean
+
+check:
+	cppcheck \
+		--enable=all --inconclusive --language=c \
+		--check-level=exhaustive \
+		--language=c \
+		--suppress=missingIncludeSystem \
+		--suppress=unusedFunction \
+		-I kernel/include \
+		-I kernel/include/i386 \
+		-I kernel/include/drivers \
+		-I kernel/include/libraries \
+		-I kernel/include/mm \
+		-I kernel/include/tcb \
+		-I kernel/include/loader \
+		-I kernel/include/usermode \
+		-I kernel/include/fs \
+		-I kernel/include/kernel_clerks \
+		-I kernel/include/protocols \
+		kernel/ \
+		2>&1 | tee cppcheck_report.txt
+		
+.PHONY: all iso run clean check

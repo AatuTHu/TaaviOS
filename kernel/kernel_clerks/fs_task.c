@@ -65,12 +65,12 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   return slot;
 }
 
-void fs_handle_request(fs_mailbox_queue *req) {
+static void fs_handle_request(fs_mailbox_queue *req) {
 
   if(req->request_type == OPEN) {
       uint32_t file_cluster = 0;
       uint32_t file_size = 0;
-      char *path = (char *)req->path;
+      const char *path = (char *)req->path;
 
       if(fat32_find_file(path, &file_cluster, &file_size) != STATUS_ERROR) {
           DEBUG("[FS_TASK][handle_request]: File found succesfully, Completing request\n");
@@ -97,7 +97,7 @@ void fs_handle_request(fs_mailbox_queue *req) {
         return;
       }
 
-      fd_entry_t *entry = (fd_entry_t *)ledger_validate(fs_task_pid, (uint32_t)fd_entry_table[req->fd]);
+      const fd_entry_t *entry = (fd_entry_t *)ledger_validate(fs_task_pid, (uint32_t)fd_entry_table[req->fd]);
 
       if(entry == 0) {
         DEBUG("[FS_TASK][handle_request]: entry not found\n");
@@ -141,7 +141,7 @@ void fs_handle_request(fs_mailbox_queue *req) {
 /*
 * 
 */
-void fs_remove_from_queue(fs_mailbox_queue *req) {
+static void fs_remove_from_queue(const fs_mailbox_queue *req) {
   
   if (request_queue_count == 0 || req == NULL) {
       return;
@@ -154,13 +154,10 @@ void fs_remove_from_queue(fs_mailbox_queue *req) {
   request_queue[request_queue_count - 1] = NULL;
   request_queue_count--;
   
-  
-  if (req != NULL) {
-    DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
-    ledger_free(fs_task_pid, (uint32_t)req);
-  }
-  
+  DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
+  ledger_free(fs_task_pid, (uint32_t)req);
   DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
+  
 }
 
 
@@ -171,7 +168,7 @@ int collect_request(uint32_t pid, char *out) {
   //DEBUG("[FS_TASK][COLLECT_REQUEST]: Fetching request\n");
 
   
-  for(uint32_t i = 0; i < request_queue_count; i++) {
+  for(int i = 0; i < request_queue_count; i++) {
     fs_mailbox_queue *req = (fs_mailbox_queue *)ledger_validate(fs_task_pid, (uint32_t)request_queue[i]);
 
     if(req == 0) {
@@ -253,7 +250,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
 * This functions was inspired from schedulers next task find function.
 * 
 */
-fs_mailbox_queue *find_next_request() {
+static fs_mailbox_queue *find_next_request() {
   if (request_queue_count == 0) return NULL;
 
   for(int i = 0; i < request_queue_count; i++) {
@@ -322,7 +319,7 @@ void fs_task_loop() {
 }
 
 
-void fs_init(task_t *fs_task) {
+void fs_init(const task_t *fs_task) {
   ledger_register(fs_task_pid);
   blankie_register(fs_task_pid, fs_task->context.eip, fs_task->kernel_stack);
 }

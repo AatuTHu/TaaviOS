@@ -6,7 +6,7 @@
 #include "config.h"
 #include "klog.h"
 
-bool elf_check_file(Elf32_Ehdr *hdr) {
+static bool elf_check_file(const Elf32_Ehdr *hdr) {
 	if(!hdr) return false;
 	if(hdr->e_ident[EI_MAG0] != ELFMAG0) {
 		ERROR("[ELF]: ELF Header EI_MAG0 incorrect.\n");
@@ -27,7 +27,7 @@ bool elf_check_file(Elf32_Ehdr *hdr) {
 	return true;
 }
 
-bool elf_check_supported(Elf32_Ehdr *hdr) {
+static bool elf_check_supported(const Elf32_Ehdr *hdr) {
 	if(!elf_check_file(hdr)) {
 		ERROR("[ELF]: Invalid ELF File.\n");
 		return false;

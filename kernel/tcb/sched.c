@@ -54,7 +54,7 @@ static void scheduler_check_clerks() {
     }
 }
 
-int scheduler_find_next_task() {
+static int scheduler_find_next_task() {
     //DEBUG("[SCHEDULER][NEXT_TASK]: Searching\n");
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
@@ -85,7 +85,7 @@ int scheduler_find_next_task() {
 *   IF candidate is not found it returns as -1. Mainly used by reaper.
 */
 
-int scheduler_find_first_task_based_on_state(task_state_t state) {
+static int scheduler_find_first_task_based_on_state(task_state_t state) {
     for(int i = 1; i <= task_count; i++) { 
             int next_idx = (current_idx + i) % task_count;
             if (tasks[next_idx]->state == state) {
@@ -255,7 +255,7 @@ int scheduler_get_task_count() {
     return task_count;
 }
 
-int scheduler_has_runnable_task() {
+static int scheduler_has_runnable_task() {
 
     for (int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->state == TASK_READY) {

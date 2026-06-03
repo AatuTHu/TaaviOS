@@ -53,7 +53,7 @@ static void print_hex(uint32_t n) {
         return; 
     }
     
-    char digits[] = "0123456789abcdef";
+    const char digits[] = "0123456789abcdef";
     char buf[9];
     buf[8] = '\0';
     int pos = 7;

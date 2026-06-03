@@ -73,7 +73,7 @@ void vmm_free_user_space(page_directory_t *dir) {
     for(uint32_t i = 0; i < size; i++) {
         if(!((*dir)[i] & PAGE_PRESENT)) continue;
         uint32_t pt_phys = (*dir)[i] & ~PAGE_FLAGS_MASK;
-        uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
+        const uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
         for(uint32_t j = 0; j < entries_per_page ; j++) {
             if(pt[j] & PAGE_PRESENT) {
                 pmm_free(pt[j] & ~PAGE_FLAGS_MASK);

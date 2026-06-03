@@ -7,7 +7,7 @@ struct idt_entry idt[256];
 struct idt_ptr idt_pointer;
 
 
-void pic_remap() {
+static void pic_remap() {
     outb(PIC1_COMMAND, 0x11);
     outb(PIC2_COMMAND, 0x11);
     
@@ -25,7 +25,7 @@ void pic_remap() {
     DEBUG("[IDT]: Remapping complete\n");
 }
 
-void idt_set_gate(int n, uint32_t handler, uint8_t dpl) {
+static void idt_set_gate(int n, uint32_t handler, uint8_t dpl) {
     idt[n].base_low = handler & 0xFFFF;
     idt[n].base_high = (handler >> 16) & 0xFFFF;
     idt[n].selector = 0x08;

@@ -12,7 +12,7 @@ Yes.
 
 #### 1. The Microlithic Kernel
 
-TaaviOS uses a kernel architecture I designed called the **Microlithic Kernel**. An asynchronous kernel model that is based on a monolithic kernel with microlithic organization.
+TaaviOS uses a kernel architecture I designed called the **Microlithic Kernel**. Kernel model is based on a monolithic kernel with a microlithic organization.
 
 The kernel is structured around autonomous kernel tasks or as I like to call them "clerks". Each clerk has its own field of operations. A filesystem clerk does all filesystem related work, a future network task would do all network related. The clerks do not communicate to each other directly so to minimize the risk of deadlock. Essentially there should never be horizontal communication between the clerks as why would a filesystem clerk talk with the guy who does landscaping (gui clerk).
 

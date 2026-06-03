@@ -77,8 +77,7 @@ typedef struct {
 } fat32_fs_t;
 
 typedef struct __attribute__((packed)) {
-    uint8_t  name[8];
-    uint8_t  ext[3];
+    uint8_t  name[11];
     uint8_t  attributes;
     uint8_t  reserved[8];
     uint16_t cluster_high;

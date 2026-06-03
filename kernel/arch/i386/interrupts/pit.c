@@ -23,7 +23,7 @@ void pit_init(uint32_t frequency) {
     DEBUG("[PIT] PIT INITIALIZED SUCCESFULLY\n");
 }
 
-void pit_irq_handler(void) {
+static void pit_irq_handler(void) {
     tick_count++;
 }
 

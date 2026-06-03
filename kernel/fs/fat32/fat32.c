@@ -65,7 +65,7 @@ static uint32_t __fat32_next_cluster(uint32_t cluster) {
         DEBUG("[FAT32][NEXT_CLUSTER]: could not read sector with lba: %d\n", lba);
         return INVALID_CLUSTER;
     }
-    uint32_t *buf_ptr = (uint32_t*) buf; 
+    const uint32_t *buf_ptr = (uint32_t*) buf; 
     uint32_t entry = buf_ptr[fat_offset / sizeof(uint32_t)];
 
     return (entry & FAT32_CLUSTER_MASK);
@@ -164,6 +164,11 @@ static uint32_t __fat32_unalloc_cluster(uint32_t cluster) {
 }
 
 static int __fat32_format_83(const char *filename, uint8_t *dst) {
+
+    if(filename == NULL) {
+        return STATUS_ERROR;
+    }
+
     memset(dst, FAT32_83_PAD, 11);
 
     int index_of_dot = -1;
@@ -284,13 +289,13 @@ void fat32_list_dir(uint32_t cluster) {
         return;
     }
 
-    fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
+    const fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
 
     for(int i = 0; i < (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE; i++) {
         if(dir_entry[i].name[0] == FAT32_DIRENT_FREE) break;
         if(dir_entry[i].name[0] == FAT32_DIRENT_DELETED) continue;
         if ((dir_entry[i].attributes & 0x0F) == 0x0F) continue;
-        DEBUG("[FAT32][LIST_DIR]: name: %.8s.%.3s\n", dir_entry[i].name, dir_entry[i].ext);
+        DEBUG("[FAT32][LIST_DIR]: name: %.11s\n", dir_entry[i].name);
         DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
@@ -372,7 +377,6 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size)
             index++;
         }
 
-        segment[index] = '\0';
         p += index;  
 
         uint8_t name83[11];
@@ -461,7 +465,10 @@ int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t fir
 
     for(uint8_t i = 0; i < cluster_length; i++) {
         if(entry[i].name[0] == FAT32_DIRENT_FREE || entry[i].name[0] == FAT32_DIRENT_DELETED) {
-            if(__fat32_format_83(filename, entry[i].name) == -1) return -1;
+            if(__fat32_format_83(filename, entry[i].name) == STATUS_ERROR) {
+                DEBUG("[FAT32][CREATE_DIRENT]: Could not format the name\n");
+                return STATUS_ERROR;
+            }
             entry[i].attributes = FAT32_ATTR_ARCHIVE;
             memset(entry[i].reserved, 0, sizeof(entry[i].reserved));
             entry[i].cluster_low = first_cluster & 0xFFFF;
@@ -484,7 +491,7 @@ int fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t fir
 int fat32_init(uint32_t partition_lba) {
     uint8_t buf[FAT32_SECTOR_SIZE];
     ata_read_sector(partition_lba, buf);
-    fat32_bpb_t *bpb = (fat32_bpb_t *)buf;
+    const fat32_bpb_t *bpb = (fat32_bpb_t *)buf;
     
     if(bpb->bytes_per_sector != FAT32_SECTOR_SIZE) {
         DEBUG("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);

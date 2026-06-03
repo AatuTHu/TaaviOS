@@ -130,11 +130,11 @@ void main(void) {
     print("TaaviOS Shell\n");
     print("Type 'help' to see all commands\n");
     
-    char buf[512] = {0};
+    char buf[512];
     int pos = 0;
     char c;
 
-    fd = open("hello.txt");
+   fd = open("hello.txt");
 
     
     if(fd != -1) {
