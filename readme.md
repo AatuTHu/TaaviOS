@@ -36,15 +36,16 @@ The idea is straightforward: instead of panicking the entire kernel when a kerne
 
 Recovery callbacks are stored in `gosling_table[CLERK_COUNT]`, indexed by PID. Registration is done at init time via `register_hail_mary_function(pid, cb)`. When a fault occurs, `activate_hail_mary(pid)` looks up the table and invokes the callback directly.
 
-The recovery function is responsible for cleaning up any in-flight state — dropping the current request, freeing heap memory — and then calling `blankie_activate` to reset the clerk back to its entry point, ready for the next run.
+The recovery function is responsible for cleaning up any in-flight state, dropping the current request, freeing heap memory and then calling `blankie_activate` to reset the clerk back to its entry point, ready for the next run.
+
 
 #### 4. Portability
 
-The Blankie and Ledger Protocols and the Microlithic model itself are architecture independent. The current implementation targets x86 but nothing in the design requires it. The concepts port to any architecture with virtual memory and privilege separation.
+The Blankie and the Microlithic model itself are architecture independent. The current implementation targets x86 but nothing in the design requires it. The concepts port to any architecture with virtual memory and privilege separation.
 
 #### 5. Tradeoffs
 
-All kernel clerks run in ring 0 and share the same address space. A misbehaving clerk can corrupt another clerk's memory. This is the standard monolithic tradeoff. Even Linux has the same risks produced in a different manner. The Ledger Protocol exists to enforce domain boundaries in software and make violations visible. The constraint is disciplined implementation.
+All kernel clerks run in ring 0 and share the same address space. A misbehaving clerk can corrupt another clerk's memory. This is the standard monolithic tradeoff. Even Linux has the same risks produced in a different manner. The Hail mary Protocol exists to counter severe bugs at the kernel level, to stop a clerk from shutting down the system
 
 #### 6. Scheduler
 
@@ -77,6 +78,6 @@ The learning process has been books, **the OSDev wiki**, r/osdev on reddit, othe
 
 Every part of this kernel was written after educating myself on the topic, writing it, failing, and then writing it again then auditing and thinking before ultimately failing again.
 
-The parts I have enjoyed most are the ones that required the most original thinking: the scheduler, the Microlithic Kernel model, the Blankie Protocol, and the Ledger Protocol. Getting preemptive multitasking or the asynchronous open request working for the first time was a particular milestone.
+The parts I have enjoyed most are the ones that required the most original thinking: the scheduler, the Microlithic Kernel model, the Blankie Protocol, and the Ledger Protocol, Hail mary Protocol. Getting preemptive multitasking or the asynchronous open request working for the first time was a particular milestone.
 
 *Author: A.H ~ 2026*
