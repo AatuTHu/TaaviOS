@@ -106,6 +106,11 @@ task_t *get_task_by_name(char *name) { //A helper function not inteded to stay. 
 }
  
 task_t *task_get(uint32_t pid) {
+
+    if(pid <= CLERK_COUNT) {
+        return task_table[pid];
+    }
+
     if(pid < MAX_TASKS) {    
         for(int i = 0; i < MAX_TASKS; i++) {
             if(task_table[i] != NULL && task_table[i]->pid == pid) {

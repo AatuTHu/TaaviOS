@@ -32,6 +32,7 @@ typedef struct fs_mailbox_queue {
 
 void fs_init(const task_t *fs_task);
 void fs_task_loop();
+void fs_recovery();
 int collect_request(uint32_t pid, char* out);
 int add_request_to_queue(uint32_t pid,operations_t type,uint32_t fd, const char* path,const char *buf);
 

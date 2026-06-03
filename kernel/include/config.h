@@ -45,6 +45,8 @@ typedef enum {
   OPEN
 } operations_t;
 
+#define CLERK_COUNT 3 // amount of clerks. Very important. hardcoded for now
+
 #define idle_task_pid 0
 #define fs_task_pid 1
 #define reaper_task_pid 2

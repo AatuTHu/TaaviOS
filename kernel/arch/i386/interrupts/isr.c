@@ -4,6 +4,7 @@
 #include "klog.h"
 #include "sched.h"
 #include "task.h"
+#include "hail_mary.h"
 
 
 irq_callback_t irq_callbacks[16] = {0};
@@ -18,7 +19,14 @@ void isr_handler(const struct registers *r) {
     __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
 
     int is_user = (r->cs & 0x3) == 3;
-    const task_t *current = scheduler_get_current_task();
+    task_t *current = scheduler_get_current_task();
+
+    if(current->task_mode == KERNEL_TASK) {
+        //DEBUG("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
+        current->state = TASK_SLEEPING;
+        activate_hail_mary(current->pid);
+        return;
+    }
 
     klog("\n");
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");

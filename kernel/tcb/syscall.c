@@ -94,6 +94,7 @@ static int32_t sys_read(struct registers *r) {
     
         if(current->state != TASK_BLOCKED) {
             scheduler_set_task_state(TASK_BLOCKED);
+            r->eax =  STATUS_OK;
             scheduler_yield(r);
         }
         
@@ -102,16 +103,15 @@ static int32_t sys_read(struct registers *r) {
         add_request_to_queue(current->pid, READ, fd, NULL, NULL);
         scheduler_yield(r);
     
-        DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
+        //DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
         if(collect_request(current->pid, buf) == STATUS_ERROR) {
             DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong");
             return STATUS_ERROR;
         }
-        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
+      //  DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
     }
     
     
-    r->eax =  STATUS_OK;
     return STATUS_OK;
     
 } //sys_read
