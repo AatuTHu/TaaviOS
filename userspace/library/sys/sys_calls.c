@@ -1,9 +1,10 @@
 #include "sys_calls.h"
 
 void sys_write(const char *msg, int len, int fd) {
+    int retval;
     __asm__ __volatile__(
         "int $0x80"
-        :
+        : "=a"(retval)
         : "a"(4), "b"(fd), "c"(msg), "d"(len)
         : "memory"
     );

@@ -35,6 +35,9 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top){
     blankie_req->entry_point    = entry_point;
     blankie_req->stack_top      = stack_top;
 
+    DEBUG("[BLANKIE][REGISTER]: Current esp 0x%x\n", stack_top);
+    DEBUG("[BLANKIE][REGISTER]: Current eip 0x%x\n", stack_top);
+
     b_registry[req_slot] = blankie_req;
     req_slot++;
 
@@ -60,6 +63,8 @@ int blankie_activate(uint32_t pid) {
             task->state       = TASK_SLEEPING;
 
             DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save us\n");
+            DEBUG("[BLANKIE][ACTIVATE]: Current esp 0x%x\n", task->context.esp);
+            DEBUG("[BLANKIE][ACTIVATE]: Current eip 0x%x\n", task->context.eip);
             while(1) {
                 __asm__ __volatile__("sti; hlt");
             }

@@ -43,7 +43,7 @@ static void update_cursor() {
     outb(0x3D5, pos & 0xFF);
 }
 
-static void clear_terminal() {
+void clear_terminal() {
     x_pos = 0;
     y_pos = 0;
     uint16_t blank = get_blank_char();

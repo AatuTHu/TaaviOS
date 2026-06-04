@@ -56,6 +56,7 @@ ISR_NOERRCODE 28  ; #HV — Hypervisor Injection Exception (AMD SVM)
 ISR_NOERRCODE 29  ; #VC — VMM Communication Exception (AMD SEV-ES)
 ISR_ERRCODE    30 ; #SX — Security Exception (AMD SVM security violation)
 ISR_NOERRCODE 31  ;       Reserved
+ISR_NOERRCODE 129 ;       YIELD FORCE VECTOR
 
 ; ── Hardware IRQs (IRQ 0–15 → INT 32–47) ──────────────────────────────────
 ; PIC remap: Master 0x20–0x27 = INT 32–39, Slave 0x28–0x2F = INT 40–47

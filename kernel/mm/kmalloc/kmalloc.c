@@ -5,8 +5,8 @@
 static block_header_t* free_list = NULL;
 
 void kmalloc_init(void* heap_start, uint32_t heap_size) {
-    DEBUG("[KMALLOC] Initializing kmalloc with heap_start: 0x%x\n", heap_start);
-    DEBUG("[KMALLOC] Heap_size: %d\n", heap_size);
+    klog("[KMALLOC] Initializing kmalloc with heap_start: 0x%x\n", heap_start);
+    klog("[KMALLOC] Heap_size: %d\n", heap_size);
     free_list = (block_header_t*)heap_start;
     free_list->size = (heap_size - sizeof(block_header_t));
     free_list->magic = HEAP_MAGIC;

@@ -37,14 +37,18 @@ static void fs_remove_from_queue(fs_mailbox_queue *req) {
       }
     }
   }
-  
 
+  if(req == NULL) {
+    return;
+  }
+  
   for (int i = 0; i < request_queue_count - 1; i++) {
     request_queue[i] = request_queue[i + 1];
   }
   
   request_queue[request_queue_count - 1] = NULL;
   request_queue_count--;
+  
   
   DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
   kfree(req);

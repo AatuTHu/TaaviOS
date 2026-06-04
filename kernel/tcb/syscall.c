@@ -62,7 +62,7 @@ static int32_t sys_write(struct registers *r) {
             break;
     }
 
-    return len;
+    return STATUS_OK;
 } //sys_write
 
 static int32_t sys_getpid(struct registers *r) {
@@ -95,22 +95,20 @@ static int32_t sys_read(struct registers *r) {
     
         if(current->state != TASK_BLOCKED) {
             scheduler_set_task_state(TASK_BLOCKED);
-            r->eax =  STATUS_OK;
             scheduler_yield(r);
         }
         
     } else {
-        scheduler_set_task_state(TASK_BLOCKED);
         add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size);
-        r->eax = STATUS_OK;
+        scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
     
-        DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
+        //DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
         if(collect_request(current->pid, buf) == STATUS_ERROR) {
-            DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong\n");
+            DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong %s\n", scheduler_get_current_task()->name);
             return STATUS_ERROR;
         }
-        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
+        //DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
     }
     
     
@@ -129,15 +127,14 @@ static int32_t sys_open(struct registers *r) {
         return STATUS_ERROR;
     }
     
-    scheduler_set_task_state(TASK_BLOCKED);
     add_request_to_queue(current->pid, OPEN, 0, path, NULL, 0);
+    scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
     
     int fd = collect_request(current->pid, NULL);
 
     if(fd == STATUS_ERROR) {
-        DEBUG("[SYSCALL][SYS_OPEN]: Invalid fd\n");
-        return STATUS_ERROR;
+        DEBUG("[SYSCALL][SYS_OPEN]: Invalid fd, reader: %s\n", scheduler_get_current_task()->name);
     }
     DEBUG("[SYSCALL][SYS_OPEN]: Returning fd: %d\n", fd);
     return fd;

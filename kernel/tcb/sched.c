@@ -99,13 +99,13 @@ static int scheduler_find_first_task_based_on_state(task_state_t state) {
 // The core switching logic, shared by both
 static void scheduler_switch(struct registers *r) {
     task_t *current = scheduler_get_current_task();
-
-    if(current != NULL && current->started && current->state != TASK_DEAD) {
-        //DEBUG("[SCHEDULER][SWITCH]: Saving: %s\n", current->name);
+    
+    if(current != NULL && current->started && current->state != TASK_DEAD && current->state != TASK_SLEEPING) {
+       // DEBUG("[SCHEDULER][SWITCH]: Saving: %s with state: %d\n", current->name, current->state);
         memcpy(&current->context, r, sizeof(struct registers));
 
         if(current->state == TASK_RUNNING) {
-            //DEBUG("[SCHEDULER][SWITCH]: setting: %s ready\n", current->name);
+           // DEBUG("[SCHEDULER][SWITCH]: setting: %s ready\n", current->name);
             current->state = TASK_READY;
         }
     }
@@ -125,11 +125,13 @@ static void scheduler_switch(struct registers *r) {
 
     task_t *next = tasks[next_idx];
     
-    next->state = TASK_RUNNING;
+    if(next->state == TASK_READY) {
+        next->state = TASK_RUNNING;
+    }
     next->started = 1;
     
     if(next_idx != current_idx) {
-        DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
+        //DEBUG("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
         
         if(next->task_mode == USER_TASK) {
@@ -141,10 +143,10 @@ static void scheduler_switch(struct registers *r) {
     }
 }
 
-void scheduler_yield(struct registers *r) { 
-    __asm__ __volatile__("cli");
-    if(scheduler_on == 0) return;
-    scheduler_switch(r);
+void scheduler_yield(struct registers *r) {
+    (void)r;
+    DEBUG("[SCHEDULER][YIELD]: %s yielding\n", scheduler_get_current_task()->name);
+    __asm__ __volatile__("int $0x81");
 }
 
 void scheduler_tick(struct registers *r) {
@@ -216,7 +218,7 @@ task_t *scheduler_get_current_task() {
 void scheduler_set_task_state(task_state_t state) {
     task_t *current = tasks[current_idx];
     if(current->state == state) {
-        //DEBUG("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
+        DEBUG("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
         return;
     }
 
@@ -243,7 +245,6 @@ void scheduler_set_task_state(task_state_t state) {
        // DEBUG("[SCHEDULER][STATE_SETTER]: killing task: %s\n", current->name);    
         current->state = TASK_DEAD;
         dead_task_count++;
-        __asm__ __volatile__("sti;hlt");
         break;
     
     default:

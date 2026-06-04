@@ -6,15 +6,13 @@
 * Takes the params sent to it via syscall and makes an work "order" for fs_task. 
 */
 int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size) {
-  __asm__ __volatile__("cli");
   DEBUG("[FS_TASK][ADD_REQUEST]: adding a request for fs_task\n");
 
   fs_mailbox_queue *new_request = (fs_mailbox_queue*)kmalloc(sizeof(fs_mailbox_queue));
 
   if(new_request == NULL) {
-      DEBUG("[FS_TASK][ADD_REQUEST]: could on allocate new requestat this time. Aborting\n");
+     // DEBUG("[FS_TASK][ADD_REQUEST]: could on allocate new requestat this time. Aborting\n");
       scheduler_wake_task(pid);
-      __asm__ __volatile__("sti");
       return STATUS_ERROR;
   }
 
@@ -33,14 +31,14 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   if(buf != NULL && type == WRITE) {
       strncpy(new_request->buf, buf, sizeof(new_request->buf) - 1);
       new_request->buf[sizeof(new_request->buf) - 1] = '\0';
-      DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s\n", new_request->buf);
+   //   DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s\n", new_request->buf);
   }
   
-  DEBUG("[FS_TASK][ADD_REQUEST]: pid: %d\n", new_request->caller_pid);
-  DEBUG("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
-  DEBUG("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
-  DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
-  DEBUG("[FS_TASK][ADD_REQUEST]: buffer_size: %d\n", new_request->buffer_size);
+ // DEBUG("[FS_TASK][ADD_REQUEST]: pid: %d\n", new_request->caller_pid);
+ // DEBUG("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
+ // DEBUG("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
+ // DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
+ // DEBUG("[FS_TASK][ADD_REQUEST]: buffer_size: %d\n", new_request->buffer_size);
 
   new_request->status = PENDING;
   request_queue[request_queue_count] = new_request;
@@ -51,8 +49,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   
   fs_task->priority = PRIORITY_HIGH;
   fs_task->state    = TASK_READY;
-  
-  __asm__ __volatile__("sti");
+
   return STATUS_OK;
 }
 
