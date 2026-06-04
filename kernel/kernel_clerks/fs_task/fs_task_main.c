@@ -39,6 +39,7 @@ static void fs_remove_from_queue(fs_mailbox_queue *req) {
   }
 
   if(req == NULL) {
+    ERROR("[FS_TASK][REMOVE]: Did not find a request to remove\n");
     return;
   }
   
@@ -111,9 +112,9 @@ void fs_task_loop() {
 
 
 void fs_recovery() {
-  DEBUG("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
+  ERROR("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
   if(current_req_index == -1) {
-    DEBUG("[FS_TASK][RECOVERY]: No freeing needed\n");
+    ERROR("[FS_TASK][RECOVERY]: No freeing needed\n");
     return;
   }
   fs_mailbox_queue *req = request_queue[current_req_index];

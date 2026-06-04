@@ -11,7 +11,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   fs_mailbox_queue *new_request = (fs_mailbox_queue*)kmalloc(sizeof(fs_mailbox_queue));
 
   if(new_request == NULL) {
-     // DEBUG("[FS_TASK][ADD_REQUEST]: could on allocate new requestat this time. Aborting\n");
+     // ERROR("[FS_TASK][ADD_REQUEST]: could on allocate new requestat this time. Aborting\n");
       scheduler_wake_task(pid);
       return STATUS_ERROR;
   }

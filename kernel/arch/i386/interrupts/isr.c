@@ -14,7 +14,7 @@ void irq_register_handler(int index, irq_callback_t cb) {
     irq_callbacks[index] = cb; 
 }
   
-void isr_handler(const struct registers *r) {
+void isr_handler(struct registers *r) {
 
     if(r->int_no == 129) {
         scheduler_tick(r);

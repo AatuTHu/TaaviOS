@@ -71,7 +71,7 @@ static void check_for_modules (const uint32_t *mboot_info) {
             }
         }
     } else {
-        klog("[KERNEL]: MODULES NOT FOUND\n");
+        ERROR("[KERNEL]: MODULES NOT FOUND\n");
     }
 }
 
@@ -86,11 +86,11 @@ static void init_filesystems() {
     uint32_t fat32_sectors = 0;
 
     if (mbr_find_fat32(&fat32_lba, &fat32_sectors) != 0) {
-        klog("[MBR]: FAT32 partition not found!\n");
+        ERROR("[MBR]: FAT32 partition not found!\n");
     }
     fat32_init(fat32_lba);
 
-    fat32_list_dir(f32_fs.root_cluster);
+   //fat32_list_dir(f32_fs.root_cluster);
     
     /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;
@@ -190,7 +190,7 @@ void kernel_main(const uint32_t *mboot_info) {
     pit_init(PIT_FREQUENCY);
     __asm__ __volatile__("sti");
     
-    pit_sleep_ms(500);
+   // pit_sleep_ms(500);
     if(first_task != NULL) {
         klog("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         scheduler_set_current_task(first_task->pid);

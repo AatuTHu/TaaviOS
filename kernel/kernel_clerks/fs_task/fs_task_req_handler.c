@@ -16,14 +16,14 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   }
 
   if(slot == -1) {
-    DEBUG("[FS_TASK][ALLOC_FD]: No free slots on the fd_table. Aborting\n");
+    ERROR("[FS_TASK][ALLOC_FD]: No free slots on the fd_table. Aborting\n");
     return STATUS_ERROR;
   }
 
   fd_entry_t *entry = (fd_entry_t *)kmalloc(sizeof(fd_entry_t));
 
   if(entry == NULL) {
-    DEBUG("[FS_TASK][ALLOC_FD]: could on allocate entry. Aborting\n");
+    ERROR("[FS_TASK][ALLOC_FD]: could on allocate entry. Aborting\n");
     return STATUS_ERROR;
   }
 
@@ -46,7 +46,7 @@ void fs_handle_request(fs_mailbox_queue *req) {
       const char *path = (char *)req->path;
 
       if(fat32_find_file(path, &file_cluster, &file_size) == STATUS_ERROR) {
-        DEBUG("[FS_TASK][handle_request]: Could not find file.\n");
+        ERROR("[FS_TASK][handle_request]: Could not find file.\n");
         req->status = TERMINATED;
         return;
       }
@@ -55,7 +55,7 @@ void fs_handle_request(fs_mailbox_queue *req) {
       int fd = fs_alloc_fd(req->caller_pid, file_cluster, file_size);
 
       if(fd == STATUS_ERROR) {
-        DEBUG("[FS_TASK][handle_request]: Invalid fd number. Terminating request\n");
+        ERROR("[FS_TASK][handle_request]: Invalid fd number. Terminating request\n");
         req->status = TERMINATED;
         return;
       }
@@ -71,14 +71,14 @@ void fs_handle_request(fs_mailbox_queue *req) {
 
     if(req->request_type == READ) {
       if(req->fd >= MAX_TASKS) {
-        DEBUG("[FS_TASK][handle_request]: fd number invalid\n");
+        ERROR("[FS_TASK][handle_request]: fd number invalid\n");
         return;
       }
 
       const fd_entry_t *entry = fd_entry_table[req->fd];
 
       if(entry == NULL) {
-        DEBUG("[FS_TASK][handle_request]: entry not found\n");
+        ERROR("[FS_TASK][handle_request]: entry not found\n");
         req->status = TERMINATED;
         return;
       }
@@ -86,13 +86,13 @@ void fs_handle_request(fs_mailbox_queue *req) {
       uint8_t *buf = (uint8_t *)kmalloc(req->buffer_size-1);
 
       if(buf == NULL) {
-        DEBUG("[FS_TASK][handle_request]: buffer unallocated\n");
+        ERROR("[FS_TASK][handle_request]: buffer unallocated\n");
         req->status = TERMINATED;
         return;
       }
 
       if(fat32_read_file(entry->cluster, req->buffer_size-1, buf) == STATUS_ERROR) {
-        DEBUG("[FS_TASK][handle_request]: Reading the file did not succeed\n");
+        ERROR("[FS_TASK][handle_request]: Reading the file did not succeed\n");
         kfree(buf);
         req->status = TERMINATED;
         return;
@@ -112,7 +112,7 @@ void fs_handle_request(fs_mailbox_queue *req) {
     }
     
     
-    DEBUG("[FS_TASK][handle_request]: Request type was invalid. Terminating request\n");
+    ERROR("[FS_TASK][handle_request]: Request type was invalid. Terminating request\n");
     req->status = TERMINATED;
     return;
 }

@@ -4,5 +4,9 @@
 
 void main(void) {
     print("Starting shell\n");
-    exec("shell");
+    if(exec("shell") != 0) return;
+
+    while(1) {
+        
+    }
 }

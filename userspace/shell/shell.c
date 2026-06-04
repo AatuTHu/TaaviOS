@@ -60,7 +60,7 @@ void command_open(const char *filename) {
     if(fd != -1) {
         print("Succesfully opened the file\n");
     } else {
-        print("Error on opening the file\n");
+        error("Error on opening the file\n");
     }
 }
 
@@ -78,7 +78,7 @@ void command_read() {
             print("File read succesfully\n");
             print(buf);
         } else {
-            print("Read failed or file empty\n");
+            error("Read failed or file empty\n");
         }
     }
 }
@@ -152,7 +152,7 @@ void main(void) {
     }*/
     
     while (1) {
-        error("\n> ");
+        print("\n> ");
         pos = 0;
         while (1) {
             int n = scan(&c);

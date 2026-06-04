@@ -21,8 +21,8 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flag
     for(uint32_t i = 0; i < n_pages; i++) {
         uint32_t addr = pmm_alloc();
         if(addr == 0) {
-            DEBUG("[VMM]: NO PHYSICAL MEMORY LEFT FOR THE ALLOCATION\n");
-            DEBUG("[VMM]: STARTING ROLLBACK\n");
+            ERROR("[VMM]: NO PHYSICAL MEMORY LEFT FOR THE ALLOCATION\n");
+            ERROR("[VMM]: STARTING ROLLBACK\n");
             while (virt > virt_start) {
                 virt -= PAGE_SIZE;
                 uint32_t phys_addr = paging_get_phys(dir, virt);
@@ -31,7 +31,7 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size, uint32_t flag
                 }
                 paging_unmap(dir, virt);
             }
-            DEBUG("[VMM]: ROLLBACK SUCCESSFUL\n");
+            ERROR("[VMM]: ROLLBACK SUCCESSFUL\n");
             return -1;
         }
         paging_map(dir, virt, addr, flags);

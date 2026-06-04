@@ -51,7 +51,7 @@ static int32_t sys_write(struct registers *r) {
             break;
         case 2:
             vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-            vga_write(buf);
+            ERROR(buf);
             r->eax =  STATUS_OK;
             break;    
         default:
@@ -152,7 +152,6 @@ static int32_t sys_exec(struct registers *r) {
     }
     
     scheduler_add(task);
-    scheduler_yield(r);
     return STATUS_OK;
 } //sys_exec
 
