@@ -27,17 +27,17 @@ static int __pmm_test_bit(uint32_t page) {
 void pmm_init(const struct multiboot_info *mboot) {
     uint32_t total_memory_kb = mboot->mem_upper + CONVENTIONAL_MEMORY_KB;
     uint32_t total_pages = (total_memory_kb * 1024) / PAGE_SIZE;
-    DEBUG("[PMM] INITIALIZING PHYSICAL MEMORY TO: %d kb\n", total_memory_kb);
-    DEBUG("[PMM] Total pages: %d\n", total_pages);
+    klog("[PMM] INITIALIZING PHYSICAL MEMORY TO: %d kb\n", total_memory_kb);
+    klog("[PMM] Total pages: %d\n", total_pages);
 
     memset(bitmap, 0, (total_pages / 8));
 
     uint32_t vaddr = phys_to_virt(mboot->mmap_addr); 
     uint32_t vend = vaddr + mboot->mmap_length;
-    DEBUG("[PMM] Memory map entries:\n");
+    klog("[PMM] Memory map entries:\n");
     while (vaddr < vend) {
         const struct mmap_entry *entry = (struct mmap_entry *)vaddr;
-        DEBUG("[PMM] [%s] base=0x%x length=0x%x\n",
+        klog("[PMM] [%s] base=0x%x length=0x%x\n",
             entry->type == 1 ? "AVAILABLE" : "RESERVED ",
             entry->base_low,
             entry->length_low);
@@ -51,7 +51,7 @@ void pmm_init(const struct multiboot_info *mboot) {
         vaddr = vaddr + entry->size + 4;
     }
 
-    DEBUG("[PMM] Reserving low memory (pages 0-%d)\n", RESERVED_LOW_PAGES - 1);
+    klog("[PMM] Reserving low memory (pages 0-%d)\n", RESERVED_LOW_PAGES - 1);
     for (uint32_t i = 0; i < RESERVED_LOW_PAGES; i++) {
         __pmm_set_bit(i);
     }
@@ -60,7 +60,7 @@ void pmm_init(const struct multiboot_info *mboot) {
     extern uint32_t _kernel_end;
     uint32_t kernel_start_page = (uint32_t)&_kernel_start / PAGE_SIZE;
     uint32_t kernel_end_page   = (uint32_t)&_kernel_end   / PAGE_SIZE;
-    DEBUG("[PMM] Kernel pages: %d-%d (0x%x-0x%x)\n",
+    klog("[PMM] Kernel pages: %d-%d (0x%x-0x%x)\n",
         kernel_start_page, kernel_end_page,
         kernel_start_page * PAGE_SIZE,
         kernel_end_page   * PAGE_SIZE);
@@ -72,7 +72,7 @@ void pmm_init(const struct multiboot_info *mboot) {
     uint32_t bitmap_size  = (MAX_PAGES / 32) * sizeof(uint32_t);
     uint32_t bitmap_start = bitmap_phys / PAGE_SIZE;
     uint32_t bitmap_end   = (bitmap_phys + bitmap_size) / PAGE_SIZE;
-    DEBUG("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n",
+    klog("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n",
         bitmap_start, bitmap_end,
         bitmap_phys, bitmap_size);
     for (uint32_t i = bitmap_start; i < bitmap_end; i++) {
@@ -83,7 +83,7 @@ void pmm_init(const struct multiboot_info *mboot) {
         if (__pmm_test_bit(i)) used_pages++;
         else free_pages++;
     }
-    DEBUG("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
+    klog("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
         free_pages, (free_pages * PAGE_SIZE) / 1024,
         used_pages, (used_pages * PAGE_SIZE) / 1024);
 }

@@ -15,6 +15,12 @@ void irq_register_handler(int index, irq_callback_t cb) {
 }
   
 void isr_handler(const struct registers *r) {
+
+    if(r->int_no == 129) {
+        scheduler_tick(r);
+        return;
+    }
+
     uint32_t cr2;
     __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
 
@@ -64,6 +70,7 @@ void isr_handler(const struct registers *r) {
 }
 
 void irq_handler(struct registers *r) {
+    
     int irq_index = r->int_no - 32;
 
     if (irq_index < 0 || irq_index > 15) {

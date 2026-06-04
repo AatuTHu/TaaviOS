@@ -61,7 +61,7 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
     task->context.cs     = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
     task->context.ss     = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
     task->context.ebp    = task->context.useresp; //stack bottom. Same as top in the begining. No plate you know
-    task->context.esp    = 0;//task->context.useresp;
+    task->context.esp    = task->context.useresp;
     task->context.eflags = EFLAGS_DEFAULT;
     task->task_mode      = task_mode; //can be usefull later?
     

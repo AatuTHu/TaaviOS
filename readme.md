@@ -19,10 +19,11 @@ Two protocols govern clerk behaviour:
 
 - Protected mode, paging, GDT/IDT/TSS  ✓ 
 - PMM, VMM, kmalloc/kfree  ✓ 
-- Preemptive round-robin scheduler (1000Hz)  ✓ 
+- Preemptive priority aware round-robin scheduler (1000Hz)  ✓ 
 - FAT32 read/write, path resolver  ✓ 
 - ELF loader, userspace, interactive shell  ✓ 
-- sys_open, sys_read, sys_write  ✓ 
+- sys_open, sys_read, sys_write  ✓
+- Fs_task, Reaper_task ✓
 - Blankie, Hail Mary protocols  ✓ 
 
 ## Tradeoffs

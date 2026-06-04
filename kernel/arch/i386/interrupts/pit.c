@@ -8,7 +8,7 @@ static volatile uint32_t tick_count = 0;
 static uint32_t ticks_per_second = 0;
 
 void pit_init(uint32_t frequency) {
-    DEBUG("[PIT] Initializing PIT with frequency %d\n",frequency);
+    klog("[PIT] Initializing PIT with frequency %d\n",frequency);
     ticks_per_second = frequency;
 
     uint32_t divisor = clock_frequency / frequency;
@@ -20,7 +20,7 @@ void pit_init(uint32_t frequency) {
     outb(PIT_CHANNEL0_PORT, hi);
 
     irq_register_handler(0, pit_irq_handler);
-    DEBUG("[PIT] PIT INITIALIZED SUCCESFULLY\n");
+    klog("[PIT] PIT INITIALIZED SUCCESFULLY\n");
 }
 
 void pit_irq_handler(void) {
