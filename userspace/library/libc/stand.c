@@ -11,19 +11,19 @@ void error(const char *msg) {
 }
 
 int scan(char *buf) {
-    return sys_read(0, 1, buf);
+    return sys_read(0,buf,1);
 }
 
-int open(const char* path) {
-    return sys_open(path);
+int open(const char* path, const char* mode) {
+    return sys_open(path, mode);
 }
 
 void write(int fd, const char *msg) {
     sys_write(msg, strlen(msg), fd);
 }
 
-int read(int fd, char *buf, uint32_t count) {
-    return sys_read(fd, count, buf); 
+int read(int fd, char *buf, int buffer_size) {
+    return sys_read(fd, buf, buffer_size); 
 }
 
 void terminate_program() {

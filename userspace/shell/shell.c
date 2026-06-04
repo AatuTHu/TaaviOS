@@ -54,7 +54,7 @@ void command_write(const char *buf) {
 
 void command_open(const char *filename) {
     print("\n");
-    fd = open(filename);
+    fd = open(filename, "r");
 
     
     if(fd != -1) {
@@ -70,9 +70,9 @@ void command_read() {
         print("Cant read the file\n");
     } else {
         print("Reading the file\n");
-        char buf[2] = {0}; 
+        char buf[512] = {0}; 
 
-        int nread = read(fd, buf, 512); 
+        int nread = read(fd, buf, sizeof(buf)); 
         
         if (nread != -1) {
             print("File read succesfully\n");

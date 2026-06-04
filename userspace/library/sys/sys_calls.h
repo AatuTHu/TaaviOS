@@ -11,9 +11,9 @@ void sys_idle(void);
 
 void sys_yield(void);
 
-int sys_read(int fd, int len, char *buf);
+int sys_read(int fd, char *buf, int len);
 
-int sys_open(const char *path);
+int sys_open(const char *path, const char* mode);
 
 int sys_exec(const char *filename);
 

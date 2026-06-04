@@ -15,7 +15,7 @@ void register_hail_mary_function(uint32_t pid, void (*cb)(void)) {
     int slot = -1;
     for(int i = 0; i < CLERK_COUNT; i++) {
         if(gosling_table[i] == NULL) {
-            slot = 1;
+            slot = i;
         }
     }
 
