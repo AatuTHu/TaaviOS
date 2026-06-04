@@ -25,21 +25,14 @@ fd_entry_t *fd_entry_table[MAX_TASKS];
 * 
 */
 static void fs_remove_from_queue(fs_mailbox_queue *req) {
-
+  DEBUG("[FS_TASK][REMOVE]: Starting on removing\n");
   if (request_queue_count == 0) {
+      DEBUG("[FS_TASK][REMOVE]: Req queue count is 0\n");
       return;
   }
-  
-  if(req == NULL) {
-    for(int i = 0; i < request_queue_count; i++) {
-      if(request_queue[i] != NULL && request_queue[i]->status == TERMINATED) {
-        req = request_queue[i];
-      }
-    }
-  }
 
   if(req == NULL) {
-    ERROR("[FS_TASK][REMOVE]: Did not find a request to remove\n");
+    DEBUG("[FS_TASK][REMOVE]: Did not find a request to remove\n");
     return;
   }
   
@@ -77,8 +70,6 @@ static fs_mailbox_queue *find_next_request() {
     }
   }
 
-  request_queue_count = 0;
-
   //DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
   return NULL;
 }
@@ -89,22 +80,34 @@ static fs_mailbox_queue *find_next_request() {
 void fs_task_loop() {
   //DEBUG("[FS_TASK]: \n");
     while(1) {
-    
-      fs_mailbox_queue *request = find_next_request();
-      if(request != NULL && request->status != TERMINATED) {
-          request->status = IN_PROGRESS;
-          __asm__ __volatile__("cli");
-          DEBUG("[FS_TASK][LOOP]: handling request\n");
-          fs_handle_request(request);
-          __asm__ __volatile__("sti");
-          current_req_index = -1;
+      if(request_queue_count > 0) {
+        fs_mailbox_queue *request = find_next_request();
+        if(request != NULL) {
+          if(request->status == PENDING || request->status == IN_PROGRESS) {
+            //__asm__ __volatile__("cli");
+            DEBUG("[FS_TASK][LOOP]: handling request\n");
+            fs_handle_request(request);
+            //__asm__ __volatile__("sti");
+          }
+
+          //__asm__ __volatile__("cli");
+          if(request->status == TERMINATED) {
+            DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
+            fs_remove_from_queue(request);
+            request = NULL;
+          }
+          //__asm__ __volatile__("sti");
+        }
       }
-    
 
-    fs_remove_from_queue(NULL);
 
-    if(request_queue_count == 0) {
-        current_req_index = -1;
+    /*
+    * if(virt file needs servicing)
+    * calculate next possible cluster/file
+    * close / delete
+    */
+
+    if (request_queue_count == 0) {
         blankie_activate(fs_task_pid);
     }
   }

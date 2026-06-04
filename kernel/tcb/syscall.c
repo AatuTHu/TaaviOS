@@ -83,21 +83,13 @@ static int32_t sys_read(struct registers *r) {
 
     
 
-    if(fd == 0) { //stdin
-        if(current == NULL) {
-            DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-            return STATUS_ERROR;
-        }
-        
-        int nread = keyboard_read_from_buffer(buf, current->pid);
-        if (nread > 0) return nread; //buffer had something so 
-    
-    
-        if(current->state != TASK_BLOCKED) {
+    if (fd == 0) { //stdin
+        int nread = 0;
+        while ((nread = keyboard_read_from_buffer(buf, current->pid)) == 0) {
             scheduler_set_task_state(TASK_BLOCKED);
             scheduler_yield(r);
         }
-        
+        return nread; 
     } else {
         add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size);
         scheduler_set_task_state(TASK_BLOCKED);

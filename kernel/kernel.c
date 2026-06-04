@@ -190,7 +190,7 @@ void kernel_main(const uint32_t *mboot_info) {
     pit_init(PIT_FREQUENCY);
     __asm__ __volatile__("sti");
     
-   // pit_sleep_ms(500);
+    pit_sleep_ms(500);
     if(first_task != NULL) {
         klog("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         scheduler_set_current_task(first_task->pid);

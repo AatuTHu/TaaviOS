@@ -324,9 +324,11 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
     //uint8_t *temp_buf = (uint8_t *)kmalloc(cluster_size);
 
     while(1) {
+        //__asm__ __volatile__("cli");
         if(__fat32_read_cluster(current_cluster, buf + bytes_read) == STATUS_ERROR) {
             ERROR("[FAT32][READ_FILE]: Error reading cluster\n");
       //    kfree(temp_buf);
+           // __asm__ __volatile__("sti");
             return STATUS_ERROR;
         }
         
@@ -338,13 +340,15 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
             DEBUG("[FAT32][READ_FILE]: All requested bytes read successfully.\n");
             DEBUG("[FAT32][READ_FILE]: Bytes read: %d\n", bytes_read);
             DEBUG("[FAT32][READ_FILE]: Bytes copied: %d\n", bytes_to_copy);
+            __asm__ __volatile__("sti");
             return STATUS_OK;
         }
 
         uint32_t next = __fat32_next_cluster(current_cluster);
         
         if(next >= FAT32_CLUSTER_EOC_MIN) {
-            return STATUS_ERROR;
+            ERROR("[FAT32][READ_FILE]: Reached end of cluster chain EOC\n");
+            return STATUS_OK;
         }
         current_cluster = next;
     }
