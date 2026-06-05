@@ -1,14 +1,30 @@
 #include "fs_task.h"
 #include "fat32.h"
 
+/*
+* Fs_task
+* Design & Implementation: A.H, 2026
+*/
+
+/*
+* This source file contains the logic to handle the selected request.
+* Here are functions wake_task, alloc_fd, read, open, close, write, delete, handle request
+* 
+* I have tried to implement a way in which we go the shortest safe route to achieving results and can wake the caller
+* 
+*/
+
+//signal scheduler to wake the pid who made the request.
 static void fs_wake_task(uint32_t pid) {
   scheduler_wake_task(pid);
 }
 
+//If opening a file is succesfull we come here and make an entry to fd_table which is separate table from the request table.
+// there can be multiple request with the same fd number but it alwasys correspond to the fd given here once a succesfully file is opened
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
   int slot = -1;
-  for (int i = free_starting_slot; i < MAX_TASKS; i++) {
+  for (int i = free_starting_slot; i < MAX_TASKS; i++) { //free_starting_slot is 3. We reserve them for standtart i/o.
       if (fd_entry_table[i] == NULL) {
           slot = i;
           break;
@@ -38,6 +54,9 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   return slot;
 }
 
+/*
+* The read file handler
+*/
 static int read(fs_mailbox_queue *req) {
       if(req->fd >= MAX_TASKS) {
         ERROR("[FS_TASK][handle_request]: fd number invalid\n");
@@ -51,7 +70,14 @@ static int read(fs_mailbox_queue *req) {
         return STATUS_ERROR;
       }
 
-      uint8_t *buf = (uint8_t *)kmalloc(req->buffer_size);
+      uint32_t real_buf_size = req->buffer_size;
+      
+      //If the real buff_size is biger than the size of opened file change it to actual size
+      if(real_buf_size > entry->size) { //On my test case this is 512 > 17 so it always uses 17
+        real_buf_size = entry->size;
+      }
+
+      uint8_t *buf = (uint8_t *)kmalloc(real_buf_size);
 
       if(buf == NULL) {
         ERROR("[FS_TASK][handle_request]: buffer unallocated\n");
@@ -59,23 +85,27 @@ static int read(fs_mailbox_queue *req) {
       }
 
       
-      if(fat32_read_file(entry->cluster, entry->size, buf) == STATUS_ERROR) {
+      if(fat32_read_file(entry->cluster, real_buf_size, buf) == STATUS_ERROR) {
         ERROR("[FS_TASK][handle_request]: Reading the file did not succeed\n");
         kfree(buf);
         return STATUS_ERROR;
       } 
 
-      buf[entry->size] = '\0';
-      memcpy(req->buf, (char*)buf, req->buffer_size);
+      //save the real size to request buffer size so it an be used when task is collecting
+      req->buffer_size = real_buf_size;    
+      // cape the files end at the real_buf_size.
+      buf[real_buf_size] = '\0'; 
+      //Copy the opened file to request buf field
+      memcpy(req->buf, (char*)buf, real_buf_size); 
       kfree(buf);
 
       DEBUG("[FS_TASK][handle_request]: Marking request with owner pid %d complete\n", req->caller_pid);
-      
       return STATUS_OK;
 }
 
+// A simple open file. Flags coming soon
 static int open(fs_mailbox_queue *req) {
-   uint32_t file_cluster = 0;
+      uint32_t file_cluster = 0;
       uint32_t file_size = 0;
       const char *path = (char *)req->path;
 
@@ -95,10 +125,13 @@ static int open(fs_mailbox_queue *req) {
       req->fd = fd;
       return STATUS_OK;
     }
-    
+
+//entry point of this file. We come here from loop and then decide what to do next
 void fs_handle_request(fs_mailbox_queue *req) {
+  //get a pointer for fs_task so we can cgange its states later
   task_t *fs_task = task_get(fs_task_pid);
-  if(fs_task == NULL || req == NULL) {
+
+  if(fs_task == NULL || req == NULL) { 
     ERROR("[FS_TASK][HANDLE_REQUST]: Couldn find pointer of self\n");
     return;
   }

@@ -8,11 +8,9 @@
 */
 
 /*
-* This file contains the implementation of filesystem_task. Its job is to talk to filesystem driver. For now it is hardcoded to be fat32 but can be
-* expanded for other filesystems once the need arises.
+* This is the source file where the function loop, init, find_next_req and remove are located
 *
-* The basic idea is that it performs crud operations for userspace tasks. Taking in requests via syscalls. After completing said request
-* it wakes the caller and if everything is completed it follows the blankie protocol.
+*
 */
 
 int request_queue_count = 0;
@@ -22,66 +20,84 @@ fd_entry_t *fd_entry_table[MAX_TASKS];
 
 
 /*
-* 
+* This function takes in the request that is selected during loop phase.
+* There is two ways of getting in here. If fs_next_request dosn't find pending or in_progress requests
+* it tries to find a terminated one. The other way is thru fs_recovery which is linked to hail mary protocol.
 */
 static void fs_remove_from_queue(fs_mailbox_queue *req) {
   DEBUG("[FS_TASK][REMOVE]: Starting on removing\n");
-  if (request_queue_count == 0) {
+  if (request_queue_count == 0 || current_req_index == -1) {
       DEBUG("[FS_TASK][REMOVE]: Req queue count is 0\n");
       return;
   }
-
-  if(req == NULL) {
-    DEBUG("[FS_TASK][REMOVE]: Did not find a request to remove\n");
-    return;
-  }
   
-  for (int i = 0; i < request_queue_count - 1; i++) {
+  if(req == NULL) return;
+
+  //current req index is set when a task is selected
+  request_queue[current_req_index] = NULL;
+  kfree(req);
+
+  //Shift the array starting starting from current request index one to the left.
+  //For example i = (cri = 1); 1 < (rqc = 5); i++; 
+  //      rq[1] = rq[1 + 1];
+  //      next iteration rq[2] = rq[2 + 1];
+  //      next iteration rq[3] = rq[3 + 1]; 
+  //      until we reach the end and leave the last index as NULL
+  for (int i = current_req_index; i < request_queue_count - 1; i++) {
     request_queue[i] = request_queue[i + 1];
   }
   
+  //After shifting we delete the last index
   request_queue[request_queue_count - 1] = NULL;
   request_queue_count--;
-  
+  //set crq as back to -1 cause the index has been deleted.
+  current_req_index = -1;
   
   DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
-  kfree(req);
   DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
   
 }
 
 /*
 * This functions was inspired from schedulers next task find function.
-* 
+* It tries to find the index of the first in_progress request, 
+* if none is found it tries to find pending. Lastly it tries to find a terminated req
+* it can be cleaned away. If it find any of these it returns index of the selected request
 */
-static fs_mailbox_queue *find_next_request() {
-  if (request_queue_count == 0) return NULL;
+static int find_next_request() {
+  if (request_queue_count == 0) return STATUS_ERROR;
 
   for(int i = 0; i < request_queue_count; i++) {
-    if(request_queue[i] != NULL && (request_queue[i]->status == PENDING || request_queue[i]->status == IN_PROGRESS)) {
-      current_req_index = i;
-      return request_queue[i];
+    if(request_queue[i] != NULL && request_queue[i]->status == IN_PROGRESS) {
+      return current_req_index = i;
+    }
+  }
+
+  for(int i = 0; i < request_queue_count; i++) {
+    if(request_queue[i] != NULL && request_queue[i]->status == PENDING) {
+      return current_req_index = i;
     }
   }
 
   for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i] != NULL && request_queue[i]->status == TERMINATED) {
-      return request_queue[i];
+       return current_req_index = i;
     }
   }
 
   //DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
-  return NULL;
+  return INVALID_IDX;
 }
 
 /*
-* Main task loop of fs_task the algorithm
+* Main task loop of fs_task the algorithm. This is the entry point of fs_task, It alwasy starts from here when woken from sleep
 */
 void fs_task_loop() {
   //DEBUG("[FS_TASK]: \n");
     while(1) {
-      if(request_queue_count > 0) {
-        fs_mailbox_queue *request = find_next_request();
+      int index = find_next_request();
+      if(request_queue_count > 0 && index != INVALID_IDX) {
+        fs_mailbox_queue *request = request_queue[index];
         if(request != NULL) {
           if(request->status == PENDING || request->status == IN_PROGRESS) {
             //__asm__ __volatile__("cli");
@@ -107,23 +123,27 @@ void fs_task_loop() {
     * close / delete
     */
 
-    if (request_queue_count == 0) {
+    //This if forces the clerk to iterate over and over again until all request are deleted.
+    //This could lead to infinite loop now that I think of it. -> need to thin solution this. 
+    if (request_queue_count == 0) { 
         blankie_activate(fs_task_pid);
     }
   }
 }
 
 
+//Hail mary function which is launced should the fs_task do something severely bad.
+//I'm thinking this deletes the request it was doing as a safe measure. After it launch the blankie and get new stack and restart.
 void fs_recovery() {
-  ERROR("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
-  if(current_req_index == -1) {
-    ERROR("[FS_TASK][RECOVERY]: No freeing needed\n");
-    return;
+  DEBUG("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
+  if(current_req_index != -1) {
+    fs_mailbox_queue *req = request_queue[current_req_index];
+    DEBUG("[FS_TASK][RECOVERY]: No freeing needed\n");
+    if(req != NULL) {
+      scheduler_wake_task(req->caller_pid);
+      fs_remove_from_queue(req);
+    }
   }
-  fs_mailbox_queue *req = request_queue[current_req_index];
-  if(req == NULL) return;
-  scheduler_wake_task(req->caller_pid);
-  fs_remove_from_queue(req);
   blankie_activate(fs_task_pid);
 }
 

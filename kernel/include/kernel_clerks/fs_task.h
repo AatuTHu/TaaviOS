@@ -9,6 +9,7 @@
 #include "kstring.h"
 #include "kmalloc.h"
 
+#define INVALID_IDX -1
 #define free_starting_slot 3
 typedef enum  {
     PENDING,
@@ -31,7 +32,7 @@ typedef struct fs_mailbox_queue {
     uint32_t                caller_pid;
     operations_t            request_type;
     char                    path[128];
-    char                    buf[512];
+    char                   *buf;
     uint32_t                buffer_size;
     uint32_t                fd;
     uint32_t                flags;

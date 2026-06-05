@@ -1,5 +1,14 @@
 #include "fs_task.h"
 
+/*
+* Fs_task
+* Design & Implementation: A.H, 2026
+*/
+
+/*
+* This file contains the public call functions that should be called from the sys_calls
+*
+*/
 
 /*
 * ADD_REQUEST_TO_QUEUE
@@ -22,8 +31,8 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   new_request->buffer_size = buffer_size;
   
   if (path != NULL) {
-      strncpy(new_request->path, path, sizeof(new_request->path) - 1);
-      new_request->path[sizeof(new_request->path) - 1] = '\0';
+      strncpy(new_request->path, path, sizeof(new_request->path) - 1); //copy the path string to path
+      new_request->path[sizeof(new_request->path) - 1] = '\0';         //end it ate 127. path is 128 long
   } else {
       new_request->path[0] = '\0';
   }
@@ -47,8 +56,8 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   DEBUG("[FS_TASK][ADD_REQUEST]: request added\n");
   task_t *fs_task = task_get(fs_task_pid);
   
-  fs_task->priority = PRIORITY_HIGH;
-  fs_task->state    = TASK_READY;
+  fs_task->priority = PRIORITY_HIGH; //set fs_task to be high so it is picked more frequently
+  fs_task->state    = TASK_READY;   // set it ready so it can be picked at all
 
   return STATUS_OK;
 }
@@ -59,31 +68,36 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
 int collect_request(uint32_t pid, char *out) {
   __asm__ __volatile__("cli");
   DEBUG("[FS_TASK][COLLECT_REQUEST]: Fetching request for %d\n", pid);
-
-
+  
+  
   for(int i = 0; i < request_queue_count; i++) {
     if(request_queue[i] != NULL && request_queue[i]->caller_pid == pid && request_queue[i]->status == COMPLETE) {
       DEBUG("[FS_TASK][COLLECT_REQUEST]: Request found!\n");
-
-      
-      if(request_queue[i]->request_type == OPEN) {
+      switch (request_queue[i]->request_type)
+      {
+      case OPEN:
         DEBUG("[FS_TASK][COLLECT_REQUEST]: Returning fd: %d\n", request_queue[i]->fd);
         request_queue[i]->status = TERMINATED;
         __asm__ __volatile__("sti");
-        return request_queue[i]->fd;
-      }
-
-      if(request_queue[i]->request_type == READ) {
-        DEBUG("[FS_TASK][COLLECT_REQUEST]: Request was READ!\n");
+        return request_queue[i]->fd;    
+      case READ:
+        DEBUG("[FS_TASK][COLLECT_REQUEST]: Returning read file to %d\n", pid);
         fd_entry_t *entry = fd_entry_table[request_queue[i]->fd];
-        memcpy(out, request_queue[i]->buf, (request_queue[i]->buffer_size -1));
-        DEBUG("[FS_TASK][COLLECT_REQUEST]: copied size: %d\n", entry->size);
-        DEBUG("[FS_TASK][COLLECT_REQUEST]: buffer content %s", out);
+
+        memcpy(out, request_queue[i]->buf, request_queue[i]->buffer_size);
         request_queue[i]->status = TERMINATED;
         __asm__ __volatile__("sti");
         return STATUS_OK;
+      case WRITE:
+        __asm__ __volatile__("sti");
+        return STATUS_OK;
+      case DELETE:
+        __asm__ __volatile__("sti");
+        return STATUS_OK;
+        
+      default:
+        break;
       }
-
     }
   }
 

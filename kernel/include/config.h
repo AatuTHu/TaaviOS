@@ -42,7 +42,8 @@ typedef enum {
   READ,
   UPDATE, // this I hear is not a thing with filesystem
   DELETE,
-  OPEN
+  OPEN,
+  CLOSE
 } operations_t;
 
 #define CLERK_COUNT 3 // amount of clerks. Very important. hardcoded for now
