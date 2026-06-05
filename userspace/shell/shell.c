@@ -54,7 +54,7 @@ void command_write(const char *buf) {
 
 void command_open(const char *filename) {
     print("\n");
-    fd = open(filename, "r");
+    fd = open(filename, "w+");
 
     
     if(fd != -1) {

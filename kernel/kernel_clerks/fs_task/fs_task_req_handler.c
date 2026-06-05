@@ -21,7 +21,7 @@ static void fs_wake_task(uint32_t pid) {
 
 //If opening a file is succesfull we come here and make an entry to fd_table which is separate table from the request table.
 // there can be multiple request with the same fd number but it alwasys correspond to the fd given here once a succesfully file is opened
-static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
+static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size, const char *flags) {
   DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
   int slot = -1;
   for (int i = free_starting_slot; i < MAX_TASKS; i++) { //free_starting_slot is 3. We reserve them for standtart i/o.
@@ -48,6 +48,8 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size) {
   entry->size         = size;
   entry->fd           = slot;
   entry->curr_offset  = 0;
+  strncpy(entry->flags, flags, sizeof(entry->flags));
+  
 
   fd_entry_table[slot] = entry;
   DEBUG("[FS_TASK][ALLOC_FD]: Allocating successfull fd: %d\n", slot);
@@ -115,7 +117,7 @@ static int open(fs_mailbox_queue *req) {
       }
 
       DEBUG("[FS_TASK][handle_request]: File found succesfully, Completing request\n");
-      int fd = fs_alloc_fd(req->caller_pid, file_cluster, file_size);
+      int fd = fs_alloc_fd(req->caller_pid, file_cluster, file_size, req->flags);
 
       if(fd == STATUS_ERROR) {
         ERROR("[FS_TASK][handle_request]: Invalid fd number. Terminating request\n");

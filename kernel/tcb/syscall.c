@@ -56,7 +56,7 @@ static int32_t sys_write(struct registers *r) {
             break;    
         default:
             const task_t *current = scheduler_get_current_task();
-            add_request_to_queue(current->pid, WRITE, fd, NULL, buf, 0);
+            add_request_to_queue(current->pid, WRITE, fd, NULL, buf, 0, NULL);
             r->eax =  STATUS_OK;
             return len;
             break;
@@ -91,7 +91,7 @@ static int32_t sys_read(struct registers *r) {
         }
         return nread; 
     } else {
-        add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size);
+        add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size, NULL);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
     
@@ -111,7 +111,7 @@ static int32_t sys_read(struct registers *r) {
 static int32_t sys_open(struct registers *r) {
     DEBUG("[SYSCALL][SYS_OPEN]\n");
     const char *path   = (char *)r->ebx;
-    uint32_t flags     = r->ecx;
+    const char *flags     = (char *)r->ecx;
     const task_t *current = scheduler_get_current_task();
 
     if (current == NULL) {
@@ -119,7 +119,7 @@ static int32_t sys_open(struct registers *r) {
         return STATUS_ERROR;
     }
     
-    add_request_to_queue(current->pid, OPEN, 0, path, NULL, 0);
+    add_request_to_queue(current->pid, OPEN, 0, path, NULL, 0, flags);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
     

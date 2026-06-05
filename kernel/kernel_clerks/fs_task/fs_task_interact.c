@@ -14,7 +14,7 @@
 * ADD_REQUEST_TO_QUEUE
 * Takes the params sent to it via syscall and makes an work "order" for fs_task. 
 */
-int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size) {
+int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size, const char *flags) {
   DEBUG("[FS_TASK][ADD_REQUEST]: adding a request for fs_task\n");
 
   fs_mailbox_queue *new_request = (fs_mailbox_queue*)kmalloc(sizeof(fs_mailbox_queue));
@@ -26,15 +26,24 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   }
 
   new_request->caller_pid = pid;
+  DEBUG("[FS_TASK][ADD_REQUEST]: pid: %d\n", new_request->caller_pid);
   new_request->request_type = type;
+  DEBUG("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
   new_request->fd = fd;
+  DEBUG("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
   new_request->buffer_size = buffer_size;
+  DEBUG("[FS_TASK][ADD_REQUEST]: buffer_size: %d\n", new_request->buffer_size);
   
-  if (path != NULL) {
+  if(flags != NULL) {
+    strncpy(new_request->flags, flags, sizeof(new_request->flags) -1);
+    new_request->flags[sizeof(new_request->flags) -1] = '\0';
+    DEBUG("[FS_TASK][ADD_REQUEST]: flags: %s\n", new_request->flags);
+  }
+  
+  if(path != NULL) {
       strncpy(new_request->path, path, sizeof(new_request->path) - 1); //copy the path string to path
       new_request->path[sizeof(new_request->path) - 1] = '\0';         //end it ate 127. path is 128 long
-  } else {
-      new_request->path[0] = '\0';
+      DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
   }
   
   if(buf != NULL && type == WRITE) {
@@ -43,11 +52,6 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
       DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s\n", new_request->buf);
   }
   
-  DEBUG("[FS_TASK][ADD_REQUEST]: pid: %d\n", new_request->caller_pid);
-  DEBUG("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
-  DEBUG("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
-  DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
-  DEBUG("[FS_TASK][ADD_REQUEST]: buffer_size: %d\n", new_request->buffer_size);
 
   new_request->status = PENDING;
   request_queue[request_queue_count] = new_request;
