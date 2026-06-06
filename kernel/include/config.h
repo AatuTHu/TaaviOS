@@ -36,6 +36,7 @@
 #define INVALID_LBA 0
 
 #define INVALID_PHYSICAL_PAGE 0xFFFFFFFF
+#define INVALID_BUFFER 0
 
 typedef enum {
   WRITE,
@@ -45,6 +46,11 @@ typedef enum {
   OPEN,
   CLOSE
 } operations_t;
+
+#define O_RDONLY 0x01
+#define O_WRONLY 0x02
+#define O_RDWR   0x04
+#define O_CREAT  0x08
 
 #define CLERK_COUNT 3 // amount of clerks. Very important. hardcoded for now
 

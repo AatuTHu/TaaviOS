@@ -25,9 +25,9 @@ fd_entry_t *fd_entry_table[MAX_TASKS];
 * it tries to find a terminated one. The other way is thru fs_recovery which is linked to hail mary protocol.
 */
 static void fs_remove_from_queue(fs_mailbox_queue *req) {
-  DEBUG("[FS_TASK][REMOVE]: Starting on removing\n");
+  //DEBUG("[FS_TASK][REMOVE]: Starting on removing\n");
   if (request_queue_count == 0 || current_req_index == -1) {
-      DEBUG("[FS_TASK][REMOVE]: Req queue count is 0\n");
+      //DEBUG("[FS_TASK][REMOVE]: Req queue count is 0\n");
       return;
   }
   
@@ -53,8 +53,8 @@ static void fs_remove_from_queue(fs_mailbox_queue *req) {
   //set crq as back to -1 cause the index has been deleted.
   current_req_index = -1;
   
-  DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
-  DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
+  //DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
+  //DEBUG("[FS_TASK][REMOVE]: Removing complete\n");
   
 }
 
@@ -85,7 +85,7 @@ static int find_next_request() {
     }
   }
 
-  //DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
+  ////DEBUG("[FS_TASK][NEXT_REQUEST]: could not find new request\n");
   return INVALID_IDX;
 }
 
@@ -93,7 +93,7 @@ static int find_next_request() {
 * Main task loop of fs_task the algorithm. This is the entry point of fs_task, It alwasy starts from here when woken from sleep
 */
 void fs_task_loop() {
-  //DEBUG("[FS_TASK]: \n");
+  ////DEBUG("[FS_TASK]: \n");
     while(1) {
       int index = find_next_request();
       if(request_queue_count > 0 && index != INVALID_IDX) {
@@ -101,14 +101,14 @@ void fs_task_loop() {
         if(request != NULL) {
           if(request->status == PENDING || request->status == IN_PROGRESS) {
             //__asm__ __volatile__("cli");
-            DEBUG("[FS_TASK][LOOP]: handling request\n");
+            //DEBUG("[FS_TASK][LOOP]: handling request\n");
             fs_handle_request(request);
             //__asm__ __volatile__("sti");
           }
 
           //__asm__ __volatile__("cli");
           if(request->status == TERMINATED) {
-            DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
+            //DEBUG("[FS_TASK][LOOP]: Request is complete. Removing it\n");
             fs_remove_from_queue(request);
             request = NULL;
           }
@@ -135,10 +135,10 @@ void fs_task_loop() {
 //Hail mary function which is launced should the fs_task do something severely bad.
 //I'm thinking this deletes the request it was doing as a safe measure. After it launch the blankie and get new stack and restart.
 void fs_recovery() {
-  DEBUG("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
+  //DEBUG("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
   if(current_req_index != -1) {
     fs_mailbox_queue *req = request_queue[current_req_index];
-    DEBUG("[FS_TASK][RECOVERY]: No freeing needed\n");
+    //DEBUG("[FS_TASK][RECOVERY]: No freeing needed\n");
     if(req != NULL) {
       scheduler_wake_task(req->caller_pid);
       fs_remove_from_queue(req);

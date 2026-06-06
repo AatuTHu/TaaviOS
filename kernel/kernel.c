@@ -86,7 +86,8 @@ static void init_filesystems() {
     uint32_t fat32_sectors = 0;
 
     if (mbr_find_fat32(&fat32_lba, &fat32_sectors) != 0) {
-        ERROR("[MBR]: FAT32 partition not found!\n");
+        DEBUG("[MBR]: No partition table found, trying LBA0\n");
+        fat32_lba = 0;
     }
     fat32_init(fat32_lba);
 

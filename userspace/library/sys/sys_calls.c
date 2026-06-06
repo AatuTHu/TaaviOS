@@ -1,6 +1,6 @@
 #include "sys_calls.h"
 
-void sys_write(const char *msg, int len, int fd) {
+void sys_write(int fd, const char *msg, int len) {
     int retval;
     __asm__ __volatile__(
         "int $0x80"
@@ -28,12 +28,12 @@ int sys_getpid(void) {
     return result;
 }
 
-int sys_open(const char *path, const char *mode) {
+int sys_open(const char *path, uint32_t flags) {
     int fd = -1;
     __asm__ __volatile__(
         "int $0x80"
         : "=a"(fd)
-        : "a"(5), "b"(path), "c"(mode)
+        : "a"(5), "b"(path), "c"(flags)
     );
     return fd;
 }

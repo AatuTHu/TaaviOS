@@ -21,8 +21,8 @@ static void fs_wake_task(uint32_t pid) {
 
 //If opening a file is succesfull we come here and make an entry to fd_table which is separate table from the request table.
 // there can be multiple request with the same fd number but it alwasys correspond to the fd given here once a succesfully file is opened
-static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size, const char *flags) {
-  DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
+static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size, uint32_t flags) {
+  //DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
   int slot = -1;
   for (int i = free_starting_slot; i < MAX_TASKS; i++) { //free_starting_slot is 3. We reserve them for standtart i/o.
       if (fd_entry_table[i] == NULL) {
@@ -48,11 +48,18 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size, cons
   entry->size         = size;
   entry->fd           = slot;
   entry->curr_offset  = 0;
-  strncpy(entry->flags, flags, sizeof(entry->flags));
+  entry->flags        = flags;
+
+  DEBUG("[FS_TASK][ALLOC_FD]: fd table created\n");
+  DEBUG("[FS_TASK][ALLOC_FD]: cluster: %d\n", cluster);
+  DEBUG("[FS_TASK][ALLOC_FD]: size: %d\n", size);
+  DEBUG("[FS_TASK][ALLOC_FD]: fd: %d\n", slot);
+  DEBUG("[FS_TASK][ALLOC_FD]: current_offset: %d\n", 0);
+  DEBUG("[FS_TASK][ALLOC_FD]: flags: %d\n", flags);
   
 
   fd_entry_table[slot] = entry;
-  DEBUG("[FS_TASK][ALLOC_FD]: Allocating successfull fd: %d\n", slot);
+  //DEBUG("[FS_TASK][ALLOC_FD]: Allocating successfull fd: %d\n", slot);
   return slot;
 }
 
@@ -60,73 +67,97 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size, cons
 * The read file handler
 */
 static int read(fs_mailbox_queue *req) {
-      if(req->fd >= MAX_TASKS) {
-        ERROR("[FS_TASK][handle_request]: fd number invalid\n");
-        return STATUS_ERROR;
-      }
-
       const fd_entry_t *entry = fd_entry_table[req->fd];
 
       if(entry == NULL) {
-        ERROR("[FS_TASK][handle_request]: entry not found\n");
+        ERROR("[FS_TASK][READ]: entry not found\n");
         return STATUS_ERROR;
       }
-
-      uint32_t real_buf_size = req->buffer_size;
       
-      //If the real buff_size is biger than the size of opened file change it to actual size
-      if(real_buf_size > entry->size) { //On my test case this is 512 > 17 so it always uses 17
-        real_buf_size = entry->size;
-      }
+      uint32_t real_buf_size = req->buffer_size;
+      DEBUG("[FS_TASK][READ]: Using Buffer size: %d\n",real_buf_size);
 
+      
       uint8_t *buf = (uint8_t *)kmalloc(real_buf_size);
 
       if(buf == NULL) {
-        ERROR("[FS_TASK][handle_request]: buffer unallocated\n");
+        ERROR("[FS_TASK][READ]: buffer unallocated\n");
         return STATUS_ERROR;
       }
 
       
       if(fat32_read_file(entry->cluster, real_buf_size, buf) == STATUS_ERROR) {
-        ERROR("[FS_TASK][handle_request]: Reading the file did not succeed\n");
+        ERROR("[FS_TASK][READ]: Reading the file did not succeed\n");
         kfree(buf);
         return STATUS_ERROR;
       } 
 
-      //save the real size to request buffer size so it an be used when task is collecting
-      req->buffer_size = real_buf_size;    
+      //save the real size to request buffer size so it an be used when task is collecting 
       // cape the files end at the real_buf_size.
-      buf[real_buf_size] = '\0'; 
+      DEBUG("[FS_TASK][READ]: Capping (placing the end of file \\ 0) the buffer at index: %d\n",entry->size);
+      buf[entry->size + 1] = '\0'; 
       //Copy the opened file to request buf field
-      memcpy(req->buf, (char*)buf, real_buf_size); 
+      DEBUG("[FS_TASK][READ]: memcpy to req.buf the read buffer with size: %d\n",real_buf_size);
+      memcpy(req->buf, (char*)buf, entry->size); 
       kfree(buf);
 
-      DEBUG("[FS_TASK][handle_request]: Marking request with owner pid %d complete\n", req->caller_pid);
+      //DEBUG("[FS_TASK][READ]: Marking request with owner pid %d complete\n", req->caller_pid);
       return STATUS_OK;
 }
 
-// A simple open file. Flags coming soon
+// A simple open file.
 static int open(fs_mailbox_queue *req) {
       uint32_t file_cluster = 0;
       uint32_t file_size = 0;
       const char *path = (char *)req->path;
 
       if(fat32_find_file(path, &file_cluster, &file_size) == STATUS_ERROR) {
-        ERROR("[FS_TASK][handle_request]: Could not find file.\n");
+        ERROR("[FS_TASK][OPEN]: Could not find file.\n");
         return STATUS_ERROR;
       }
 
-      DEBUG("[FS_TASK][handle_request]: File found succesfully, Completing request\n");
+      //DEBUG("[FS_TASK][OPEN]: File found succesfully, Completing request\n");
       int fd = fs_alloc_fd(req->caller_pid, file_cluster, file_size, req->flags);
 
       if(fd == STATUS_ERROR) {
-        ERROR("[FS_TASK][handle_request]: Invalid fd number. Terminating request\n");
+        ERROR("[FS_TASK][OPEN]: Invalid fd number. Terminating request\n");
         return STATUS_ERROR;
       }
 
       req->fd = fd;
       return STATUS_OK;
-    }
+}
+
+static int write(fs_mailbox_queue *req)  {
+
+      fd_entry_t *entry = fd_entry_table[req->fd];
+
+      if(entry == NULL) {
+        ERROR("[FS_TASK][WRITE]: entry not found\n");
+        return STATUS_ERROR;
+      }
+
+      if(!(entry->flags & O_WRONLY) && !(entry->flags & O_RDWR)) {
+        ERROR("[FS_TASK][WRITE]: Given flags did not match the opened files flags\n");
+        return STATUS_ERROR;
+      }
+
+      if(fat32_write_file_at_offset(entry->cluster, entry->curr_offset, req->buf, req->buffer_size) == STATUS_ERROR) {
+        ERROR("[FS_TASK][WRITE]: Could not write to opened file\n");
+        return STATUS_ERROR;
+      }
+
+      DEBUG("[FS_TASK][WRITE]: Write was succesful\n");
+      entry->curr_offset += req->buffer_size;
+      entry->size         += req->buffer_size;
+
+      if(fat32_update_dirent_size(f32_fs.root_cluster, entry->cluster, entry->size) == STATUS_ERROR) {
+        ERROR("[FS_TASK][WRITE]: Could not update file\n");
+        return STATUS_ERROR;
+      }
+      DEBUG("[FS_TASK][WRITE]: current offset %d and size %d\n", entry->curr_offset, entry->size);
+      return STATUS_OK;
+}
 
 //entry point of this file. We come here from loop and then decide what to do next
 void fs_handle_request(fs_mailbox_queue *req) {
@@ -134,12 +165,21 @@ void fs_handle_request(fs_mailbox_queue *req) {
   task_t *fs_task = task_get(fs_task_pid);
 
   if(fs_task == NULL || req == NULL) { 
-    ERROR("[FS_TASK][HANDLE_REQUST]: Couldn find pointer of self\n");
+    //DEBUG("[FS_TASK][HANDLE_REQUST]: trying to handle request with invalid data. Aborting\n");
+    return;
+  }
+  
+  if(req->fd >= MAX_TASKS) {
+    //DEBUG("[FS_TASK][HANDLE_REQUST]: Invalid fd number\n");
+    fs_wake_task(req->caller_pid);
+    req->status = TERMINATED;
     return;
   }
 
-  if(req->request_type == OPEN) {
-     //__asm__ __volatile__("cli");
+  switch (req->request_type)
+  {
+  case OPEN:
+      //__asm__ __volatile__("cli");
      if(open(req) == STATUS_ERROR) {
       req->status = TERMINATED;
      } else {
@@ -149,25 +189,35 @@ void fs_handle_request(fs_mailbox_queue *req) {
     fs_wake_task(req->caller_pid);
     //__asm__ __volatile__("sti");
     return;
-  }
-
-  if(req->request_type == READ) {
+  case READ:
     //__asm__ __volatile__("cli");
     if(read(req) == STATUS_ERROR) {
       req->status = TERMINATED;
     } else {
       req->status = COMPLETE;
     }
-    task_t *fs_task = task_get(fs_task_pid);
     fs_task->priority = PRIORITY_LOW;
     fs_wake_task(req->caller_pid);
     //__asm__ __volatile__("sti");
     return;
-  }
-    
-    
+  case WRITE:
+     //__asm__ __volatile__("cli");
+    if(write(req) == STATUS_ERROR) {
+      req->status = TERMINATED;
+    } else {
+      req->status = COMPLETE;
+    }
+    fs_task->priority = PRIORITY_LOW;
+    fs_wake_task(req->caller_pid);
+    //__asm__ __volatile__("sti");
+  return;
+  case CLOSE:
+
+  return;
+  default:
     ERROR("[FS_TASK][handle_request]: Request type was invalid. Terminating request\n");
     req->status = TERMINATED;
     fs_wake_task(req->caller_pid);
-    return;
+    return; 
+  }
 }

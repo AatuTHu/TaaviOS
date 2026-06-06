@@ -6,4 +6,5 @@
 *.iso
 *.txt
 *.elf
+*.img
 .vscode

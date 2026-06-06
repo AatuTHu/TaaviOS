@@ -39,7 +39,7 @@ iso: $(BUILD)/taavi.bin
 run: iso
 	qemu-system-i386 \
 		-drive file=$(BUILD)/taavi.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
-		-drive file=disk.img,format=raw,if=ide,bus=0,unit=1,media=disk \
+		-drive file=fat.img,format=raw,if=ide,bus=0,unit=1,media=disk \
 		-boot d -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
 
 clean:
@@ -47,6 +47,11 @@ clean:
 	find . -name '*.o' -delete
 	rm -f taavi.bin taavi.iso
 	rm -rf $(BUILD) isodir
+
+disk:
+	dd if=/dev/zero of=fat.img bs=1M count=64
+	mkfs.fat -F 32 fat.img
+	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::hello.txt
 
 check:
 	cppcheck \

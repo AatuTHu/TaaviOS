@@ -49,12 +49,13 @@ void command_exec(const char *filename) {
 }
 
 void command_write(const char *buf) {
-    write(4,"wake!");
+    write(fd,buf);
+    print("\n");
 }
 
 void command_open(const char *filename) {
     print("\n");
-    fd = open(filename, "w+");
+    fd = open(filename, O_RDONLY | O_WRONLY);
 
     
     if(fd != -1) {

@@ -25,7 +25,7 @@ typedef struct fd_entry_t {
     uint32_t cluster;
     uint32_t size;
     uint32_t curr_offset;
-    char     flags[4];
+    uint32_t flags;
 } fd_entry_t;
 
 typedef struct fs_mailbox_queue {
@@ -35,7 +35,7 @@ typedef struct fs_mailbox_queue {
     char                    buf[512];
     uint32_t                buffer_size;
     uint32_t                fd;
-    char                    flags[4];
+    uint32_t                flags;
     fs_task_queue_status_t  status;
 } fs_mailbox_queue;
 
@@ -44,7 +44,7 @@ void fs_task_loop();
 void fs_recovery();
 void fs_handle_request(fs_mailbox_queue *req);
 int collect_request(uint32_t pid, char* out);
-int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size, const char *flags);
+int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size, uint32_t flags);
 
 
 extern int request_queue_count;
