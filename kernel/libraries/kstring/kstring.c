@@ -32,13 +32,18 @@ void strcpy(char *dest, const char *src) {
   *dest = '\0';
 }
 
-void strncpy(char *dest,const char *src, uint32_t size) {
+void strncpy(char *dest, const char *src, uint32_t size) {
   uint32_t i;
-  for(i = 0; i < size-1; i++) {
-    if(src[i] == '\0') break;
-    dest[i] = src[i];
+  for (i = 0; i < size; i++) {
+    if (src[i] != '\0') {
+      dest[i] = src[i];
+    } else {
+      while (i < size) {
+        dest[i++] = '\0';
+      }
+      break;
+    }
   }
-  dest[i] = '\0';
 }
 
 int strcmp(const char *a, const char *b) {

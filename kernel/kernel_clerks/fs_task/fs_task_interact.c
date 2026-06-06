@@ -43,9 +43,8 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   }
   
   if(buf != NULL && type == WRITE) {
-      strncpy(new_request->buf, buf, buffer_size);
-      new_request->buf[buffer_size] = '\0';
-      DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s and buf length: %d\n", new_request->buf, buffer_size);
+    strncpy(new_request->buf, buf, sizeof(new_request->buf));
+    DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s and buf length: %d\n", new_request->buf, buffer_size);
   }
   
 
@@ -82,7 +81,8 @@ int collect_request(uint32_t pid, char *out) {
         return request_queue[i]->fd;  
 
       case READ:
-        //DEBUG("[FS_TASK][COLLECT_REQUEST]: Returning read file to %d\n", pid);
+        DEBUG("[FS_TASK][COLLECT_REQUEST]: Returning read file to %d\n", pid);
+        DEBUG("[FS_TASK][COLLECT_REQUEST]: File contents %s\n", request_queue[i]->buf);
         memcpy(out, request_queue[i]->buf, request_queue[i]->buffer_size);
         request_queue[i]->status = TERMINATED;
         __asm__ __volatile__("sti");

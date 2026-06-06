@@ -128,7 +128,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
             if(whole_cluster == file_cluster) {
                 DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
                 dir_entry[i].size = new_size;
-                if(__fat32_write_cluster(dir_entry, buf) == STATUS_ERROR) {
+                if(__fat32_write_cluster(current_dir_cluster, buf) == STATUS_ERROR) {
                     __fat32_free_buffer(buf);
                     return STATUS_ERROR;
                 }

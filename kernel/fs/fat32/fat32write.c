@@ -69,7 +69,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset, const ui
 
         //increase the size written and then check if it was over or the exact amount compared to the size.
         bytes_written += bytes_to_write;
-        DEBUG("[FAT32][WRITE_AT_OFFSET]: bytes_read: %d\n", bytes_read);
+        DEBUG("[FAT32][WRITE_AT_OFFSET]: bytes_written: %d\n", bytes_written);
         if(bytes_written >= size) {
             DEBUG("[FAT32][WRITE_AT_OFFSET]: Bytes_read higher or equal to size\n");
             __fat32_free_buffer(tmp_buf);

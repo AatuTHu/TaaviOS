@@ -67,7 +67,7 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size, uint
 * The read file handler
 */
 static int read(fs_mailbox_queue *req) {
-      const fd_entry_t *entry = fd_entry_table[req->fd];
+      fd_entry_t *entry = fd_entry_table[req->fd];
 
       if(entry == NULL) {
         ERROR("[FS_TASK][READ]: entry not found\n");
@@ -95,9 +95,9 @@ static int read(fs_mailbox_queue *req) {
       //save the real size to request buffer size so it an be used when task is collecting 
       // cape the files end at the real_buf_size.
       DEBUG("[FS_TASK][READ]: Capping (placing the end of file \\ 0) the buffer at index: %d\n",entry->size);
-      buf[entry->size + 1] = '\0'; 
+      buf[entry->size] = '\0';
       //Copy the opened file to request buf field
-      DEBUG("[FS_TASK][READ]: memcpy to req.buf the read buffer with size: %d\n",real_buf_size);
+      DEBUG("[FS_TASK][READ]: memcpy to req.buf the read buffer with size: %d\n", entry->size);
       memcpy(req->buf, (char*)buf, entry->size); 
       kfree(buf);
 
@@ -148,8 +148,8 @@ static int write(fs_mailbox_queue *req)  {
       }
 
       DEBUG("[FS_TASK][WRITE]: Write was succesful\n");
-      entry->curr_offset += req->buffer_size;
-      entry->size         += req->buffer_size;
+      entry->curr_offset  = req->buffer_size;
+      entry->size         = req->buffer_size;
 
       if(fat32_update_dirent_size(f32_fs.root_cluster, entry->cluster, entry->size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not update file\n");

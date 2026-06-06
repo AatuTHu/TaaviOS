@@ -23,7 +23,7 @@ void fat32_list_dir(uint32_t cluster) {
     * if it is deleted or a long filename advance to next iteration
     * otherwise print the name and size to serial. this is not a proper but will do for now
     */
-    for(int i = 0; i < max_entries; i++) {
+    for(uint32_t i = 0; i < max_entries; i++) {
         if(dir_entry[i].name[0] == FAT32_DIRENT_FREE) break;
         if(dir_entry[i].name[0] == FAT32_DIRENT_DELETED) continue;
         if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) == FAT32_LONG_FILE_NAME) continue;

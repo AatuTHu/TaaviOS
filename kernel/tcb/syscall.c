@@ -103,7 +103,7 @@ static int32_t sys_read(struct registers *r) {
             //DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong %s\n", scheduler_get_current_task()->name);
             return STATUS_ERROR;
         }
-        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
+        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s\n", buf);
     }
     
     
