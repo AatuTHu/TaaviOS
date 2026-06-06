@@ -13,11 +13,11 @@
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
 static int32_t sys_exit(struct registers *r) {
-    DEBUG("[SYSCALL][SYSEXIT]\n");
+    //DEBUG("[SYSCALL][SYSEXIT]\n");
     const task_t *current = scheduler_get_current_task();
 
     if(current == NULL) {
-        DEBUG("[SYSCALL][SYSEXIT]: current task not found\n");
+        //DEBUG("[SYSCALL][SYSEXIT]: current task not found\n");
         return STATUS_ERROR;
     }
 
@@ -26,7 +26,7 @@ static int32_t sys_exit(struct registers *r) {
     }
     
     if(keyboard_get_foreground_pid() == (int)current->pid) {
-        DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
+        //DEBUG("[SYSCALL][SYSEXIT]: releasing foregroundpid\n");
         keyboard_set_foreground_pid(-1);
     }
 
@@ -51,15 +51,18 @@ static int32_t sys_write(struct registers *r) {
             break;
         case 2:
             vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-            vga_write(buf);
+            ERROR(buf);
             r->eax =  STATUS_OK;
             break;    
         default:
             const task_t *current = scheduler_get_current_task();
-            add_request_to_queue(current->pid, WRITE, fd, NULL, buf, 0);
-            r->eax =  STATUS_OK;
-            return len;
-            break;
+            add_request_to_queue(current->pid, WRITE, fd, NULL, buf, len, O_WRONLY);
+            scheduler_set_task_state(TASK_BLOCKED);
+            scheduler_yield(r);
+
+            int new_offset = collect_request(current->pid, NULL);
+
+            return new_offset;
     }
 
     return STATUS_OK;
@@ -83,32 +86,24 @@ static int32_t sys_read(struct registers *r) {
 
     
 
-    if(fd == 0) { //stdin
-        if(current == NULL) {
-            DEBUG("[SYSCALL][SYS_READ]: current task not found\n");
-            return STATUS_ERROR;
-        }
-        
-        int nread = keyboard_read_from_buffer(buf, current->pid);
-        if (nread > 0) return nread; //buffer had something so 
-    
-    
-        if(current->state != TASK_BLOCKED) {
+    if (fd == 0) { //stdin
+        int nread = 0;
+        while ((nread = keyboard_read_from_buffer(buf, current->pid)) == 0) {
             scheduler_set_task_state(TASK_BLOCKED);
             scheduler_yield(r);
         }
-        
+        return nread; 
     } else {
-        add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size);
+        add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size, 0);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
     
-        //DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
+        ////DEBUG("[SYSCALL][SYS_READ]: %s awoken. Collecting\n", scheduler_get_current_task()->name);
         if(collect_request(current->pid, buf) == STATUS_ERROR) {
-            DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong %s\n", scheduler_get_current_task()->name);
+            //DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong %s\n", scheduler_get_current_task()->name);
             return STATUS_ERROR;
         }
-        //DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
+        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s", buf);
     }
     
     
@@ -117,26 +112,26 @@ static int32_t sys_read(struct registers *r) {
 } //sys_read
 
 static int32_t sys_open(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_OPEN]\n");
+    //DEBUG("[SYSCALL][SYS_OPEN]\n");
     const char *path   = (char *)r->ebx;
     uint32_t flags     = r->ecx;
     const task_t *current = scheduler_get_current_task();
 
     if (current == NULL) {
-        DEBUG("[SYSCALL][SYS_OPEN]: current task not found\n");
+        //DEBUG("[SYSCALL][SYS_OPEN]: current task not found\n");
         return STATUS_ERROR;
     }
     
-    add_request_to_queue(current->pid, OPEN, 0, path, NULL, 0);
+    add_request_to_queue(current->pid, OPEN, 0, path, NULL, 0, flags);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
     
     int fd = collect_request(current->pid, NULL);
 
     if(fd == STATUS_ERROR) {
-        DEBUG("[SYSCALL][SYS_OPEN]: Invalid fd, reader: %s\n", scheduler_get_current_task()->name);
+        //DEBUG("[SYSCALL][SYS_OPEN]: Invalid fd, reader: %s\n", scheduler_get_current_task()->name);
     }
-    DEBUG("[SYSCALL][SYS_OPEN]: Returning fd: %d\n", fd);
+    //DEBUG("[SYSCALL][SYS_OPEN]: Returning fd: %d\n", fd);
     return fd;
 }
 
@@ -144,7 +139,7 @@ static int32_t sys_open(struct registers *r) {
 *   This is a hack function. Does not really execute elf binaries. I made it for now so that I could test multitasking. NEEDS TO BE FIXED
 */
 static int32_t sys_exec(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_EXEC]: caller: %s\n", scheduler_get_current_task()->name);
+    //DEBUG("[SYSCALL][SYS_EXEC]: caller: %s\n", scheduler_get_current_task()->name);
     char *filename = (char *)r->ecx;
     task_t *task = get_task_by_name(filename);
     if(task == NULL) {
@@ -152,12 +147,11 @@ static int32_t sys_exec(struct registers *r) {
     }
     
     scheduler_add(task);
-    scheduler_yield(r);
     return STATUS_OK;
 } //sys_exec
 
 static int32_t sys_yield(struct registers *r) {
-    DEBUG("[SYSCALL][SYS_yield]: caller: %s\n", scheduler_get_current_task()->name);
+    //DEBUG("[SYSCALL][SYS_yield]: caller: %s\n", scheduler_get_current_task()->name);
     r->eax = STATUS_OK;
     scheduler_yield(r);
     return STATUS_OK;
@@ -170,7 +164,7 @@ static int32_t sys_idle(struct registers *r) {
 } //sys_idle
 
 void syscall_init() {
-    DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
+    //DEBUG("[SYSCALL] INITIALIZING SYSCALLS\n");
     for(uint32_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
     syscall_table[SYS_EXIT]     = sys_exit;
     syscall_table[SYS_WRITE]    = sys_write;

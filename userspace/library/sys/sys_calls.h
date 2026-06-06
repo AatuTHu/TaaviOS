@@ -1,7 +1,9 @@
 #ifndef SYS_CALLS_H
 #define SYS_CALLS_H
 
-void sys_write(const char *msg, int len, int fd);
+#include "stdint.h"
+
+void sys_write(int fd, const char *msg, int len);
 
 void sys_exit(void);
 
@@ -13,7 +15,7 @@ void sys_yield(void);
 
 int sys_read(int fd, char *buf, int len);
 
-int sys_open(const char *path, const char* mode);
+int sys_open(const char *path, uint32_t flags);
 
 int sys_exec(const char *filename);
 

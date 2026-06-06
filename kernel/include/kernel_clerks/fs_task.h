@@ -9,6 +9,7 @@
 #include "kstring.h"
 #include "kmalloc.h"
 
+#define INVALID_IDX -1
 #define free_starting_slot 3
 typedef enum  {
     PENDING,
@@ -43,7 +44,7 @@ void fs_task_loop();
 void fs_recovery();
 void fs_handle_request(fs_mailbox_queue *req);
 int collect_request(uint32_t pid, char* out);
-int add_request_to_queue(uint32_t pid,operations_t type,uint32_t fd, const char* path,const char *buf, uint32_t buffer_size);
+int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size, uint32_t flags);
 
 
 extern int request_queue_count;

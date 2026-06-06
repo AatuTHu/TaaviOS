@@ -71,7 +71,7 @@ static void check_for_modules (const uint32_t *mboot_info) {
             }
         }
     } else {
-        klog("[KERNEL]: MODULES NOT FOUND\n");
+        ERROR("[KERNEL]: MODULES NOT FOUND\n");
     }
 }
 
@@ -86,11 +86,12 @@ static void init_filesystems() {
     uint32_t fat32_sectors = 0;
 
     if (mbr_find_fat32(&fat32_lba, &fat32_sectors) != 0) {
-        klog("[MBR]: FAT32 partition not found!\n");
+        DEBUG("[MBR]: No partition table found, trying LBA0\n");
+        fat32_lba = 0;
     }
     fat32_init(fat32_lba);
 
-    fat32_list_dir(f32_fs.root_cluster);
+   //fat32_list_dir(f32_fs.root_cluster);
     
     /*uint32_t file_cluster = 0;
     uint32_t file_size = 0;

@@ -3,23 +3,23 @@
 #include "string.h"
 
 void print(const char *msg) {
-    sys_write(msg, strlen(msg), 1);
+    sys_write(1, msg, strlen(msg));
 }
 
 void error(const char *msg) {
-    sys_write(msg, strlen(msg), 2);
+    sys_write(2, msg, strlen(msg));
 }
 
 int scan(char *buf) {
     return sys_read(0,buf,1);
 }
 
-int open(const char* path, const char* mode) {
-    return sys_open(path, mode);
+int open(const char* path, uint32_t flags) {
+    return sys_open(path, flags);
 }
 
 void write(int fd, const char *msg) {
-    sys_write(msg, strlen(msg), fd);
+    sys_write(fd, msg, strlen(msg));
 }
 
 int read(int fd, char *buf, int buffer_size) {

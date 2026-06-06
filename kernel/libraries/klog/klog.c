@@ -115,6 +115,9 @@ static void kwrite (const char* fmt, va_list args) {
 void klog(const char* fmt, ...) {
     va_list args; //not important
     va_start(args, fmt); //not important
+    vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+    kputs("[OK]: ");
+    vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt,args); //main writer function call ->
     va_end(args); //not important
 }

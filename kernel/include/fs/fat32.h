@@ -1,6 +1,12 @@
 #ifndef FAT32_H
 #define FAT32_H
 #include <stdint.h>
+#include "klog.h"
+#include "config.h"
+#include "stddef.h"
+#include "kmalloc.h"
+#include "kstring.h"
+#include "ata.h"
 
 /* Sector and FAT geometry */
 #define FAT32_SECTOR_SIZE        512
@@ -19,7 +25,7 @@
 /* Directory entry first-byte markers */
 #define FAT32_DIRENT_FREE        0x00
 #define FAT32_DIRENT_DELETED     0xE5
-
+#define FAT32_LONG_FILE_NAME     0x0F
 /* Attribute flags */
 #define FAT32_ATTR_READ_ONLY     0x01
 #define FAT32_ATTR_HIDDEN        0x02
@@ -94,19 +100,34 @@ int      fat32_init(uint32_t partition_lba);
 void     fat32_list_dir(uint32_t cluster);
 int      fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size);
 int      fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf);
-//uint32_t __fat32_next_cluster(uint32_t cluster);
-//int      __fat32_read_cluster(uint32_t cluster, uint8_t *buf);
+int      fat32_update_dirent_size(uint32_t dir_cluster, uint32_t file_cluster, uint32_t new_size);
+
 
 /* Write */
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size);
+int      fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset, const uint8_t *buf, uint32_t size);
 int      fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_t first_cluster, uint32_t size);
-//int      __fat32_write_cluster(uint32_t cluster, const uint8_t *buf);
-//uint32_t __fat32_alloc_cluster(void);
-//int      __fat32_set_cluster(uint32_t cluster, uint32_t value);
-//int      __fat32_format_83(const char *filename, uint8_t *dst);
 
 /* DELETE */
-//uint32_t __fat32_unalloc_cluster(uint32_t cluster);
+
+
+/* HELPERS */
+uint32_t __fat32_calculate_lba(uint32_t cluster);
+uint32_t __fat32_cluster_to_sector(uint32_t cluster);
+uint32_t __fat32_calculate_offset(uint32_t cluster);
+uint32_t fat32_calculate_cluster_size();
+uint32_t __fat32_next_cluster(uint32_t cluster);
+int __fat32_read_cluster(uint32_t cluster, uint8_t *buf);
+uint32_t __fat32_alloc_cluster(void);
+int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf);
+int __fat32_set_cluster(uint32_t cluster, uint32_t value);
+uint32_t __fat32_unalloc_cluster(uint32_t cluster);
+int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint32_t *out_cluster, uint32_t *out_size, uint8_t  *out_attr);
+int __fat32_format_83(const char *filename, uint8_t *dst);
+uint32_t __fat32_calculate_maximum_number_of_directory_entries();
+uint8_t *__fat32_allocate_buffer();
+void __fat32_free_buffer(uint8_t *buf);
+
 
 extern fat32_fs_t f32_fs;
 

@@ -4,11 +4,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define O_RDONLY 0x01
+#define O_WRONLY 0x02
+#define O_RDWR   0x04
+#define O_CREAT  0x08
+
 void print(const char *msg);
 void error(const char *msg);
 int scan(char *buf);
 
-int open(const char* path, const char* mode);
+int open(const char* path, uint32_t flags);
 int read(int fd, char *buf, int buffer_size); 
 void write(int fd, const char *msg);
 

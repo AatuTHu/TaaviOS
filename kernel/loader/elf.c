@@ -85,7 +85,7 @@ int elf_load(void *data, page_directory_t *page_dir) {
 		}
 		
 		if(vmm_alloc(page_dir, phdr->p_vaddr, size, page_flags) == STATUS_ERROR) {
-			DEBUG("[ELF]: virtual memory allocation failed\n");
+			ERROR("[ELF]: virtual memory allocation failed\n");
 			return STATUS_ERROR;
 		}
 		
@@ -108,7 +108,7 @@ int elf_load(void *data, page_directory_t *page_dir) {
 			
 			uint32_t phys = vmm_get_phys(page_dir, phdr->p_vaddr + j * PAGE_SIZE);
 			if(phys == INVALID_PHYSICAL_PAGE) {
-				DEBUG("[ELF]: Invalid physical page given. Aborting\n");
+				ERROR("[ELF]: Invalid physical page given. Aborting\n");
 				return STATUS_ERROR;
 			}
 

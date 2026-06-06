@@ -14,7 +14,7 @@ void kmalloc_init(void* heap_start, uint32_t heap_size) {
 }
 
 void* kmalloc(uint32_t size) {
-    DEBUG("[KMALLOC] Allocating %d bytes\n", size);
+    //DEBUG("[KMALLOC] Allocating %d bytes\n", size);
     block_header_t *current = free_list;
     block_header_t *prev = NULL;
     while(current != NULL) {
@@ -26,14 +26,14 @@ void* kmalloc(uint32_t size) {
                 split_block->next = current->next;
                 current->size = size;
                 current->next = split_block;
-                DEBUG("[KMALLOC] Block split — new block at 0x%x size: %d\n", split_block, split_block->size);
+                //DEBUG("[KMALLOC] Block split — new block at 0x%x size: %d\n", split_block, split_block->size);
             }
             if (prev == NULL) {
                 free_list = current->next;
             } else {
                 prev->next = current->next;
             }
-            DEBUG("[KMALLOC] Allocated at 0x%x\n", (uint8_t*)current + sizeof(block_header_t));
+            //DEBUG("[KMALLOC] Allocated at 0x%x\n", (uint8_t*)current + sizeof(block_header_t));
             return (void*)((uint8_t*)current + sizeof(block_header_t));
         }
         prev = current;
@@ -47,9 +47,9 @@ static void merge() {
     block_header_t *current = free_list;
     while (current != NULL && current->next != NULL) {
         if((block_header_t*)((uint8_t*)current + sizeof(block_header_t) + current->size) == current->next) {
-            DEBUG("[KMALLOC]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
+            //DEBUG("[KMALLOC]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
             current->size += sizeof(block_header_t) + current->next->size;
-            DEBUG("[KMALLOC]: Currents size after merge: 0x%x\n", current->size);
+            //DEBUG("[KMALLOC]: Currents size after merge: 0x%x\n", current->size);
             current->next = current->next->next;
         } else {
             current = current->next;
@@ -58,7 +58,7 @@ static void merge() {
 }
 
 void kfree(void* ptr) {
-    DEBUG("[KMALLOC] Freeing at 0x%x\n", ptr);
+    //DEBUG("[KMALLOC] Freeing at 0x%x\n", ptr);
     block_header_t *addr = (block_header_t*)((uint8_t*)ptr - sizeof(block_header_t));
     if(addr->magic != HEAP_MAGIC) {
         ERROR("[KMALLOC] Invalid magic at 0x%x — expected 0x%x\n", addr, HEAP_MAGIC);
@@ -76,7 +76,7 @@ void kfree(void* ptr) {
         } else {
             prev->next = addr;
         }
-        DEBUG("[KMALLOC] Block returned to free list, merging\n");
+        //DEBUG("[KMALLOC] Block returned to free list, merging\n");
         merge();
     }
 }

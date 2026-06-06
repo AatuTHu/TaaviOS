@@ -14,7 +14,7 @@ void irq_register_handler(int index, irq_callback_t cb) {
     irq_callbacks[index] = cb; 
 }
   
-void isr_handler(const struct registers *r) {
+void isr_handler(struct registers *r) {
 
     if(r->int_no == 129) {
         scheduler_tick(r);
@@ -27,12 +27,12 @@ void isr_handler(const struct registers *r) {
     int is_user = (r->cs & 0x3) == 3;
     task_t *current = scheduler_get_current_task();
 
-    if(current->task_mode == KERNEL_TASK) {
-        //DEBUG("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
+   /* if(current->task_mode == KERNEL_TASK) {
+        DEBUG("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
         current->state = TASK_SLEEPING;
         activate_hail_mary(current->pid);
         return;
-    }
+    }*/
 
     klog("\n");
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
