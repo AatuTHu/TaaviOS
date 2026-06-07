@@ -41,10 +41,11 @@
 typedef enum {
     WRITE,
     READ,
-    UPDATE, // this I hear is not a thing with filesystem
+    UPDATE, // write at offset
     DELETE,
     OPEN,
-    CLOSE
+    CLOSE,
+    CREATE
 } operations_t;
 
 #define O_RDONLY 0x01

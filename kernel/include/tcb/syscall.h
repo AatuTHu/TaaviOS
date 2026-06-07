@@ -12,6 +12,7 @@
 #define SYS_CLOSE  6
 #define SYS_GETPID 20
 #define SYS_EXEC   11
+#define SYS_MKDIR  39
 #define SYS_IDLE   112
 #define SYS_YIELD  158
 

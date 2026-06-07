@@ -5,7 +5,8 @@
  * that contains the allocation entry for the given cluster.
  */
 uint32_t __fat32_calculate_lba(uint32_t cluster) {
-    DEBUG("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n", cluster);
+    // DEBUG("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n",
+    // cluster);
     if (cluster >= f32_fs.maximum_cluster_size) {
         ERROR("[FAT32][CALCULATE_LBA]: Cluster number too high: %d\n", cluster);
         return INVALID_LBA;
@@ -104,8 +105,8 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
     uint32_t lba        = __fat32_calculate_lba(cluster);
     uint32_t fat_offset = __fat32_calculate_offset(cluster);
 
-    DEBUG("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
-    DEBUG("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
+    // DEBUG("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
+    // DEBUG("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
 
     /*
      *   Read the target lba to buffer from the actual hard drive.
@@ -240,31 +241,33 @@ uint32_t __fat32_alloc_cluster(void) {
                 // filesystem
                 uint32_t cluster_index = (i * FAT32_ENTRIES_PER_SECTOR) + j;
 
-                DEBUG("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
-                      "index: %d\n",
-                      cluster_index);
+                // DEBUG("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
+                //    "index: %d\n",
+                //     cluster_index);
                 // mark index of current j as end of chain
                 fat_entries[j] = FAT32_CLUSTER_EOC;
 
                 /*
-                 * Write to the hard drive starting from fat_start + current i
-                 * the contents of the buf. Also write it to the second fat
-                 * table Should writing fail mark the cluster of current J as
-                 * free cluster and return Invalid cluster.
+                 * Write to the hard drive starting from fat_start +
+                 * current i the contents of the buf. Also write it to the
+                 * second fat table Should writing fail mark the cluster
+                 * of current J as free cluster and return Invalid
+                 * cluster.
                  */
                 if (ata_write_sector(f32_fs.fat_start + i, buf) == -1 ||
                     ata_write_sector(
                         f32_fs.fat_start + f32_fs.sectors_per_fat + i, buf) ==
                         -1) {
-                    ERROR("[FAT32][ALLOC_CLUSTER]: Could not write to sector. "
+                    ERROR("[FAT32][ALLOC_CLUSTER]: Could not write to "
+                          "sector. "
                           "Stopping cluster allocation\n");
                     fat_entries[j] = FAT32_CLUSTER_FREE;
                     __fat32_free_buffer(buf);
                     return INVALID_CLUSTER;
                 }
 
-                // save index of last allocated cluster so that next allocation
-                // can continue from it.
+                // save index of last allocated cluster so that next
+                // allocation can continue from it.
                 f32_fs.last_allocated_cluster = cluster_index;
                 __fat32_free_buffer(buf);
                 return cluster_index;
@@ -545,10 +548,11 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
                                dir_entry[i].cluster_low;
                 *out_size    = dir_entry[i].size;
                 *out_attr    = dir_entry[i].attributes;
-                DEBUG("[FAT32][SEARCH_DIR]: file name %s\n", dir_entry[i].name);
-                DEBUG("[FAT32][SEARCH_DIR]: file found!\n");
-                DEBUG("[FAT32][SEARCH_DIR]: cluster: %d\n", *out_cluster);
-                DEBUG("[FAT32][SEARCH_DIR]: size: %d\n", *out_size);
+                // DEBUG("[FAT32][SEARCH_DIR]: file name %s\n",
+                // dir_entry[i].name); DEBUG("[FAT32][SEARCH_DIR]: file
+                // found!\n"); DEBUG("[FAT32][SEARCH_DIR]: cluster: %d\n",
+                // *out_cluster); DEBUG("[FAT32][SEARCH_DIR]: size: %d\n",
+                // *out_size);
                 __fat32_free_buffer(buf);
                 return STATUS_OK;
             }
@@ -563,10 +567,11 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
          * entries proceed to next cluster
          */
         uint32_t next_cluster = __fat32_next_cluster(current_cluster);
-        DEBUG("[FAT32][SEARCH_DIR]: Next cluster number: %d\n", next_cluster);
+        // DEBUG("[FAT32][SEARCH_DIR]: Next cluster number: %d\n",
+        // next_cluster);
 
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
+            // DEBUG("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
             __fat32_free_buffer(buf);
             return STATUS_ERROR;
         }

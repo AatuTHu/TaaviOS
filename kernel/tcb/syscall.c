@@ -201,6 +201,25 @@ static int32_t sys_exec(struct registers *r) {
     return STATUS_OK;
 } // sys_exec
 
+static int32_t sys_mkdir(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_MKDIR]\n");
+    const char *path = (char *)r->ebx;
+    DEBUG("[SYSCALL][SYS_MKDIR]: creating path %s\n", path);
+    task_t *current = scheduler_get_current_task();
+    if (current == NULL) {
+        DEBUG("[SYSCALL][SYS_MKDIR]: no current task found\n");
+        return STATUS_ERROR;
+    }
+    add_request_to_queue(current->pid, CREATE, 0, path, NULL, 0, O_CREAT);
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_yield(r);
+
+    if (collect_request(current->pid, NULL) == STATUS_ERROR)
+        return STATUS_ERROR;
+
+    return STATUS_OK;
+}
+
 static int32_t sys_idle(struct registers *r) {
     (void)r;
     while (1) __asm__ __volatile__("sti; hlt");
@@ -236,4 +255,5 @@ void syscall_init() {
     syscall_table[SYS_YIELD]  = sys_yield;
     syscall_table[SYS_OPEN]   = sys_open;
     syscall_table[SYS_CLOSE]  = sys_close;
+    syscall_table[SYS_MKDIR]  = sys_mkdir;
 }

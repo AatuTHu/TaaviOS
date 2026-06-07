@@ -26,6 +26,10 @@ void write(int fd, const char *msg) {
     sys_write(fd, msg, strlen(msg));
 }
 
+int mkdir(const char *path) {
+    sys_mkdir(path);
+}
+
 int read(int fd, char *buf, int buffer_size) {
     return sys_read(fd, buf, buffer_size);
 }

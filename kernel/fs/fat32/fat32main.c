@@ -88,17 +88,16 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
             DEBUG("[FAT32][FIND_FILE]: Size: %d\n", *out_size);
             DEBUG("[FAT32][FIND_FILE]: last segment: %s\n", out_fname);
             return STATUS_OK;
-        } else {
-            if (inner_copy_of_path[0] == '/')
-                inner_copy_of_path++;
-            // See if directory bit is present
-            if (!(found_attr & FAT32_ATTR_DIRECTORY)) {
-                ERROR("[FAT32][FIND_FILE]: Found invalid attributes\n");
-                return STATUS_ERROR;
-            }
-            // step further in to a subdirectory
-            current_directory_cluster = found_cluster;
         }
+        if (inner_copy_of_path[0] == '/')
+            inner_copy_of_path++;
+        // See if directory bit is present
+        if (!(found_attr & FAT32_ATTR_DIRECTORY)) {
+            ERROR("[FAT32][FIND_FILE]: Found invalid attributes\n");
+            return STATUS_ERROR;
+        }
+        // step further in to a subdirectory
+        current_directory_cluster = found_cluster;
     }
 
     return STATUS_ERROR;
@@ -204,74 +203,141 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster,
 }
 
 /**
- * __fat32_create_drient() - Creates directory entry.
+ * __fat32_create_drip() - Creates directory entry.
  *
  * @starting_cluster: starting directory cluster
- * @filename: directory name
- * @first_cluster: cluster of the first entry
- * @size: size of directory
+ * @path: directory path
  *
  * Description:
- * To make directories we need to read the directory entrys metadata from disk,
- * then loop around the entries to find free spot. If found we can then place
- * the new directory to there.
+ * Takes the path char and creates the whole directory chain up to it.
+ *
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
-int fat32_create_dirent(uint32_t starting_cluster, const char *filename,
-                        uint32_t first_cluster, uint32_t size) {
+int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
 
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
         return STATUS_ERROR;
 
-    /*
-     * first read the data off the given starting cluster to buffer
-     */
+    uint32_t current_directory_cluster = parent_cluster;
+    const char *inner_copy_of_path     = path;
+    uint8_t name83[11];
 
-    if (__fat32_read_cluster(starting_cluster, buf) == STATUS_ERROR) {
-        ERROR("[FAT32][CREATE_DIRENT]: Could not read cluster\n");
-        __fat32_free_buffer(buf);
-        return STATUS_ERROR;
-    }
+    // if the first index of copied path is a forward slash we skip it by
+    // advancing the pointer This is because the inner loop would brake at the
+    // first iteration
+    if (inner_copy_of_path[0] == '/')
+        inner_copy_of_path++;
 
-    fat32_dirent_t *entry = (fat32_dirent_t *)buf;
-    uint32_t max_entries  = __fat32_calculate_max_dir_entries();
+    while (*inner_copy_of_path) {
+        char segment[13]; // one segment is name (8) dot (1) and ext (3) + '\0'
+                          // (1).
+        uint8_t index = 0;
 
-    /*
-     * loop from 0 to max entries
-     * check if the current entry name equals to free or deleted. if it does
-     * give the given filename and the current entry name to __fat32_format_83
-     * function. The function will format and save the filename to entrys name
-     * Then deposit some starting info to the entry. Deconstruct the first
-     * cluster of the directory into a high and low clusters. write the new
-     * entry to disk
-     */
-    for (uint32_t i = 0; i < max_entries; i++) {
-        if (entry[i].name[0] == FAT32_DIRENT_FREE ||
-            entry[i].name[0] == FAT32_DIRENT_DELETED) {
-            if (__fat32_format_83(filename, entry[i].name) == STATUS_ERROR) {
-                ERROR("[FAT32][CREATE_DIRENT]: Could not format the name\n");
+        // since there shouldnt be ha '/' at this point we only go from 0 to 11
+        // forward breaking the loop if we find end of file or a slash sooner
+        while (index < 12) {
+            if (inner_copy_of_path[index] == '\0' ||
+                inner_copy_of_path[index] == '/') {
+                segment[index] = '\0';
                 break;
             }
-            entry[i].attributes = FAT32_ATTR_ARCHIVE;
-            memset(entry[i].reserved, 0, sizeof(entry[i].reserved));
-            entry[i].cluster_low  = first_cluster & 0xFFFF;
-            entry[i].cluster_high = (first_cluster >> 16) & 0xFFFF;
-            entry[i].size         = size;
-            entry[i].time         = 0;
-            entry[i].date         = 0;
+            segment[index] = inner_copy_of_path[index];
+            index++;
+        }
+        // quaranteens that segment ends with null terminator
+        segment[index] = '\0';
+        DEBUG("[FAT32][MKDIR]: Current segment %s\n", segment);
+        // advacne the size of index the inner copy for the next iteration of
+        // the main loop
+        inner_copy_of_path += index;
 
-            if (__fat32_write_cluster(starting_cluster, buf) == STATUS_ERROR)
+        DEBUG("[FAT32][MKDIR]: Reading directory data from disk\n");
+        if (__fat32_read_cluster(current_directory_cluster, buf) ==
+            STATUS_ERROR) {
+            ERROR("[FAT32][MKDIR]: Could not read cluster\n");
+            break;
+        }
+
+        fat32_dirent_t *entry = (fat32_dirent_t *)buf;
+        uint32_t max_entries  = __fat32_calculate_max_dir_entries();
+        /*
+         * loop from 0 to max entries
+         * check if the current entry name equals to free or deleted. if it does
+         * give the given filename and the current entry name to
+         * __fat32_format_83 function. The function will format and save the
+         * filename to entrys name Then deposit some starting info to the entry.
+         * Deconstruct the first cluster of the directory into a high and low
+         * clusters. write the new entry to disk
+         */
+        DEBUG("[FAT32][MKDIR]: Finding new spot onthe directory\n");
+        for (uint32_t i = 0; i < max_entries; i++) {
+            if (entry[i].name[0] == FAT32_DIRENT_FREE ||
+                entry[i].name[0] == FAT32_DIRENT_DELETED) {
+                if (__fat32_format_83(segment, entry[i].name) == STATUS_ERROR) {
+                    ERROR("[FAT32][MKDIR]: Could not format the name\n");
+                    break;
+                }
+                DEBUG("[FAT32][MKDIR]: Free entry found! %s\n", entry[i].name);
+                entry[i].attributes = FAT32_ATTR_ARCHIVE;
+                memset(entry[i].reserved, 0, sizeof(entry[i].reserved));
+                entry[i].cluster_low = current_directory_cluster & 0xFFFF;
+                entry[i].cluster_high =
+                    (current_directory_cluster >> 16) & 0xFFFF;
+                entry[i].size = 0;
+                entry[i].time = 0;
+                entry[i].date = 0;
+                if (__fat32_write_cluster(current_directory_cluster, buf) ==
+                    STATUS_ERROR)
+                    return STATUS_ERROR;
                 break;
+            }
+        }
+
+        if (*inner_copy_of_path == '\0') {
             __fat32_free_buffer(buf);
             return STATUS_OK;
         }
+
+        uint32_t next_cluster = __fat32_next_cluster(current_directory_cluster);
+        if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
+            DEBUG("[FAT32][MKDIR]: Next cluster was end of chain\n");
+            next_cluster = __fat32_alloc_cluster();
+
+            if (next_cluster == INVALID_CLUSTER) {
+                DEBUG("[FAT32][MKDIR]: failed to allocate new cluster\n");
+                break;
+            }
+
+            DEBUG("[FAT32][MKDIR]: Chaining next cluster to "
+                  "current_directory_cluster\n");
+            if (__fat32_set_cluster(current_directory_cluster, next_cluster) ==
+                STATUS_ERROR) {
+                ERROR("[FAT32][MKDIR]: Failed to chain clusters\n");
+                break;
+            }
+
+            DEBUG("[FAT32][MKDIR]: marking new cluster to be end of "
+                  "chain\n");
+            if (__fat32_set_cluster(next_cluster, FAT32_CLUSTER_EOC) ==
+                STATUS_ERROR) {
+                ERROR("[FAT32][MKDIR]: Failed to set new cluster as end of "
+                      "chain\n");
+                break;
+            }
+
+            current_directory_cluster = next_cluster;
+        }
+
+        if (inner_copy_of_path[0] == '/')
+            inner_copy_of_path++;
+        current_directory_cluster = next_cluster;
     }
 
     __fat32_free_buffer(buf);
     return STATUS_ERROR;
-} // create_dirent
+} // create_mkdir
 
 // constucts a fat table of from the partition lba
 int fat32_init(uint32_t partition_lba) {

@@ -40,21 +40,21 @@ void fat32_list_dir(uint32_t cluster) {
         if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) ==
             FAT32_LONG_FILE_NAME)
             continue;
-        DEBUG("[FAT32][LIST_DIR]: name: %.11s\n", dir_entry[i].name);
-        DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
+        DEBUG("[FAT32][LIST_DIR]: name: %s\n", dir_entry[i].name);
+        // DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
-    DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
+    // DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
     // Usual cluster hopping
     uint32_t next_cluster = __fat32_next_cluster(cluster);
 
     if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-        DEBUG("[FAT32][LIST_DIR]: End of the chain reached\n");
+        //   DEBUG("[FAT32][LIST_DIR]: End of the chain reached\n");
         __fat32_free_buffer(buf);
         return;
     }
 
-    DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
+    // DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
     __fat32_free_buffer(buf);
     fat32_list_dir(next_cluster);
 } // list_dir

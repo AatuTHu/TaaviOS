@@ -113,8 +113,9 @@ static int open(request_queue_t *req) {
     uint32_t file_cluster = 0;
     uint32_t file_size    = 0;
     const char *path      = (char *)req->path;
+    char *filename[8];
 
-    if (fat32_find_file(path, &file_cluster, &file_size, NULL) ==
+    if (fat32_find_file(path, &file_cluster, &file_size, filename) ==
         STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Could not find file.\n");
         return STATUS_ERROR;
@@ -129,7 +130,12 @@ static int open(request_queue_t *req) {
     }
 
     req->fd = fd;
+    memcpy(req->buf, filename, 8);
     return STATUS_OK;
+}
+
+static int create(request_queue_t *r) {
+    // fat32_create_dirent();
 }
 
 static int write(request_queue_t *req) {

@@ -26,6 +26,12 @@ int sys_open(const char *path, uint32_t flags) {
     return fd;
 }
 
+int sys_mkdir(const char *path) {
+    int result = -1;
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(39), "b"(path));
+    return result;
+}
+
 void sys_close(uint32_t fd) {
     __asm__ __volatile__("int $0x80" : : "a"(6), "b"(fd));
 }

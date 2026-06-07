@@ -83,10 +83,14 @@ void command_close() {
     print("\nclosing file\n");
     close(fd);
     fd = -1;
-    print("\n");
+}
+
+void command_mkdir(const char *filename) {
+    mkdir(filename);
 }
 
 void exec_cmd(char *buf) {
+    print("\n");
     if (str_eq(buf, "help") == 1)
         command_help();
     if (str_eq(buf, "about") == 1)
@@ -101,12 +105,13 @@ void exec_cmd(char *buf) {
         command_read();
     if (str_starts_with(buf, "write ") == 1)
         command_write(buf + 6);
-
     if (str_starts_with(buf, "open ") == 1)
         command_open(buf + 5);
-
     if (str_starts_with(buf, "exec ") == 1)
         command_exec(buf + 5);
+    if (str_starts_with(buf, "mkdir ") == 1)
+        command_mkdir(buf + 6);
+    print("\n");
 }
 
 void main(void) {

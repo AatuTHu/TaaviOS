@@ -17,6 +17,7 @@ int open(const char *path, uint32_t flags);
 int read(int fd, char *buf, int buffer_size);
 void write(int fd, const char *msg);
 void close(uint32_t fd);
+int mkdir(const char *path);
 
 int exec(const char *filename);
 void idle(void);
