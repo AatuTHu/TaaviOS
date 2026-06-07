@@ -199,4 +199,5 @@ void syscall_init() {
     syscall_table[SYS_IDLE]   = sys_idle;
     syscall_table[SYS_YIELD]  = sys_yield;
     syscall_table[SYS_OPEN]   = sys_open;
+    syscall_table[SYS_CLOSE]  = sys_close;
 }

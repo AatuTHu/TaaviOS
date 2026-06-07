@@ -7,6 +7,8 @@ void sys_write(int fd, const char *msg, int len);
 
 void sys_exit(void);
 
+void sys_close(uint32_t fd);
+
 int sys_getpid(void);
 
 void sys_idle(void);

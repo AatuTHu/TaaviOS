@@ -18,6 +18,10 @@ int open(const char *path, uint32_t flags) {
     return sys_open(path, flags);
 }
 
+void close(uint32_t fd) {
+    sys_close(fd);
+}
+
 void write(int fd, const char *msg) {
     sys_write(fd, msg, strlen(msg));
 }

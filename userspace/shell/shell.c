@@ -78,6 +78,12 @@ void command_read() {
     }
 }
 
+void command_close() {
+    print("\nclosing file\n");
+    close(fd);
+    print("\n");
+}
+
 void exec_cmd(char *buf) {
     if (str_eq(buf, "help") == 1)
         command_help();
@@ -87,6 +93,8 @@ void exec_cmd(char *buf) {
         command_get_pid();
     if (str_eq(buf, "exit") == 1)
         command_exit();
+    if (str_eq(buf, "close") == 1)
+        command_close();
     if (str_eq(buf, "read") == 1)
         command_read();
     if (str_starts_with(buf, "write ") == 1) {

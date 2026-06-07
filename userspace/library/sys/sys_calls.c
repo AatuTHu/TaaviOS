@@ -26,6 +26,10 @@ int sys_open(const char *path, uint32_t flags) {
     return fd;
 }
 
+void sys_close(uint32_t fd) {
+    __asm__ __volatile__("int $0x80" : : "a"(6), "b"(fd));
+}
+
 int sys_read(int fd, char *buf, int len) {
     int result;
     __asm__ __volatile__("int $0x80"

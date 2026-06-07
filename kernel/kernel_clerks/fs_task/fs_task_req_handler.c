@@ -166,6 +166,19 @@ static int write(request_queue_t *req) {
     return STATUS_OK;
 }
 
+static int close(request_queue_t *req) {
+    fd_entry_t *entry = fd_entry_table[req->fd];
+    DEBUG("[FS_TASK][CLOSE]: Closing fd_request: %d\n", entry->fd);
+
+    if (entry == NULL) {
+        ERROR("[FS_TASK][WRITE]: entry not found\n");
+        return STATUS_ERROR;
+    }
+
+    fd_entry_table[req->fd] = NULL;
+    kfree(entry);
+}
+
 // entry point of this file. We come here from loop and then decide what to do
 // next
 void fs_handle_request(request_queue_t *req) {
@@ -220,7 +233,12 @@ void fs_handle_request(request_queue_t *req) {
         //__asm__ __volatile__("sti");
         return;
     case CLOSE:
-
+        if (close(req) == STATUS_ERROR) {
+            DEBUG("[FS_TASK][HANDLE_REQ]: CLOSING\n");
+            req->status = FAILED;
+        } else {
+            req->status = TERMINATED;
+        }
         return;
     default:
         ERROR("[FS_TASK][handle_request]: Request type was invalid. "
