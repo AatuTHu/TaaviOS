@@ -74,5 +74,8 @@ check:
 		-I kernel/include/protocols \
 		kernel/ \
 		2>&1 | tee cppcheck_report.txt
-		
-.PHONY: all iso run clean check
+
+format:
+	@echo "Formatting kernel source files..."
+	@find $(KERNEL_DIR) -name "*.c" -o -name "*.h" | xargs clang-format -i
+	@echo "Kernel formatting complete."

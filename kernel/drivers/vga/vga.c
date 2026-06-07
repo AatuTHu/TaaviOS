@@ -1,38 +1,35 @@
 #include "vga.h"
-#include "io.h"
 #include "config.h"
+#include "io.h"
 
 volatile unsigned short *vga = NULL;
 
 /*
-* This is shit should be rewritten, but it is the first things I wrote
-*/
-
+ * This is shit should be rewritten, but it is the first things I wrote
+ */
 
 // Default: White (0x0F) on Black (0x00)
-static uint8_t terminal_attribute = 0x0F; 
+static uint8_t terminal_attribute = 0x0F;
 
 int x_pos = 0;
 int y_pos = 0;
 
-#define terminal_width 80
+#define terminal_width  80
 #define terminal_height 25
-
 
 // Helper to get a "blank" character with the current color
 static uint16_t get_blank_char() {
     return (uint16_t)terminal_attribute << 8 | ' ';
 }
 
-//calculates current cursos position
+// calculates current cursos position
 static int get_terminal_pos() {
     return x_pos + (terminal_width * y_pos);
 }
 
-
-//calculates the "cross" position based on x and y co'oordinates
+// calculates the "cross" position based on x and y co'oordinates
 static int get_pos(int x, int y) {
-    return x + (terminal_width * y); 
+    return x + (terminal_width * y);
 }
 
 static void update_cursor() {
@@ -44,8 +41,8 @@ static void update_cursor() {
 }
 
 void clear_terminal() {
-    x_pos = 0;
-    y_pos = 0;
+    x_pos          = 0;
+    y_pos          = 0;
     uint16_t blank = get_blank_char();
     for (int i = 0; i < terminal_width * terminal_height; i++) {
         vga[i] = blank;
@@ -65,24 +62,22 @@ void vga_set_color(enum vga_color fg, enum vga_color bg) {
 void vga_init() {
     x_pos = 0;
     y_pos = 0;
-    vga = (volatile unsigned short *)VGA_MEMORY_ADDRESS; //hardcode hack
-    //clear_terminal();
+    vga   = (volatile unsigned short *)VGA_MEMORY_ADDRESS; // hardcode hack
+    // clear_terminal();
 }
 
 static void lift_texts_up() {
     // Copy rows up
-    for(int y = 1; y < terminal_height; y++) {
-        for(int x = 0; x < terminal_width; x++) {
-            vga[get_pos(x, y-1)] = vga[get_pos(x, y)];
+    for (int y = 1; y < terminal_height; y++) {
+        for (int x = 0; x < terminal_width; x++) {
+            vga[get_pos(x, y - 1)] = vga[get_pos(x, y)];
         }
-    }  
+    }
 
     // Clear the last line with the current color
     uint16_t blank = get_blank_char();
-    for(int x = 0; x < terminal_width; x++) {
-        vga[get_pos(x, 24)] = blank;
-    }
-    
+    for (int x = 0; x < terminal_width; x++) { vga[get_pos(x, 24)] = blank; }
+
     y_pos = 23;
 }
 
@@ -95,13 +90,14 @@ static void backspace_pressed() {
     } else {
         return; // At 0,0 - nothing to do
     }
-    
-    vga[get_terminal_pos()] = get_blank_char(); 
+
+    vga[get_terminal_pos()] = get_blank_char();
     update_cursor();
 }
 
 void vga_putchar(char c) {
-    if(y_pos >= 25) lift_texts_up();
+    if (y_pos >= 25)
+        lift_texts_up();
 
     switch (c) {
     case '\n':
@@ -113,17 +109,18 @@ void vga_putchar(char c) {
         return;
     case '\t':
         x_pos = (x_pos + 8) & ~7; // Standard 8-space tabs
-        if(x_pos >= 80) {
+        if (x_pos >= 80) {
             y_pos++;
             x_pos = 0;
         }
         break;
-    default: 
+    default:
         // Combine attribute (high) and character (low)
-        vga[get_terminal_pos()] = (uint16_t)terminal_attribute << 8 | (unsigned char)c;
+        vga[get_terminal_pos()] =
+            (uint16_t)terminal_attribute << 8 | (unsigned char)c;
         x_pos++;
-        
-        if(x_pos >= 80) {
+
+        if (x_pos >= 80) {
             x_pos = 0;
             y_pos++;
         }
@@ -131,13 +128,11 @@ void vga_putchar(char c) {
     }
 
     // Check again if the newline/wrap pushed us off screen
-    if(y_pos >= 25) lift_texts_up();
-    
+    if (y_pos >= 25)
+        lift_texts_up();
 }
 
 void vga_write(const char *msg) {
-    for (int i = 0; msg[i] != '\0'; i++) {
-        vga_putchar(msg[i]);
-    }
+    for (int i = 0; msg[i] != '\0'; i++) { vga_putchar(msg[i]); }
     update_cursor();
 }

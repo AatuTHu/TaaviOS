@@ -1,8 +1,8 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 void memcpy(void *dst, const void *src, uint32_t n);
 void memset(void *ptr, int value, int size);

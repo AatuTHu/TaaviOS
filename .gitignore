@@ -6,3 +6,5 @@
 *.elf
 *.img
 .vscode
+.clang-format
+.editorconfig

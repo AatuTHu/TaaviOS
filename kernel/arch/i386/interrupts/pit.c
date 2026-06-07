@@ -1,14 +1,14 @@
 #include "pit.h"
+#include "config.h"
 #include "io.h"
 #include "isr.h"
-#include "config.h"
 #include "klog.h"
 
 static volatile uint32_t tick_count = 0;
-static uint32_t ticks_per_second = 0;
+static uint32_t ticks_per_second    = 0;
 
 void pit_init(uint32_t frequency) {
-    klog("[PIT] Initializing PIT with frequency %d\n",frequency);
+    klog("[PIT] Initializing PIT with frequency %d\n", frequency);
     ticks_per_second = frequency;
 
     uint32_t divisor = clock_frequency / frequency;
@@ -32,14 +32,14 @@ uint32_t pit_get_ticks(void) {
 }
 
 uint32_t pit_get_uptime_s(void) {
-   return tick_count / ticks_per_second;
+    return tick_count / ticks_per_second;
 }
 
 void pit_sleep_ms(uint32_t ms) {
     uint32_t tick_count_start = tick_count;
-    
+
     // Convert target milliseconds to the equivalent number of ticks
-    uint32_t ticks_to_wait = ms * (ticks_per_second / 1000); 
+    uint32_t ticks_to_wait = ms * (ticks_per_second / 1000);
 
     // Loop until the required time has elapsed in the background
     while ((tick_count - tick_count_start) < ticks_to_wait) {
