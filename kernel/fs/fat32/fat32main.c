@@ -17,8 +17,8 @@ fat32_fs_t f32_fs;
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
-int fat32_find_file(const char *path, uint32_t *out_cluster,
-                    uint32_t *out_size) {
+int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
+                    char *out_fname) {
 
     if (path == NULL) {
         ERROR("[FAT32][FIND_FILE]: Given path was invalid\n");
@@ -80,11 +80,13 @@ int fat32_find_file(const char *path, uint32_t *out_cluster,
         // however if it is a forward slash advance by one and mask the
         // attributes to see that it is a directory and not a file
         if (*inner_copy_of_path == '\0') {
-            DEBUG("[FAT32][FIND_FILE]: Directory cluster found: %d\n",
-                  found_cluster);
-            DEBUG("[FAT32][FIND_FILE]: Size: %d\n", found_size);
+            memcpy(out_fname, segment, 8);
             *out_cluster = found_cluster;
             *out_size    = found_size;
+            DEBUG("[FAT32][FIND_FILE]: Directory cluster found: %d\n",
+                  *out_cluster);
+            DEBUG("[FAT32][FIND_FILE]: Size: %d\n", *out_size);
+            DEBUG("[FAT32][FIND_FILE]: last segment: %s\n", out_fname);
             return STATUS_OK;
         } else {
             if (inner_copy_of_path[0] == '/')

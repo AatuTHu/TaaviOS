@@ -182,15 +182,6 @@ void kernel_main(const uint32_t *mboot_info) {
         }
     }
 
-    if (total_mods > 1) {
-        page_directory_t *shell_pd = vmm_create_directory();
-        uint32_t shell_phys        = module_starts[1];
-        uint32_t entry = elf_load((void *)phys_to_virt(shell_phys), shell_pd);
-        if (entry != ET_NONE) {
-            task_create(-1, entry, "shell", shell_pd, USER_TASK);
-        }
-    }
-
     pit_init(PIT_FREQUENCY);
     __asm__ __volatile__("sti");
 

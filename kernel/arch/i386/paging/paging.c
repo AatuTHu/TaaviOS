@@ -14,9 +14,9 @@ void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
         return;
     }
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
-    // klog("[PAGING] Mapping to page directory index: %d\n", pd_index);
+    // DEBUG("[PAGING] Mapping to page directory index: %d\n", pd_index);
     uint32_t pt_index = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
-    // klog("[PAGING] Page Table index: %d\n", pt_index);
+    // DEBUG("[PAGING] Page Table index: %d\n", pt_index);
 
     uint32_t pd_flags = PAGE_PRESENT | PAGE_RW;
     if (flags & PAGE_USER) {
@@ -49,7 +49,7 @@ void paging_unmap(page_directory_t *dir, uint32_t virt) {
 }
 
 page_directory_t *paging_create_directory() {
-    klog("[PAGING][pcd]: Creating virtual page directory\n");
+    DEBUG("[PAGING][pcd]: Creating virtual page directory\n");
     page_directory_t *phys_addr = (page_directory_t *)
         pmm_alloc(); // ask pmm to allocate a physical page dir
     uint32_t vaddr =
@@ -61,7 +61,7 @@ page_directory_t *paging_create_directory() {
     memcpy(&(*virt_dir)[KERNEL_PD_INDEX_START],
            &kernel_page_dir[KERNEL_PD_INDEX_START],
            KERNEL_PD_ENTRIES * sizeof(uint32_t));
-    klog("[PAGING][pcd]: Page created\n");
+    DEBUG("[PAGING][pcd]: Page created\n");
     return (page_directory_t *)(vaddr);
 }
 
@@ -71,9 +71,9 @@ void paging_switch(page_directory_t *dir) {
 }
 
 void paging_init() {
-    klog("[PAGING] Starting to initialize PAGING\n");
+    DEBUG("[PAGING] Starting to initialize PAGING\n");
     for (int i = 0; i < ENTRIES_PER_TABLE; i++) { kernel_page_dir[i] = 0; }
-    klog("[PAGING] PAGE DIRECTORY INITIALIZED\n");
+    DEBUG("[PAGING] PAGE DIRECTORY INITIALIZED\n");
 
     for (uint32_t i = 0; i < ENTRIES_PER_TABLE; i++) {
         paging_map(&kernel_page_dir, KERNEL_VIRTUAL_START + i * PAGE_SIZE,
@@ -83,10 +83,10 @@ void paging_init() {
 
     paging_map(&kernel_page_dir, VGA_MEMORY_ADDRESS, VGA_PHYSICAL_ADDRESS,
                PAGE_PRESENT | PAGE_RW);
-    klog("[PAGING] VGA page created\n");
-    klog("[PAGING] SWITCHING TO KERNEL PAGE DIRECTORY\n");
+    DEBUG("[PAGING] VGA page created\n");
+    DEBUG("[PAGING] SWITCHING TO KERNEL PAGE DIRECTORY\n");
     paging_switch(&kernel_page_dir);
-    klog("[PAGING] PAGING INITIALIZED SUCCESFULLY\n");
+    DEBUG("[PAGING] PAGING INITIALIZED SUCCESFULLY\n");
 }
 
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
@@ -96,20 +96,20 @@ uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
                                       // directory missing we cant give a valid
                                       // page? I think this is right.
     }
-    klog("[PAGING]: getting physical location for page directory: %x, with "
-         "virt: %d\n",
-         (uint32_t)dir, virt);
+    DEBUG("[PAGING]: getting physical location for page directory: %x, with "
+          "virt: %d\n",
+          (uint32_t)dir, virt);
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
-    klog("[PAGING]: page directory index: %d\n", pd_index);
+    DEBUG("[PAGING]: page directory index: %d\n", pd_index);
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {
-        klog("[PAGING] page not found\n");
+        DEBUG("[PAGING] page not found\n");
         return INVALID_PHYSICAL_PAGE;
     }
 
     uint32_t pt_index = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
-    klog("[PAGING]: page table index: %d\n", pt_index);
+    DEBUG("[PAGING]: page table index: %d\n", pt_index);
     uint32_t pt_virt = phys_to_virt(((*dir)[pd_index] & PAGE_FRAME_MASK));
-    klog("[PAGING]: virtual page table: %x\n", pt_virt);
+    DEBUG("[PAGING]: virtual page table: %x\n", pt_virt);
     page_table_t *pt = (page_table_t *)pt_virt;
 
     return (*pt)[pt_index] & PAGE_FRAME_MASK;

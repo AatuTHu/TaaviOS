@@ -1,6 +1,7 @@
 #include "syscall.h"
 #include "config.h"
 #include "elf.h"
+#include "fat32.h"
 #include "fs_task.h"
 #include "keyboard.h"
 #include "klog.h"
@@ -148,20 +149,55 @@ static int32_t sys_getpid(struct registers *r) {
     return (task) ? (int32_t)task->pid : -1;
 } // sys_getpid
 
-/*
- *   This is a hack function. Does not really execute elf binaries. I made it
- * for now so that I could test multitasking. NEEDS TO BE FIXED
+/**
+ * Sys_exec - Execute binaries.
+ * @r: - current context registers
+ *
+ * Description:
+ * This function find the file at the end of given path.
+ * If it finds it, it read the contents of the file and then makes an elf binary
+ * of it After that create page directory, a task and add it to scheduler
+ *
+ * Context: to execute tasks.
+ * Return: STATUS_ERROR || STATUS_OK.
  */
 static int32_t sys_exec(struct registers *r) {
-    // DEBUG("[SYSCALL][SYS_EXEC]: caller: %s\n",
-    // scheduler_get_current_task()->name);
-    char *filename = (char *)r->ecx;
-    task_t *task   = get_task_by_name(filename);
-    if (task == NULL) {
+    DEBUG("[SYSCALL][SYS_EXEC]\n");
+    task_t *current      = scheduler_get_current_task();
+    const char *filename = (char *)r->ecx;
+    if (current == NULL || filename == NULL) {
         return STATUS_ERROR;
     }
 
+    uint32_t file_cluster = 0;
+    uint32_t file_size    = 0;
+    char task_name[8];
+    DEBUG("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
+    if (fat32_find_file(filename, &file_cluster, &file_size, &task_name) ==
+        STATUS_ERROR) {
+        ERROR("[SYS_EXEC]: Did not find the file\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG("[SYSCALL][SYS_EXEC]: continuing to read file with name %s\n",
+          task_name);
+
+    uint8_t *binary_buffer = (uint8_t *)kmalloc(file_size);
+    if (fat32_read_file(file_cluster, file_size, binary_buffer) ==
+        STATUS_ERROR) {
+        ERROR("[SYS_EXEC]: Could not read the file\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG("[SYSCALL][SYS_EXEC]: creating the task\n");
+
+    page_directory_t *pd = vmm_create_directory();
+    uint32_t entry       = elf_load(binary_buffer, pd);
+    kfree(binary_buffer);
+    task_t *task = task_create(-1, entry, task_name, pd, USER_TASK);
+
     scheduler_add(task);
+
     return STATUS_OK;
 } // sys_exec
 

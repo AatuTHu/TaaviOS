@@ -53,6 +53,8 @@ disk:
 	dd if=/dev/zero of=fat.img bs=1M count=64
 	mkfs.fat -F 32 fat.img
 	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::hello.txt
+	mmd -i fat.img ::sysbin
+	mcopy -i fat.img ./isodir/boot/shell.elf ::sysbin/shell
 
 check:
 	cppcheck \

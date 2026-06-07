@@ -4,6 +4,6 @@
 
 void main(void) {
     // print("Starting shell\n");
-    if (exec("shell") != 0)
+    if (exec("/sysbin/shell") != 0)
         return;
 }

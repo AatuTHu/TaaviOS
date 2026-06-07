@@ -9,12 +9,13 @@ void command_help() {
     print("\n------------------------------------------------------------------"
           "-------------\n");
     print("Available commands\n");
-    print("- help               'Prints this list'\n");
-    print("- about              'Useless function'\n");
-    print("- get my pid         'Shells pid'\n");
-    print("- exec  [task]       'Executes a task'\n");
-    print("- open  [path]       'Open a file'\n");
+    print("- help               'Prints this list'     \n");
+    print("- about              'Useless function'     \n");
+    print("- get my pid         'Shells pid'           \n");
+    print("- exec  [task]       'Executes a task'      \n");
+    print("- open  [path]       'Open a file'          \n");
     print("- write [text]       'Writes to opened file \n");
+    print("- close              'close opened file'    \n");
     print("- read               'Reads the opened file'\n");
     print("- exit               'Exits and kills shell'\n");
     print("\n");
@@ -81,6 +82,7 @@ void command_read() {
 void command_close() {
     print("\nclosing file\n");
     close(fd);
+    fd = -1;
     print("\n");
 }
 
@@ -97,18 +99,14 @@ void exec_cmd(char *buf) {
         command_close();
     if (str_eq(buf, "read") == 1)
         command_read();
-    if (str_starts_with(buf, "write ") == 1) {
+    if (str_starts_with(buf, "write ") == 1)
         command_write(buf + 6);
-        return;
-    }
-    if (str_starts_with(buf, "open ") == 1) {
+
+    if (str_starts_with(buf, "open ") == 1)
         command_open(buf + 5);
-        return;
-    }
-    if (str_starts_with(buf, "exec ") == 1) {
+
+    if (str_starts_with(buf, "exec ") == 1)
         command_exec(buf + 5);
-        return;
-    }
 }
 
 void main(void) {

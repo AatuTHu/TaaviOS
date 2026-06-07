@@ -504,7 +504,7 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
      */
     while (is_done != 1) {
         if (__fat32_read_cluster(current_cluster, buf) == STATUS_ERROR) {
-            ERROR("[FAT32][FIND_FILE]: Could not read cluster\n");
+            ERROR("[FAT32][SEARCH_DIR]: Could not read cluster\n");
             __fat32_free_buffer(buf);
             return STATUS_ERROR;
         }
@@ -545,9 +545,10 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
                                dir_entry[i].cluster_low;
                 *out_size    = dir_entry[i].size;
                 *out_attr    = dir_entry[i].attributes;
-                DEBUG("[FAT32][FIND_FILE]: file found!\n");
-                DEBUG("[FAT32][FIND_FILE]: cluster: %d\n", *out_cluster);
-                DEBUG("[FAT32][FIND_FILE]: size: %d\n", *out_size);
+                DEBUG("[FAT32][SEARCH_DIR]: file name %s\n", dir_entry[i].name);
+                DEBUG("[FAT32][SEARCH_DIR]: file found!\n");
+                DEBUG("[FAT32][SEARCH_DIR]: cluster: %d\n", *out_cluster);
+                DEBUG("[FAT32][SEARCH_DIR]: size: %d\n", *out_size);
                 __fat32_free_buffer(buf);
                 return STATUS_OK;
             }
@@ -562,10 +563,10 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
          * entries proceed to next cluster
          */
         uint32_t next_cluster = __fat32_next_cluster(current_cluster);
-        DEBUG("[FAT32][FIND_FILE]: Next cluster number: %d\n", next_cluster);
+        DEBUG("[FAT32][SEARCH_DIR]: Next cluster number: %d\n", next_cluster);
 
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG("[FAT32][FIND_FILE]: End of the cluster chain\n");
+            DEBUG("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
             __fat32_free_buffer(buf);
             return STATUS_ERROR;
         }

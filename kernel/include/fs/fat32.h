@@ -96,8 +96,8 @@ typedef struct __attribute__((packed)) {
 /* Read */
 int fat32_init(uint32_t partition_lba);
 void fat32_list_dir(uint32_t cluster);
-int fat32_find_file(const char *path, uint32_t *out_cluster,
-                    uint32_t *out_size);
+int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
+                    char *out_fname);
 int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf);
 int fat32_update_dirent_size(uint32_t dir_cluster, uint32_t file_cluster,
                              uint32_t new_size);

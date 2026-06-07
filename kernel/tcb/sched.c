@@ -278,7 +278,7 @@ int scheduler_has_runnable_task() {
 }
 
 void scheduler_wake_task(uint32_t pid) {
-    ////DEBUG("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
+    DEBUG("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for (int i = 0; i < task_count; i++) {
         if (tasks[i] && tasks[i]->pid == pid) {
             ////DEBUG("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n",

@@ -105,23 +105,6 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     kfree(task);
 }
 
-task_t *get_task_by_name(char *name) { // A helper function not inteded to stay.
-                                       // Doesn't feel like the best solution
-    if (name == NULL)
-        return NULL;
-
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (task_table[i] == NULL) {
-            continue;
-        }
-
-        if (strcmp(task_table[i]->name, name) == 0) {
-            return task_table[i];
-        }
-    }
-    return NULL;
-}
-
 task_t *task_get(uint32_t pid) {
 
     if (pid <= CLERK_COUNT) {
