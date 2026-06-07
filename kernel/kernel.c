@@ -94,7 +94,7 @@ static void init_filesystems() {
     }
     fat32_init(fat32_lba);
 
-    fat32_mkdirp(f32_fs.root_cluster, "system/hello/hello.txt");
+    fat32_mkdirp(f32_fs.root_cluster, "sysbin/test/hello");
 
     fat32_list_dir(f32_fs.root_cluster);
     /* if (fat32_find_file(f32_fs.root_cluster, "HELLI   ", "TXT",

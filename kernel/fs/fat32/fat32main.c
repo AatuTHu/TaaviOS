@@ -203,14 +203,15 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster,
 }
 
 /**
- * __fat32_create_drip() - Creates directory entry.
+ * __fat32_create_mkdirp() - Creates directory entry.
  *
  * @starting_cluster: starting directory cluster
  * @path: directory path
  *
  * Description:
- * Takes the path char and creates the whole directory chain up to it.
- *
+ * This function makes a chain of directories as long as the path is
+ * Before making a new directory it check if on with the same name exsist
+ * thus preventing a dublication.
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
@@ -224,15 +225,11 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
     const char *inner_copy_of_path     = path;
     uint8_t name83[11];
 
-    // if the first index of copied path is a forward slash we skip it by
-    // advancing the pointer This is because the inner loop would brake at the
-    // first iteration
     if (inner_copy_of_path[0] == '/')
         inner_copy_of_path++;
 
     while (*inner_copy_of_path) {
-        char segment[13]; // one segment is name (8) dot (1) and ext (3) + '\0'
-                          // (1).
+        char segment[13];
         uint8_t index = 0;
 
         // since there shouldnt be ha '/' at this point we only go from 0 to 11
@@ -246,48 +243,44 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
             segment[index] = inner_copy_of_path[index];
             index++;
         }
-        // quaranteens that segment ends with null terminator
+
         segment[index] = '\0';
-        DEBUG("[FAT32][MKDIR]: Current segment %s\n", segment);
-        // advacne the size of index the inner copy for the next iteration of
-        // the main loop
         inner_copy_of_path += index;
 
-        DEBUG("[FAT32][MKDIR]: Reading directory data from disk\n");
+        DEBUG("[FAT32][MKDIRP]: Formating current segment %s\n", segment);
+        if (__fat32_format_83(segment, name83) == STATUS_ERROR) {
+            ERROR("[FAT32][MKDIRP]: Could not format the name\n");
+            break;
+        }
+
         if (__fat32_read_cluster(current_directory_cluster, buf) ==
             STATUS_ERROR) {
-            ERROR("[FAT32][MKDIR]: Could not read cluster\n");
+            ERROR("[FAT32][MKDIRP]: Could not read cluster\n");
             break;
         }
 
         fat32_dirent_t *entry = (fat32_dirent_t *)buf;
         uint32_t max_entries  = __fat32_calculate_max_dir_entries();
-        /*
-         * loop from 0 to max entries
-         * check if the current entry name equals to free or deleted. if it does
-         * give the given filename and the current entry name to
-         * __fat32_format_83 function. The function will format and save the
-         * filename to entrys name Then deposit some starting info to the entry.
-         * Deconstruct the first cluster of the directory into a high and low
-         * clusters. write the new entry to disk
-         */
-        DEBUG("[FAT32][MKDIR]: Finding new spot onthe directory\n");
+
         for (uint32_t i = 0; i < max_entries; i++) {
-            if (entry[i].name[0] == FAT32_DIRENT_FREE ||
-                entry[i].name[0] == FAT32_DIRENT_DELETED) {
-                if (__fat32_format_83(segment, entry[i].name) == STATUS_ERROR) {
-                    ERROR("[FAT32][MKDIR]: Could not format the name\n");
+            if (entry[i].name[0] != FAT32_DIRENT_FREE) {
+                if (memcmp(name83, entry[i].name, 11) == 0) {
+                    DEBUG("[FAT32][MKDIRP]: Match found\n");
                     break;
+                } else {
+                    DEBUG("[FAT32][MKDIRP]: Did, not match\n");
                 }
-                DEBUG("[FAT32][MKDIR]: Free entry found! %s\n", entry[i].name);
-                entry[i].attributes = FAT32_ATTR_ARCHIVE;
+            } else {
+                DEBUG("[FAT32][MKDIRP]: Free entry found! %s\n", name83);
+                strcpy(entry[i].name, name83);
                 memset(entry[i].reserved, 0, sizeof(entry[i].reserved));
                 entry[i].cluster_low = current_directory_cluster & 0xFFFF;
                 entry[i].cluster_high =
                     (current_directory_cluster >> 16) & 0xFFFF;
-                entry[i].size = 0;
-                entry[i].time = 0;
-                entry[i].date = 0;
+                entry[i].attributes = FAT32_ATTR_DIRECTORY;
+                entry[i].size       = 0;
+                entry[i].time       = 0;
+                entry[i].date       = 0;
                 if (__fat32_write_cluster(current_directory_cluster, buf) ==
                     STATUS_ERROR)
                     return STATUS_ERROR;
@@ -302,27 +295,27 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
 
         uint32_t next_cluster = __fat32_next_cluster(current_directory_cluster);
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG("[FAT32][MKDIR]: Next cluster was end of chain\n");
+            DEBUG("[FAT32][MKDIRP]: Next cluster was end of chain\n");
             next_cluster = __fat32_alloc_cluster();
 
             if (next_cluster == INVALID_CLUSTER) {
-                DEBUG("[FAT32][MKDIR]: failed to allocate new cluster\n");
+                DEBUG("[FAT32][MKDIRP]: failed to allocate new cluster\n");
                 break;
             }
 
-            DEBUG("[FAT32][MKDIR]: Chaining next cluster to "
+            DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
                   "current_directory_cluster\n");
             if (__fat32_set_cluster(current_directory_cluster, next_cluster) ==
                 STATUS_ERROR) {
-                ERROR("[FAT32][MKDIR]: Failed to chain clusters\n");
+                ERROR("[FAT32][MKDIRP]: Failed to chain clusters\n");
                 break;
             }
 
-            DEBUG("[FAT32][MKDIR]: marking new cluster to be end of "
+            DEBUG("[FAT32][MKDIRP]: marking new cluster to be end of "
                   "chain\n");
             if (__fat32_set_cluster(next_cluster, FAT32_CLUSTER_EOC) ==
                 STATUS_ERROR) {
-                ERROR("[FAT32][MKDIR]: Failed to set new cluster as end of "
+                ERROR("[FAT32][MKDIRP]: Failed to set new cluster as end of "
                       "chain\n");
                 break;
             }
@@ -337,7 +330,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
 
     __fat32_free_buffer(buf);
     return STATUS_ERROR;
-} // create_mkdir
+} // create_mkdrip
 
 // constucts a fat table of from the partition lba
 int fat32_init(uint32_t partition_lba) {

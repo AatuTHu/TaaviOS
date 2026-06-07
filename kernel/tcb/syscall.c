@@ -141,6 +141,8 @@ static int32_t sys_close(struct registers *r) {
     }
 
     add_request_to_queue(current->pid, CLOSE, fd, NULL, NULL, 0, 0);
+
+    return STATUS_OK;
 }
 
 static int32_t sys_getpid(struct registers *r) {
