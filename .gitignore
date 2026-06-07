@@ -1,10 +1,8 @@
 /isodir
 /build
-/docs
 *.o
 *.bin
 *.iso
-*.txt
 *.elf
 *.img
 .vscode

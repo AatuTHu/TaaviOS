@@ -1,15 +1,5 @@
 #include "fat32.h"
 
-
-
-/*
-*   This files contains the helpers that the main fat32 functions use.
-*   
-*   First we have calculate functions, then alloc unalloc buffer functions and the rest are
-*   cluster read, write, next cluster, searh_dir
-*
-*/
-
 /*
 * Calculate the Logical Block Address (LBA) of the FAT sector 
 * that contains the allocation entry for the given cluster.
@@ -49,7 +39,7 @@ uint32_t __fat32_calculate_offset(uint32_t cluster) {
 * Calculate the total size of a cluster in bytes
 * sector_per_cluster * (sector_size = 512)
 */
-uint32_t fat32_calculate_cluster_size() {
+uint32_t __fat32_calculate_cluster_size() {
     return f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
 }
 
@@ -57,7 +47,7 @@ uint32_t fat32_calculate_cluster_size() {
 * Calculate the maximum number of directory entries that can fit in a single cluster
 * (sector_per_cluster * (sector_size = 512)) / (dirent_size = 32);
 */
-uint32_t __fat32_calculate_maximum_number_of_directory_entries() {
+uint32_t __fat32_calculate_max_dir_entries() {
     return (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE;
 }
 
@@ -67,7 +57,7 @@ uint32_t __fat32_calculate_maximum_number_of_directory_entries() {
 *  so I decided to make a dedicated helper func. Could be more dynamic with a few addition but will do for now
 */
 uint8_t *__fat32_allocate_buffer() { 
-    uint32_t cluster_size = fat32_calculate_cluster_size();
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
     uint8_t *buf = (uint8_t *)kmalloc(cluster_size);
 
     if(buf == NULL) {
@@ -78,15 +68,26 @@ uint8_t *__fat32_allocate_buffer() {
     return buf;
 }
 
-//quess what this does.
+/*
+* This function is useless might aswell just use kfree
+*/
 void __fat32_free_buffer(uint8_t *buf) {
     if(buf != NULL) {
         kfree(buf);
     }
 }
 
-/*
-*  Walk the cluster chain starting from the given input cluster
+
+/**
+* __fat32_next_cluster() - Used to walk in a specific the cluster chain.
+*
+* @cluster: base cluster from which to start the walk
+*
+* Description:
+* Function calculates base clusters lba an then reads from disk
+* Then calculates the next entry number
+*
+* Return: INVALID_CLUSTER || next CLUSTER NUMBER.
 */
 uint32_t __fat32_next_cluster(uint32_t cluster) {
     uint8_t *buf = __fat32_allocate_buffer();
@@ -125,8 +126,17 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
     return (entry & FAT32_CLUSTER_MASK);
 }
 
-/*
-* Reads the data of the given cluster to given buffer
+/**
+* __fat32_read_cluster() - Read data from disk to a buffer.
+*
+* @cluster: cluster whose data will be read
+* @buf:     buffer where the data will be read
+*
+* Description:
+* This functions calculates the sector number of the given cluster then reads
+* to given buffer the contents from disk
+*
+* Return: STATUS_ERROR || STATUS_OK.
 */
 int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
     //Get the real sector number of the given cluster
@@ -149,8 +159,16 @@ int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
 }
 
 
-/*
-* Allocate new cluster return newly allocated cluster number or invalid cluster
+/**
+* __fat32_alloc_cluster() - Allocates next empty cluster from FAT table
+*
+* @void:
+*
+* Description:
+* Allocation starts from the index of last allocated cluster and looks for next free cluster from there on.
+* No wrap around so if there are freed cluster before it it will not find them. 
+*
+* Return: INVALID_CLUSTER or CLUSTER NUMBER.
 */
 uint32_t __fat32_alloc_cluster(void) {
 
@@ -229,8 +247,18 @@ uint32_t __fat32_alloc_cluster(void) {
     return INVALID_CLUSTER;
 }
 
-/*
-* Write the contents of the buffer to the given cluster
+
+/**
+* __fat32_write_cluster() - Writes data to a disk.
+*
+* @cluster: base cluster to write
+* @buf:     holds what to write
+*
+* Description:
+* Calculates sector number of the given cluster and then writes
+* the content of buffer to there.
+*
+* Return: STATUS_ERROR || STATUS_OK
 */
 int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
     // Start by calculating the clusters starting sector number in the data region.
@@ -253,8 +281,18 @@ int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
     return STATUS_OK;
 }
 
-/*
-* Updates given cluster with the given value
+/**
+* __fat32_set_cluster() - Updates clusters attributes
+*
+* @cluster: cluster that will be updated
+* @value:   holds the updated information
+*
+* Description:
+* When a specific cluster needs it values changed, it can be done using this function
+* for example it receives a cluster and as value it receives EOC. Function then set
+* That value to the cluster and writes it to disk
+*
+* Return: STATUS_ERROR || STATUS_OK.
 */
 int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
 
@@ -302,8 +340,10 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
 }
 
 
-/*
-* unallocates the cluster. a Stub for now. until I have time to make it right it is this now
+
+/**
+* __fat32_unalloc_cluster()
+* might as well use set_cluster instead. This function is a stub, but lets see if it can be used
 */
 uint32_t __fat32_unalloc_cluster(uint32_t cluster) {
     if(__fat32_set_cluster(cluster, FAT32_CLUSTER_FREE) == STATUS_ERROR) {
@@ -313,8 +353,21 @@ uint32_t __fat32_unalloc_cluster(uint32_t cluster) {
     return STATUS_OK;
 }
 
-/*
-* Formats a given file or directory name into the FAT 8.3 short filename specification.
+
+/**
+* __fat32_format_83() - Formats fat 8.3 compatitable name to dst
+*
+* @filename: name that requires formatting
+* @dst:      formated name is copied to this
+*
+* Description:
+* Because we only have support for shorter name with 8 chars to name, 1 dot and 3 for ext
+* This function takes formats a single char at a time from the filename turning it 
+* in upper case if it was not already. Never makes longer name than 8 chars long
+* leaves spaces if name or ext was shorter than 8 or 3. If no dot in filename
+* it formats only to 8 chars long and returns
+*
+* Return: STATUS_ERROR or STATUS_OK.
 */
 int __fat32_format_83(const char *filename, uint8_t *dst) {
 
@@ -379,8 +432,21 @@ int __fat32_format_83(const char *filename, uint8_t *dst) {
     return STATUS_OK;
 }
 
-/*
-* Searches from a given directory cluster the given name and give the found cluster, found size and attributes back.
+
+/**
+* __fat32_search_dir() - Searches for a specific directory
+*
+* @dir_cluster: starting directory cluster.
+* @name83:      holds the name taht we are looking for
+* @out_cluster: function places the found cluster in here
+* @out_size:    function places found size in here
+* @out_attr:    function places found attributes in here      
+*
+* Description:
+* Function searches for a specific cluster starting from the given dir_cluster.
+* if it finds the dir in question it places its metadata to outgoing params.
+*
+* Return: STATUS_ERROR or STATUS_OK.
 */
 int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint32_t *out_cluster, uint32_t *out_size, uint8_t  *out_attr) {
     uint8_t *buf = __fat32_allocate_buffer();
@@ -401,7 +467,7 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint32_t *ou
 
         //Convert the buffer to a directory entry array
         fat32_dirent_t* dir_entry = (fat32_dirent_t*)buf;
-        uint32_t max_dir_entries = __fat32_calculate_maximum_number_of_directory_entries();
+        uint32_t max_dir_entries = __fat32_calculate_max_dir_entries();
 
         /*
         * Loop as many times as there are entries in a directory.

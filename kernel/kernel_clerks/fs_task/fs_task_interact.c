@@ -1,18 +1,28 @@
 #include "fs_task.h"
 
-/*
-* Fs_task
-* Design & Implementation: A.H, 2026
+/**
+  * Fs_task
+  * Design & Implementation:
+  * @author: A.H, 2026
 */
 
-/*
-* This file contains the public call functions that should be called from the sys_calls
-*
-*/
 
-/*
-* ADD_REQUEST_TO_QUEUE
-* Takes the params sent to it via syscall and makes an work "order" for fs_task. 
+/**
+   * add_request_to_queue - A noticeboard to pin request.
+   * @pid: caller's pid to attach to request
+   * @type: type of requst
+   * @fd: file descriptor number 
+   * @path: path to a file
+   * @buf: buffer containing data
+   * @buffer_size: -
+   * @flags: flags to set when opening a file
+   * 
+   * Description:
+   * Makes a new request of the given params. Then add that request to queue.
+   * After that wakes fs_task and sets its priority as high.
+   *
+   * Context: To achieve asynchronity between tasks No direct contact with fs_task is needed.
+   * Return: STATUS_OK on succesful entry added and STATUS_ERROR if failed.
 */
 int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const char* path, const char *buf, uint32_t buffer_size, uint32_t flags) {
   //DEBUG("[FS_TASK][ADD_REQUEST]: adding a request for fs_task\n");
@@ -61,9 +71,17 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd, const cha
   return STATUS_OK;
 }
 
-/*
-* This function gives the result to outside world. Mainly for the caller in syscall
-*/
+/**
+ * Collect request - Should a task want to collect results.
+ * @pid: Callers pid to match with request pid
+ * @buf: on read situation. Read the contents of a request to buffer
+ *
+ * Description:
+ * more lenghty desription on what the function DOES
+ *
+ * Context: It was made so that caller could do other things and be notified to when to collect.
+ * Return: the type of request or STATUS_ERROR
+ */
 int collect_request(uint32_t pid, char *out) {
   __asm__ __volatile__("cli");
   //DEBUG("[FS_TASK][COLLECT_REQUEST]: Fetching request for %d\n", pid);

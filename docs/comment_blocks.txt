@@ -1,0 +1,22 @@
+At the top of the function: 
+
+/*
+ * This file contains functions:
+ *
+ *
+ *
+*/
+
+function blocks:
+
+/**
+* function name - short description on when to use.
+* @param1: short description.
+* @param2: short desription.
+*
+* Description:
+* more lenghty desription on what the function DOES
+*
+* Context: Why was it made, when to call it.
+* Return: what if successfull, what if unsuffessfull.
+*/

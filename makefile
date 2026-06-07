@@ -47,6 +47,7 @@ clean:
 	find . -name '*.o' -delete
 	rm -f taavi.bin taavi.iso
 	rm -rf $(BUILD) isodir
+	rm -f cppcheck_report.txt
 
 disk:
 	dd if=/dev/zero of=fat.img bs=1M count=64

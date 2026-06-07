@@ -93,8 +93,6 @@ typedef struct __attribute__((packed)) {
     uint32_t size;
 } fat32_dirent_t;
 
-uint32_t fat32_calculate_cluster_size();
-
 /* Read */
 int      fat32_init(uint32_t partition_lba);
 void     fat32_list_dir(uint32_t cluster);
@@ -115,7 +113,7 @@ int      fat32_create_dirent(uint32_t dir_cluster, const char *filename, uint32_
 uint32_t __fat32_calculate_lba(uint32_t cluster);
 uint32_t __fat32_cluster_to_sector(uint32_t cluster);
 uint32_t __fat32_calculate_offset(uint32_t cluster);
-uint32_t fat32_calculate_cluster_size();
+uint32_t __fat32_calculate_cluster_size();
 uint32_t __fat32_next_cluster(uint32_t cluster);
 int __fat32_read_cluster(uint32_t cluster, uint8_t *buf);
 uint32_t __fat32_alloc_cluster(void);
@@ -124,7 +122,7 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value);
 uint32_t __fat32_unalloc_cluster(uint32_t cluster);
 int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83, uint32_t *out_cluster, uint32_t *out_size, uint8_t  *out_attr);
 int __fat32_format_83(const char *filename, uint8_t *dst);
-uint32_t __fat32_calculate_maximum_number_of_directory_entries();
+uint32_t __fat32_calculate_max_dir_entries();
 uint8_t *__fat32_allocate_buffer();
 void __fat32_free_buffer(uint8_t *buf);
 

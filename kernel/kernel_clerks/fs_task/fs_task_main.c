@@ -2,16 +2,12 @@
 #include "blankie.h"
 #include "hail_mary.h"
 
-/*
-* Fs_task
-* Design & Implementation: A.H, 2026
+/**
+  * Fs_task
+  * Design & Implementation: 
+  * @author: A.H, 2026
 */
 
-/*
-* This is the source file where the function loop, init, find_next_req and remove are located
-*
-*
-*/
 
 int request_queue_count = 0;
 int current_req_index = -1;
@@ -19,38 +15,31 @@ fs_mailbox_queue *request_queue[MAX_TASKS];
 fd_entry_t *fd_entry_table[MAX_TASKS];
 
 
-/*
-* This function takes in the request that is selected during loop phase.
-* There is two ways of getting in here. If fs_next_request dosn't find pending or in_progress requests
-* it tries to find a terminated one. The other way is thru fs_recovery which is linked to hail mary protocol.
-*/
+
+/**
+ * fs_remove_from_queue - used main loop when picks a terminated requst.
+ * @req: pointer to a terminated request
+ *
+ * Description:
+ * frees the request from heap memory, then shifts there request_queue
+ * array to left by one.
+ *
+ */
 static void fs_remove_from_queue(fs_mailbox_queue *req) {
   //DEBUG("[FS_TASK][REMOVE]: Starting on removing\n");
   if (request_queue_count == 0 || current_req_index == -1) {
       //DEBUG("[FS_TASK][REMOVE]: Req queue count is 0\n");
       return;
   }
-  
-  if(req == NULL) return;
 
-  //current req index is set when a task is selected
   request_queue[current_req_index] = NULL;
   kfree(req);
 
-  //Shift the array starting starting from current request index one to the left.
-  //For example i = (cri = 1); 1 < (rqc = 5); i++; 
-  //      rq[1] = rq[1 + 1];
-  //      next iteration rq[2] = rq[2 + 1];
-  //      next iteration rq[3] = rq[3 + 1]; 
-  //      until we reach the end and leave the last index as NULL
   for (int i = current_req_index; i < request_queue_count - 1; i++) {
     request_queue[i] = request_queue[i + 1];
   }
-  
-  //After shifting we delete the last index
   request_queue[request_queue_count - 1] = NULL;
   request_queue_count--;
-  //set crq as back to -1 cause the index has been deleted.
   current_req_index = -1;
   
   //DEBUG("[FS_TASK][REMOVE]: Freeing request heap memory\n");
@@ -64,6 +53,17 @@ static void fs_remove_from_queue(fs_mailbox_queue *req) {
 * if none is found it tries to find pending. Lastly it tries to find a terminated req
 * it can be cleaned away. If it find any of these it returns index of the selected request
 */
+
+/**
+ * find_next_request - Simple round-robin picker.
+ *
+ * Description:
+ * loops thru request_queue. Tries to find requests in order of
+ * "IN_PROGRESS" -> "PENDIG" -> "TERMINATED"
+ *
+ * Context: picks a request for fs_task at the start of loop iteration.
+ * Return: Index of next request or INVALID_IDX on failure.
+ */
 static int find_next_request() {
   if (request_queue_count == 0) return STATUS_ERROR;
 
@@ -89,9 +89,16 @@ static int find_next_request() {
   return INVALID_IDX;
 }
 
-/*
-* Main task loop of fs_task the algorithm. This is the entry point of fs_task, It alwasy starts from here when woken from sleep
-*/
+
+/**
+ * fs_task_loop - Entry point function used when clerk is created at boot.
+ *
+ * Description:
+ * When a request is made by userspace task fs_task is woken and start handling requests from this function
+ * afeter all the requests have been handled it goes to thru the blankie protocol
+ * 
+ * Context: Runs besides other tasks to achieve asynchronous feeling.
+ */
 void fs_task_loop() {
   ////DEBUG("[FS_TASK]: \n");
     while(1) {
@@ -123,8 +130,6 @@ void fs_task_loop() {
     * close / delete
     */
 
-    //This if forces the clerk to iterate over and over again until all request are deleted.
-    //This could lead to infinite loop now that I think of it. -> need to thin solution this. 
     if (request_queue_count == 0) { 
         blankie_activate(fs_task_pid);
     }
@@ -132,8 +137,15 @@ void fs_task_loop() {
 }
 
 
-//Hail mary function which is launced should the fs_task do something severely bad.
-//I'm thinking this deletes the request it was doing as a safe measure. After it launch the blankie and get new stack and restart.
+/**
+ * fs_recovery - tries to remove malicious request.
+ *
+ * Description:
+ * In a case where fs_task has made a critical error we come here via isr handler to try remove malicious request
+ * then reset stack via blankie
+ *
+ * Context: to remove request and wake the caller.
+ */
 void fs_recovery() {
   //DEBUG("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
   if(current_req_index != -1) {

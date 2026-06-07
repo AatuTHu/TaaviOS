@@ -1,7 +1,17 @@
 #include "fat32.h"
 
-/*
-* Writes to the given cluster at the given offset the size of buffer
+/**
+* fat32_write_file_at_offset - Writes data to given offset.
+* @first_cluster: starting fluster of the file
+* @offset: the data sector starting point
+* @buf: -
+* @size: how long of buffer length
+*
+* Description:
+* -
+*
+* Context: Call when there is a file opened and want you want to write to it
+* Returns: STATUS_ERROR || STATUS_OK
 */
 int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset, const uint8_t *buf, uint32_t size) {
 
@@ -11,7 +21,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset, const ui
     DEBUG("[FAT32][WRITE_AT_OFFSET]: input param: buf %s\n", buf);
 
     uint32_t target_cluster = first_cluster;
-    uint32_t cluster_size   = fat32_calculate_cluster_size();
+    uint32_t cluster_size   = __fat32_calculate_cluster_size();
     uint32_t cluster_chain_length = offset / cluster_size; //calculate the lenght of chain
     uint32_t target_offset  = offset % cluster_size; //
 
@@ -123,13 +133,20 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset, const ui
     return STATUS_ERROR;
 }
 
-/*
+/**
+* fat32_write_file - Writes new file.
+* @buf: data to write
+* @size: buffer length
+*
+* Description:
 * Writes the contents of a raw buffer sequentially into a series of newly allocated clusters.
-* Returns the absolute starting cluster index number of the new file, or INVALID_CLUSTER on failure.
+*
+* Context: Call when there is a file opened and want you want to write to it
+* Returns: INVALID_CLUSTER || New files starting cluster number
 */
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 
-    uint32_t cluster_size = fat32_calculate_cluster_size();
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
     
     // Ceiling division formula to determine the total number of blocks required for data
     uint32_t clusters_needed = (size + (cluster_size - 1)) / cluster_size;

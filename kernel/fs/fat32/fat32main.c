@@ -2,8 +2,18 @@
 
 fat32_fs_t f32_fs;
 
-/*
-* Find a file, at the takes in a path and give back cluster and size
+/**
+* __fat32_find_file() - Finds the specific file.
+*
+* @path:        holds the route of the file
+* @out_cluster: after the function this should hold the root cluster of the file
+* @out_size:    after the function this should hold the size of the file
+*
+* Description:
+* Searches for a file using the given path. Deconstructs the path into segments and gontinues
+* to next directory by using those segments if the file was not found sooner.
+*
+* Return: STATUS_ERROR || STATUS_OK.
 */
 int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size) {
     
@@ -79,9 +89,19 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size)
 }
 
 
-/*
-* Update the file size property of a target file. 
-* Begins searching for the file's entry starting from the directory cluster provided in dir_start_cluster.
+
+/**
+* __fat32_next_cluster() - Updates directory metadata.
+*
+* @starting_cluster: directory cluster
+* @file_cluster:     child of directory cluster
+* @new_size:         -
+
+* Description:
+* After succesfull write we want to update a specific file in a specific directory
+* This function searches the right one and updates the metadata to disk.
+*
+* Return: STATUS_ERROR || STATUS_OK.
 */
 int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, uint32_t new_size) {
 
@@ -93,7 +113,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
     uint8_t *buf = __fat32_allocate_buffer();
     if(buf == INVALID_BUFFER) return STATUS_ERROR;
     
-    uint32_t cluster_size = fat32_calculate_cluster_size();
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
     uint32_t current_dir_cluster = starting_cluster;
 
     /*
@@ -157,9 +177,19 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
     return STATUS_ERROR;
 }
 
-/*
-* This function creates a new directory entry (metadata slot) 
-* inside a parent directory cluster using the given parameters.
+/**
+* __fat32_create_drient() - Creates directory entry.
+*
+* @starting_cluster: starting directory cluster
+* @filename: directory name
+* @first_cluster: cluster of the first entry
+* @size: size of directory
+*
+* Description:
+* To make directories we need to read the directory entrys metadata from disk, then loop
+* around the entries to find free spot. If found we can then place the new directory to there.
+*
+* Return: STATUS_ERROR || STATUS_OK.
 */
 int fat32_create_dirent(uint32_t starting_cluster, const char *filename, uint32_t first_cluster, uint32_t size) {
     
@@ -177,7 +207,7 @@ int fat32_create_dirent(uint32_t starting_cluster, const char *filename, uint32_
     }
     
     fat32_dirent_t *entry = (fat32_dirent_t *)buf;
-    uint32_t max_entries = __fat32_calculate_maximum_number_of_directory_entries(); 
+    uint32_t max_entries = __fat32_calculate_max_dir_entries(); 
 
     /*
     * loop from 0 to max entries
@@ -209,6 +239,7 @@ int fat32_create_dirent(uint32_t starting_cluster, const char *filename, uint32_
     __fat32_free_buffer(buf);
     return STATUS_ERROR;
 } //create_dirent
+
 
 // constucts a fat table of from the partition lba
 int fat32_init(uint32_t partition_lba) {

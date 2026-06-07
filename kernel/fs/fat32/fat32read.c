@@ -1,7 +1,13 @@
 #include "fat32.h"
 
-/*
-* Lists all directories under the given cluster
+/**
+* __fat32_list_dir() - lists all directories
+*
+* @cluster: starting directory cluster.
+
+* Description:
+* Function starts searching directories from the given cluster. Printing them directly to screen
+*
 */
 void fat32_list_dir(uint32_t cluster) {
     uint8_t *buf = __fat32_allocate_buffer();
@@ -15,7 +21,7 @@ void fat32_list_dir(uint32_t cluster) {
 
     //convert the read buffer to an directory entry
     const fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
-    uint32_t max_entries = __fat32_calculate_maximum_number_of_directory_entries();
+    uint32_t max_entries = __fat32_calculate_max_dir_entries();
 
     /*
     * loop thru the directory entry
@@ -47,13 +53,22 @@ void fat32_list_dir(uint32_t cluster) {
     fat32_list_dir(next_cluster);
 } //list_dir
 
-/*
-* This function reads content of a specific file to the given buffer
+/**
+* __fat32_read_file() - Read contents of a specific file
+*
+* @start_cluster: file starting point
+* @size: size of file
+* @buf: out going buffer
+*
+* Description:
+* Reads a data from a specific file amount of size to a buffer
+*
+* @return STATUS_ERROR || STATUS_OK
 */
 int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
 
     uint32_t bytes_read = 0;
-    uint32_t cluster_size = fat32_calculate_cluster_size();
+    uint32_t cluster_size = __fat32_calculate_cluster_size();
     uint32_t current_cluster = start_cluster;
 
     DEBUG("[FAT32][READ_FILE]: input param: size: %d\n", size);
