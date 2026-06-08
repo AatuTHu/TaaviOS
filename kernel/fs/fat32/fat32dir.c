@@ -1,0 +1,284 @@
+#include "fat32.h"
+
+/**
+* __fat32_list_dir() - lists all directories
+*
+* @cluster: starting directory cluster.
+
+* Description:
+* Function starts searching directories from the given cluster. Printing them
+directly to screen
+*
+*/
+void fat32_list_dir(uint32_t cluster) {
+    uint8_t *buf = __fat32_allocate_buffer();
+    if (buf == INVALID_BUFFER)
+        return;
+
+    if (__fat32_read_cluster(cluster, buf) == STATUS_ERROR) {
+        ERROR("[FAT32][LIST_DIR]: Could not read cluster. Aborting\n");
+        __fat32_free_buffer(buf);
+        return;
+    }
+
+    // convert the read buffer to an directory entry
+    const fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
+    uint32_t max_entries            = __fat32_calculate_max_dir_entries();
+
+    /*
+     * loop thru the directory entry
+     * if dir name is equals to free then stop and go to next dir_entry
+     * if it is deleted or a long filename advance to next iteration
+     * otherwise print the name and size to serial. this is not a proper but
+     * will do for now
+     */
+    for (uint32_t i = 0; i < max_entries; i++) {
+        if (dir_entry[i].name[0] == FAT32_DIRENT_FREE)
+            break;
+        if (dir_entry[i].name[0] == FAT32_DIRENT_DELETED)
+            continue;
+        if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) ==
+            FAT32_LONG_FILE_NAME)
+            continue;
+        DEBUG("[FAT32][LIST_DIR]: name: %s\n", dir_entry[i].name);
+        // DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
+    }
+
+    // DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
+    // Usual cluster hopping
+    uint32_t next_cluster = __fat32_next_cluster(cluster);
+
+    if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
+        //   DEBUG("[FAT32][LIST_DIR]: End of the chain reached\n");
+        __fat32_free_buffer(buf);
+        return;
+    }
+
+    // DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
+    __fat32_free_buffer(buf);
+    fat32_list_dir(next_cluster);
+} // list_dir
+
+/**
+ * __fat32_create_mkdirp() - Creates directory entry.
+ *
+ * @starting_cluster: starting directory cluster
+ * @path: directory path
+ *
+ * Description:
+ * This function makes a chain of directories as long as the path is
+ * Before making a new directory it check if on with the same name exsist
+ * thus preventing a dublication.
+ *
+ * Return: STATUS_ERROR || STATUS_OK.
+ */
+int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
+
+    DEBUG("[FAT32][MKDIRP]: Current parent_cluster %d\n", parent_cluster);
+    DEBUG("[FAT32][MKDIRP]: Current path %s\n", path);
+
+    uint8_t *buf = __fat32_allocate_buffer();
+    if (buf == INVALID_BUFFER)
+        return STATUS_ERROR;
+
+    uint32_t current_directory_cluster = parent_cluster;
+    uint32_t max_entries               = __fat32_calculate_max_dir_entries();
+    uint8_t name83[11];
+
+    while (*path) {
+
+        if (__fat32_read_cluster(current_directory_cluster, buf) ==
+            STATUS_ERROR) {
+            ERROR("[FAT32][MKDIRP]: Could not read cluster\n");
+            __fat32_free_buffer(buf);
+            return STATUS_ERROR;
+        }
+
+        fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
+
+        if (__fat32_walk_dir_path(&path, name83) == STATUS_ERROR) {
+            DEBUG("[FAT32][MKDIRP]: Problem in path walking");
+            __fat32_free_buffer(buf);
+            return STATUS_ERROR;
+        }
+
+        int found = 0;
+        for (uint32_t i = 0; i < max_entries; i++) {
+            if (dir_entry[i].name[0] == FAT32_DIRENT_FREE ||
+                dir_entry[i].name[0] == FAT32_DIRENT_DELETED)
+                continue;
+
+            if (memcmp(name83, dir_entry[i].name, 11) == 0 &&
+                dir_entry[i].attributes & FAT32_ATTR_DIRECTORY) {
+                DEBUG("[FAT32][MKDIRP]: Match found %s\n", dir_entry[i].name);
+                current_directory_cluster = (dir_entry[i].cluster_high << 16) |
+                                            dir_entry[i].cluster_low;
+                found                     = 1;
+                break;
+            }
+        }
+
+        if (found == 1) {
+            DEBUG("[FAT32][MKDIRP]: match found!\n");
+            continue;
+        }
+
+        DEBUG("[FAT32][MKDIRP]: There were no match in the directory\n");
+        int slot_found = 0;
+        for (uint32_t i = 0; i < max_entries; i++) {
+            if (dir_entry[i].name[0] == FAT32_DIRENT_FREE ||
+                dir_entry[i].name[0] == FAT32_DIRENT_DELETED) {
+                uint32_t new_dir_cluster = __fat32_alloc_cluster();
+
+                if (new_dir_cluster == INVALID_CLUSTER) {
+                    ERROR("[FAT32][MKDIRP]: failed to allocate new cluster\n");
+                    __fat32_free_buffer(buf);
+                    return STATUS_ERROR;
+                }
+
+                DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
+                      "be END OF CHAIN\n");
+                if (__fat32_set_cluster(new_dir_cluster, FAT32_CLUSTER_EOC) ==
+                    STATUS_ERROR) {
+                    ERROR("[FAT32][MKDIRP]: failed to set cluster as EOC\n");
+                    __fat32_free_buffer(buf);
+                    return STATUS_ERROR;
+                }
+
+                memcpy(dir_entry[i].name, name83, 11);
+                DEBUG("[FAT32][MKDIRP]: New dir name %s\n", dir_entry[i].name);
+                memset(dir_entry[i].reserved, 0, sizeof(dir_entry[i].reserved));
+
+                dir_entry[i].cluster_low  = new_dir_cluster & 0xFFFF;
+                dir_entry[i].cluster_high = (new_dir_cluster >> 16) & 0xFFFF;
+                dir_entry[i].attributes   = FAT32_ATTR_DIRECTORY;
+                dir_entry[i].size         = 0;
+                dir_entry[i].time         = 0;
+                dir_entry[i].date         = 0;
+                if (__fat32_write_cluster(current_directory_cluster, buf) ==
+                    STATUS_ERROR) {
+                    ERROR("[FAT32][MKDIRP]: Failed to write directory entry to "
+                          "disk\n");
+                    __fat32_free_buffer(buf);
+                    return STATUS_ERROR;
+                }
+
+                memset(buf, 0, __fat32_calculate_cluster_size());
+                __fat32_write_cluster(new_dir_cluster, buf);
+
+                current_directory_cluster = new_dir_cluster;
+                slot_found                = 1;
+                break;
+            }
+        }
+
+        if (!slot_found) {
+            current_directory_cluster = __fat32_link_cluster_chain(current_directory_cluster);
+            if (current_directory_cluster == INVALID_CLUSTER)
+                return STATUS_ERROR;
+        }
+    }
+
+    DEBUG("[FAT32][MKDIRP]: end of path\n");
+    __fat32_free_buffer(buf);
+    return STATUS_OK;
+} // create_mkdrip
+
+/**
+* __fat32_update_dirent_size() - Updates directory metadata.
+*
+* @starting_cluster: directory cluster
+* @file_cluster:     child of directory cluster
+* @new_size:         -
+
+* Description:
+* After succesfull write we want to update a specific file in a specific
+directory
+* This function searches the right one and updates the metadata to disk.
+*
+* Return: STATUS_ERROR || STATUS_OK.
+*/
+int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster,
+    uint32_t new_size) {
+
+    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: startibg cluster: %d\n",
+        starting_cluster);
+    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: file_cluster: %d\n", file_cluster);
+    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: new_size: %d\n", new_size);
+
+    uint8_t *buf = __fat32_allocate_buffer();
+    if (buf == INVALID_BUFFER)
+        return STATUS_ERROR;
+
+    uint32_t cluster_size        = __fat32_calculate_cluster_size();
+    uint32_t current_dir_cluster = starting_cluster;
+
+    /*
+     * Start the loop by reading data of the directory cluster
+     */
+    while (1) {
+        if (__fat32_read_cluster(current_dir_cluster, buf) == STATUS_ERROR) {
+            ERROR("[FAT32][UPDATE_DIRENT_SIZE]: could not read cluster\n");
+            __fat32_free_buffer(buf);
+            return STATUS_ERROR;
+        }
+
+        /*
+         * cast the read info to be a directory entry structure
+         * calculate of many entry elements there can be in a directory are in a
+         * directory
+         */
+        fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
+        uint32_t max_dir_entries  = cluster_size / FAT32_DIRENT_SIZE;
+
+        DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: dir_enty: %s\n", dir_entry->name);
+        DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: max_dir_entries: %d\n",
+            max_dir_entries);
+
+        /*
+         * loop the size of dir_enry. At every iteration construct a cluster
+         * from the high and low cluster parts Check if it is the same as the
+         * file cluster in question. if it is update the current directory entry
+         * with the give size Then write tha changes to hardware.
+         */
+
+        for (uint32_t i = 0; i < max_dir_entries; i++) {
+            uint32_t whole_cluster =
+                (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
+            DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n",
+                whole_cluster);
+            if (whole_cluster == file_cluster) {
+                DEBUG(
+                    "[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
+                dir_entry[i].size = new_size;
+                if (__fat32_write_cluster(current_dir_cluster, buf) ==
+                    STATUS_ERROR) {
+                    __fat32_free_buffer(buf);
+                    return STATUS_ERROR;
+                }
+                DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Update complete!\n");
+                __fat32_free_buffer(buf);
+                return STATUS_OK;
+            }
+        }
+
+        /*
+         * The target file entry was not in this directory cluster block.
+         * Follow the chain link to fetch the next directory cluster block from
+         * the FAT.
+         */
+        uint32_t next = __fat32_next_cluster(current_dir_cluster);
+
+        if (next >= FAT32_CLUSTER_EOC) {
+            ERROR("[FAT32][UPDATE_DIRENT_SIZE]: Next cluster is end of the "
+                  "chain. Aborting\n");
+            __fat32_free_buffer(buf);
+            return STATUS_ERROR;
+        }
+
+        current_dir_cluster = next;
+    }
+
+    __fat32_free_buffer(buf);
+    return STATUS_ERROR;
+} // update_dir_size

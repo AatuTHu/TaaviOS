@@ -1,16 +1,16 @@
 #include "keyboard.h"
-#include "isr.h"
-#include "io.h"
-#include "vga.h"
-#include "sched.h"
 #include "config.h"
+#include "io.h"
+#include "isr.h"
 #include "klog.h"
+#include "sched.h"
+#include "vga.h"
 
 static keyboard_buffer_t kbd_buf_instance;
 static keyboard_buffer_t *keyboard_buffer = &kbd_buf_instance;
-static int shift_pressed = 0;
-static int caps_lock_pressed = 0;
-static int waiting_queue_count = 0;
+static int shift_pressed                  = 0;
+static int caps_lock_pressed              = 0;
+static int waiting_queue_count            = 0;
 static int waiting_queue[MAX_TASKS];
 
 int keyboard_get_foreground_pid() {
@@ -22,11 +22,11 @@ static void keyboard_clear_buffer() {
 }
 
 void keyboard_set_foreground_pid(int pid) {
-    if(pid == -1) {
-        if(waiting_queue_count > 0) {
+    if (pid == -1) {
+        if (waiting_queue_count > 0) {
             pid = waiting_queue[0];
-            for(int i = 0; i < waiting_queue_count - 1; i++) {
-                waiting_queue[i] = waiting_queue[i+1];
+            for (int i = 0; i < waiting_queue_count - 1; i++) {
+                waiting_queue[i] = waiting_queue[i + 1];
             }
             waiting_queue_count--;
         }
@@ -36,9 +36,11 @@ void keyboard_set_foreground_pid(int pid) {
 }
 
 static void keyboard_add_to_waiting_queue(int pid) {
-    if(pid == -1) return;
-    for(int i = 0; i < waiting_queue_count; i++) {
-        if(waiting_queue[i] == pid) return; // already queued
+    if (pid == -1)
+        return;
+    for (int i = 0; i < waiting_queue_count; i++) {
+        if (waiting_queue[i] == pid)
+            return; // already queued
     }
     waiting_queue[waiting_queue_count++] = pid;
 }
@@ -49,20 +51,21 @@ static void keyboard_irq_handler(void) {
 }
 
 static void keyboard_write_to_buffer(char c) {
-        if ((keyboard_buffer->write - keyboard_buffer->read) == KEYBOARD_BUFFER_SIZE) {
+    if ((keyboard_buffer->write - keyboard_buffer->read) ==
+        KEYBOARD_BUFFER_SIZE) {
         return;
     }
     keyboard_buffer->buf[keyboard_buffer->write % KEYBOARD_BUFFER_SIZE] = c;
     keyboard_buffer->write++;
 }
 
-int keyboard_read_from_buffer(char* out, uint32_t pid) {
-    
-    if(keyboard_get_foreground_pid() == -1) {
+int keyboard_read_from_buffer(char *out, uint32_t pid) {
+
+    if (keyboard_get_foreground_pid() == -1) {
         keyboard_set_foreground_pid(pid);
     }
 
-    if(keyboard_get_foreground_pid() != (int)pid) {
+    if (keyboard_get_foreground_pid() != (int)pid) {
         keyboard_add_to_waiting_queue(pid);
         return 0;
     }
@@ -71,45 +74,51 @@ int keyboard_read_from_buffer(char* out, uint32_t pid) {
         return 0;
     }
 
-
-    
     *out = keyboard_buffer->buf[keyboard_buffer->read % KEYBOARD_BUFFER_SIZE];
     keyboard_buffer->read++;
-    
+
     return 1;
 }
 
-
 void keyboard_handler(uint8_t scancode) {
-    
-    if ((scancode == 0x2A) || (scancode == 0x36)) { shift_pressed = 1; return; }
-    if ((scancode == 0xAA) || (scancode == 0xB6)) { shift_pressed = 0; return; }
-    
-    if (scancode == 0x3A) {caps_lock_pressed = 1 - caps_lock_pressed; return;}
-    
+
+    if ((scancode == 0x2A) || (scancode == 0x36)) {
+        shift_pressed = 1;
+        return;
+    }
+    if ((scancode == 0xAA) || (scancode == 0xB6)) {
+        shift_pressed = 0;
+        return;
+    }
+
+    if (scancode == 0x3A) {
+        caps_lock_pressed = 1 - caps_lock_pressed;
+        return;
+    }
+
     if ((scancode < sizeof(scancode_to_ascii) && !(scancode & 0x80))) {
-        char c = shift_pressed ? scancode_to_ascii_shifted[scancode] : scancode_to_ascii[scancode];
-        
+        char c = shift_pressed ? scancode_to_ascii_shifted[scancode]
+                               : scancode_to_ascii[scancode];
+
         if (caps_lock_pressed) {
             c = scancode_to_ascii_caps_lock[scancode];
         }
-        
+
         if (caps_lock_pressed && shift_pressed) {
             c = scancode_to_ascii[scancode];
         }
-        
+
         if (c != 0) {
-            //DEBUG("[KEYBOARD][HANDLER]: fired!\n");
+            // DEBUG("[KEYBOARD][HANDLER]: fired!\n");
             keyboard_write_to_buffer(c);
             scheduler_wake_task(keyboard_buffer->foreground_pid);
         }
     }
 }
 
-
 void keyboard_init() {
-    keyboard_buffer->read = 0;
-    keyboard_buffer->write = 0;
+    keyboard_buffer->read           = 0;
+    keyboard_buffer->write          = 0;
     keyboard_buffer->foreground_pid = -1;
     irq_register_handler(1, keyboard_irq_handler);
 }

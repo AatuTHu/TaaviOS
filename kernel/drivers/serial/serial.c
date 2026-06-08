@@ -4,15 +4,15 @@
 #define COM1 0x3F8
 
 /*
-* Most generic serial thingy
-*/
+ * Most generic serial thingy
+ */
 
 static int serial_is_ready(void) {
     return inb(COM1 + 5) & 0x20;
 }
 
 uint8_t serial_received() {
-   return inb(COM1 + 5) & 1;
+    return inb(COM1 + 5) & 1;
 }
 
 void serial_init(void) {

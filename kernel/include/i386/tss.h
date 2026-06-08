@@ -4,7 +4,6 @@
 #include <stdint.h>
 #define SEG_TSS 0x28
 
-
 struct tss_entry {
     uint32_t prev_tss;
     uint32_t esp0;

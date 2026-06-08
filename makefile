@@ -52,7 +52,9 @@ clean:
 disk:
 	dd if=/dev/zero of=fat.img bs=1M count=64
 	mkfs.fat -F 32 fat.img
-	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::hello.txt
+	mmd -i fat.img ::sysbin
+	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::sysbin/test.txt
+	mcopy -i fat.img ./isodir/boot/shell.elf ::sysbin/shell
 
 check:
 	cppcheck \
@@ -74,5 +76,8 @@ check:
 		-I kernel/include/protocols \
 		kernel/ \
 		2>&1 | tee cppcheck_report.txt
-		
-.PHONY: all iso run clean check
+
+format:
+	@echo "Formatting kernel source files..."
+	@find $(KERNEL_DIR) -name "*.c" -o -name "*.h" | xargs clang-format -i
+	@echo "Kernel formatting complete."

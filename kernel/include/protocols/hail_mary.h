@@ -1,8 +1,8 @@
 #ifndef HAIL_MARY_H
 #define HAIL_MARY_H
 
-#include <stdint.h>
 #include "config.h"
+#include <stdint.h>
 
 typedef struct {
     uint32_t pid;
