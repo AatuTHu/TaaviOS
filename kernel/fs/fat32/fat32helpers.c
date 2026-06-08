@@ -73,6 +73,48 @@ uint8_t *__fat32_allocate_buffer() {
     return buf;
 }
 
+/**
+ * __fat32_walk_dir_path() - Used to walk directory path.
+ *
+ * @param path: Pointer to path variable
+ * @param name83: buffer where to save the last variable
+ *
+ * Description:
+ * This func walks between / ... / and saves the formatted middle to name83
+ *
+ * Return: STATUS_ERROR || STATUS_OK.
+ */
+int __fat32_walk_dir_path(const char **path, uint8_t name83[11]) {
+    const char *p = *path;
+
+    while (*p == '/') { p++; }
+
+    if (*p == '\0') {
+        *path = p;
+        return STATUS_ERROR;
+    }
+
+    char segment[13];
+    uint8_t index = 0;
+
+    while (index < 12) {
+        if (p[index] == '\0' || p[index] == '/') {
+            break;
+        }
+        segment[index] = p[index];
+        index++;
+    }
+    segment[index] = '\0';
+    *path          = p + index;
+
+    DEBUG("[FAT32][MKDIRP]: Formatting current segment %s\n", segment);
+    if (__fat32_format_83(segment, name83) == STATUS_ERROR) {
+        ERROR("[FAT32][MKDIRP]: Could not format the name\n");
+        return STATUS_ERROR;
+    }
+
+    return STATUS_OK;
+}
 /*
  * This function is useless might aswell just use kfree
  */
@@ -85,7 +127,7 @@ void __fat32_free_buffer(uint8_t *buf) {
 /**
  * __fat32_next_cluster() - Used to walk in a specific the cluster chain.
  *
- * @cluster: base cluster from which to start the walk
+ * @param cluster: base cluster from which to start the walk
  *
  * Description:
  * Function calculates base clusters lba an then reads from disk
@@ -136,8 +178,8 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
 /**
  * __fat32_read_cluster() - Read data from disk to a buffer.
  *
- * @cluster: cluster whose data will be read
- * @buf:     buffer where the data will be read
+ * @param cluster: cluster whose data will be read
+ * @param buf:     buffer where the data will be read
  *
  * Description:
  * This functions calculates the sector number of the given cluster then reads
@@ -173,7 +215,7 @@ int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
 /**
  * __fat32_alloc_cluster() - Allocates next empty cluster from FAT table
  *
- * @void:
+ * @param void:
  *
  * Description:
  * Allocation starts from the index of last allocated cluster and looks for next
@@ -284,8 +326,8 @@ uint32_t __fat32_alloc_cluster(void) {
 /**
  * __fat32_write_cluster() - Writes data to a disk.
  *
- * @cluster: base cluster to write
- * @buf:     holds what to write
+ * @param cluster: base cluster to write
+ * @param buf:     holds what to write
  *
  * Description:
  * Calculates sector number of the given cluster and then writes
@@ -320,8 +362,8 @@ int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
 /**
  * __fat32_set_cluster() - Updates clusters attributes
  *
- * @cluster: cluster that will be updated
- * @value:   holds the updated information
+ * @param cluster: cluster that will be updated
+ * @param value:   holds the updated information
  *
  * Description:
  * When a specific cluster needs it values changed, it can be done using this
@@ -396,8 +438,8 @@ uint32_t __fat32_unalloc_cluster(uint32_t cluster) {
 /**
  * __fat32_format_83() - Formats fat 8.3 compatitable name to dst
  *
- * @filename: name that requires formatting
- * @dst:      formated name is copied to this
+ * @param filename: name that requires formatting
+ * @param dst:      formated name is copied to this
  *
  * Description:
  * Because we only have support for shorter name with 8 chars to name, 1 dot and
@@ -480,11 +522,11 @@ int __fat32_format_83(const char *filename, uint8_t *dst) {
 /**
  * __fat32_search_dir() - Searches for a specific directory
  *
- * @dir_cluster: starting directory cluster.
- * @name83:      holds the name taht we are looking for
- * @out_cluster: function places the found cluster in here
- * @out_size:    function places found size in here
- * @out_attr:    function places found attributes in here
+ * @param dir_cluster: starting directory cluster.
+ * @param name83:      holds the name taht we are looking for
+ * @param out_cluster: function places the found cluster in here
+ * @param out_size:    function places found size in here
+ * @param out_attr:    function places found attributes in here
  *
  * Description:
  * Function searches for a specific cluster starting from the given dir_cluster.
