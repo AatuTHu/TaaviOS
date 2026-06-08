@@ -93,10 +93,11 @@ static void init_filesystems() {
         fat32_lba = 0;
     }
     fat32_init(fat32_lba);
+    //  fat32_mkdir(f32_fs.root_cluster, "testdir");
 
     // fat32_mkdirp(f32_fs.root_cluster, "sysbin/test/hello");
 
-    // fat32_list_dir(f32_fs.root_cluster);
+    fat32_list_dir(f32_fs.root_cluster);
     /* if (fat32_find_file(f32_fs.root_cluster, "HELLI   ", "TXT",
      &file_cluster, &file_size, out_name) == 0) { klog("[FAT32]: Found file!
      cluster: %d size: %d\n", file_cluster, file_size); uint8_t file_buf[512];

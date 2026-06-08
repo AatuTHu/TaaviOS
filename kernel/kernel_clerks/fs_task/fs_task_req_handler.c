@@ -134,8 +134,25 @@ static int open(request_queue_t *req) {
     return STATUS_OK;
 }
 
-static int create(request_queue_t *r) {
-    // fat32_create_dirent();
+static int create(request_queue_t *req) {
+    DEBUG("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
+
+    uint32_t base_directory = f32_fs.root_cluster;
+
+    if (req->buffer_size > 8) {
+        if (fat32_mkdirp(base_directory, req->path) == STATUS_ERROR) {
+            ERROR("[FS_TASK][OPEN]: mkdirp failed!\n");
+            return STATUS_ERROR;
+        }
+    } else {
+        if (fat32_mkdir(base_directory, req->path) == STATUS_ERROR) {
+            ERROR("[FS_TASK][OPEN]: mkdir failed!\n");
+            return STATUS_ERROR;
+        }
+    }
+
+    fat32_list_dir(base_directory);
+    return STATUS_OK;
 }
 
 static int write(request_queue_t *req) {
@@ -241,11 +258,19 @@ void fs_handle_request(request_queue_t *req) {
         return;
     case CLOSE:
         if (close(req) == STATUS_ERROR) {
-            DEBUG("[FS_TASK][HANDLE_REQ]: CLOSING\n");
             req->status = FAILED;
         } else {
             req->status = TERMINATED;
         }
+        return;
+    case CREATE:
+        if (create(req) == STATUS_ERROR) {
+            req->status = FAILED;
+        } else {
+            req->status = TERMINATED;
+        }
+        fs_task->priority = PRIORITY_LOW;
+        fs_wake_task(req->caller_pid);
         return;
     default:
         ERROR("[FS_TASK][handle_request]: Request type was invalid. "

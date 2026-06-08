@@ -51,10 +51,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd,
     switch (new_request->request_type) {
     case CREATE:
     case OPEN:
-        strncpy(new_request->path, path,
-            sizeof(new_request->path) - 1); // copy the path string to path
-        new_request->path[sizeof(new_request->path) - 1] =
-            '\0'; // end it ate 127. path is 128 long
+        strncpy(new_request->path, path, sizeof(new_request->path));
         DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
         break;
     case WRITE:

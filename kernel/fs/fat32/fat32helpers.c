@@ -79,6 +79,7 @@ uint8_t *__fat32_allocate_buffer() {
  * @param path: Pointer to path variable
  * @param name83: buffer where to save the last variable
  *
+ * REMEMBER THAT PATH COMES WITH &
  * Description:
  * This func walks between / ... / and saves the formatted middle to name83
  *
@@ -630,7 +631,7 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
  *
  *
  * Description:
- * This function tries to find next cluster in chain. If the next cluster is 
+ * This function tries to find next cluster in chain. If the next cluster is
  *
  * Context: Why was it made, when to call it.
  * Return: what if successfull, what if unsuffessfull.
