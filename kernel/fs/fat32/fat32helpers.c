@@ -623,3 +623,46 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
     __fat32_free_buffer(buf);
     return STATUS_ERROR;
 }
+
+/**
+ * __fat32_link_cluster_chain() - Used when in need of next cluster or allocation of next cluster.
+ * @param cluster: parent cluster from which to continue;
+ *
+ *
+ * Description:
+ * This function tries to find next cluster in chain. If the next cluster is 
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successfull, what if unsuffessfull.
+ */
+int __fat32_link_cluster_chain(uint32_t cluster) {
+    uint32_t next_cluster = __fat32_next_cluster(cluster);
+
+    if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
+        next_cluster = __fat32_alloc_cluster();
+
+        if (next_cluster == INVALID_CLUSTER) {
+            DEBUG("[FAT32][MKDIRP]: failed to allocate newcluster\n");
+            return INVALID_CLUSTER;
+        }
+
+        DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
+              "current_directory_cluster\n");
+        if (__fat32_set_cluster(cluster,
+                next_cluster) == STATUS_ERROR) {
+            DEBUG("[FAT32][MKDIRP]: Failed to chainclusters\n");
+            return INVALID_CLUSTER;
+        }
+
+        if (__fat32_set_cluster(next_cluster, FAT32_CLUSTER_EOC) ==
+            STATUS_ERROR) {
+            DEBUG("[FAT32][MKDIRP]: Failed to set new cluster as "
+                  "endofchain\n");
+            return INVALID_CLUSTER;
+        }
+
+        return next_cluster;
+    }
+
+    return next_cluster;
+}

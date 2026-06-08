@@ -107,40 +107,10 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
         uint32_t next = __fat32_next_cluster(target_cluster);
         bytes_left    = size - bytes_written;
         DEBUG("[FAT32][WRITE_AT_OFFSET]: next cluster %d\n", next);
+        target_cluster = __fat32_link_cluster_chain(target_cluster);
 
-        if (next >= FAT32_CLUSTER_EOC_MIN && bytes_left > 0) {
-            DEBUG("[FAT32][READ_FILE]: Reached end of cluster chain EOC\n");
-            DEBUG("[FAT32][WRITE_AT_OFFSET]: allocating new cluster\n");
-            uint32_t new_cluster = __fat32_alloc_cluster();
-
-            if (new_cluster == INVALID_CLUSTER) {
-                ERROR("[FAT32][READ_FILE]: Failed to alloc cluster\n");
-                __fat32_free_buffer(tmp_buf);
-                return STATUS_ERROR;
-            }
-
-            DEBUG("[FAT32][WRITE_AT_OFFSET]: chainig new cluster\n");
-            if (__fat32_set_cluster(target_cluster, new_cluster) ==
-                STATUS_ERROR) {
-                ERROR("[FAT32][READ_FILE]: Failed to chain clusters\n");
-                __fat32_free_buffer(tmp_buf);
-                return STATUS_ERROR;
-            }
-
-            DEBUG("[FAT32][WRITE_AT_OFFSET]: marking new cluster to be end of "
-                  "chain\n");
-            if (__fat32_set_cluster(new_cluster, FAT32_CLUSTER_EOC) ==
-                STATUS_ERROR) {
-                ERROR("[FAT32][READ_FILE]: Failed to set new cluster as end of "
-                      "chain\n");
-                __fat32_free_buffer(tmp_buf);
-                return STATUS_ERROR;
-            }
-
-            target_cluster = new_cluster;
-        } else {
-            target_cluster = next;
-        }
+        if (target_cluster == INVALID_CLUSTER)
+            return STATUS_ERROR;
     }
 
     __fat32_free_buffer(tmp_buf);
