@@ -18,7 +18,7 @@ fat32_fs_t f32_fs;
  * Return: STATUS_ERROR || STATUS_OK.
  */
 int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
-                    char *out_fname) {
+    char *out_fname) {
 
     if (path == NULL) {
         ERROR("[FAT32][FIND_FILE]: Given path was invalid\n");
@@ -67,8 +67,8 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
 
         // Search the current directory cluster for the formatted 8.3 name
         if (__fat32_search_dir(current_directory_cluster, name83,
-                               &found_cluster, &found_size,
-                               &found_attr) == STATUS_ERROR) {
+                &found_cluster, &found_size,
+                &found_attr) == STATUS_ERROR) {
             ERROR("[FAT32][FIND_FILE]: Unable to find the directory\n");
             return STATUS_ERROR;
         }
@@ -82,7 +82,7 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
             *out_cluster = found_cluster;
             *out_size    = found_size;
             DEBUG("[FAT32][FIND_FILE]: Directory cluster found: %d\n",
-                  *out_cluster);
+                *out_cluster);
             DEBUG("[FAT32][FIND_FILE]: Size: %d\n", *out_size);
             DEBUG("[FAT32][FIND_FILE]: last segment: %s\n", out_fname);
             return STATUS_OK;
@@ -116,10 +116,10 @@ directory
 * Return: STATUS_ERROR || STATUS_OK.
 */
 int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster,
-                             uint32_t new_size) {
+    uint32_t new_size) {
 
     DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: startibg cluster: %d\n",
-          starting_cluster);
+        starting_cluster);
     DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: file_cluster: %d\n", file_cluster);
     DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: new_size: %d\n", new_size);
 
@@ -150,7 +150,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster,
 
         DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: dir_enty: %s\n", dir_entry->name);
         DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: max_dir_entries: %d\n",
-              max_dir_entries);
+            max_dir_entries);
 
         /*
          * loop the size of dir_enry. At every iteration construct a cluster
@@ -163,7 +163,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster,
             uint32_t whole_cluster =
                 (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
             DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n",
-                  whole_cluster);
+                whole_cluster);
             if (whole_cluster == file_cluster) {
                 DEBUG(
                     "[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
@@ -328,7 +328,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
                 DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
                       "current_directory_cluster\n");
                 if (__fat32_set_cluster(current_directory_cluster,
-                                        next_cluster) == STATUS_ERROR) {
+                        next_cluster) == STATUS_ERROR) {
                     ERROR("[FAT32][MKDIRP]: Failed to chainclusters\n");
                     break;
                 }
@@ -363,7 +363,7 @@ int fat32_init(uint32_t partition_lba) {
 
     if (bpb->bytes_per_sector != FAT32_SECTOR_SIZE) {
         DEBUG("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n",
-              bpb->bytes_per_sector);
+            bpb->bytes_per_sector);
     }
 
     f32_fs.partition_lba = partition_lba;
@@ -376,22 +376,22 @@ int fat32_init(uint32_t partition_lba) {
     f32_fs.fat_count              = bpb->fat_count;
     f32_fs.sectors_per_fat        = bpb->sectors_per_fat;
     f32_fs.last_allocated_cluster = 0;
-    uint32_t data_sectors = bpb->total_sectors_32 - bpb->reserved_sectors -
-                            (bpb->fat_count * bpb->sectors_per_fat);
-    f32_fs.maximum_cluster_size = (data_sectors / bpb->sectors_per_cluster) +
-                                  2; // 2 for reserved clusters
+    uint32_t data_sectors         = bpb->total_sectors_32 - bpb->reserved_sectors -
+                                    (bpb->fat_count * bpb->sectors_per_fat);
+    f32_fs.maximum_cluster_size   = (data_sectors / bpb->sectors_per_cluster) +
+                                    2; // 2 for reserved clusters
 
     DEBUG("[FAT32][INIT]: partition_lba: %d\n", f32_fs.partition_lba);
     DEBUG("[FAT32][INIT]: fat_start: %d\n", f32_fs.fat_start);
     DEBUG("[FAT32][INIT]: data_start: %d\n", f32_fs.data_start);
     DEBUG("[FAT32][INIT]: root_cluster: %d\n", f32_fs.root_cluster);
     DEBUG("[FAT32][INIT]: sectors_per_cluster: %d\n",
-          f32_fs.sectors_per_cluster);
+        f32_fs.sectors_per_cluster);
     DEBUG("[FAT32][INIT]: bytes_per_sector: %d\n", f32_fs.bytes_per_sector);
     DEBUG("[FAT32][INIT]: fat_count: %d\n", f32_fs.fat_count);
     DEBUG("[FAT32][INIT]: sectors_per_fat %d\n", f32_fs.sectors_per_fat);
     DEBUG("[FAT32][INIT]: maximum cluster size: %d\n",
-          f32_fs.maximum_cluster_size);
+        f32_fs.maximum_cluster_size);
 
     return STATUS_OK;
 } // init

@@ -10,7 +10,7 @@
 static task_t *task_table[MAX_TASKS];
 
 task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
-                    page_directory_t *page_dir, uint8_t task_mode) {
+    page_directory_t *page_dir, uint8_t task_mode) {
 
     int slot = -1;
 
@@ -43,7 +43,7 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
 
     if (task_mode == USER_TASK) {
         if (vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE,
-                      PAGE_USER_RW) == STATUS_ERROR)
+                PAGE_USER_RW) == STATUS_ERROR)
             return NULL;
     }
 
@@ -65,13 +65,13 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
         KERNEL_STACK_SIZE; // kernel stack is bottom of stack so add the stack
                            // on top of it. Convert it to virtual addr
 
-    task->context.eip = entry; // Begining of the task like the main function
+    task->context.eip     = entry; // Begining of the task like the main function
     task->context.useresp = task_mode == USER_TASK
                                 ? USER_STACK_TOP + USER_STACK_SIZE
                                 : task->kernel_stack; // stack pointer?
-    task->priority   = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
-    task->context.cs = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
-    task->context.ss = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
+    task->priority        = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
+    task->context.cs      = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
+    task->context.ss      = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
     task->context.ebp =
         task->context.useresp; // stack bottom. Same as top in the begining. No
                                // plate you know

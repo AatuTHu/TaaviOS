@@ -25,8 +25,8 @@
  * failed.
  */
 int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd,
-                         const char *path, const char *buf,
-                         uint32_t buffer_size, uint32_t flags) {
+    const char *path, const char *buf,
+    uint32_t buffer_size, uint32_t flags) {
     // DEBUG("[FS_TASK][ADD_REQUEST]: adding a request for fs_task\n");
 
     request_queue_t *new_request =
@@ -52,7 +52,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd,
     case CREATE:
     case OPEN:
         strncpy(new_request->path, path,
-                sizeof(new_request->path) - 1); // copy the path string to path
+            sizeof(new_request->path) - 1); // copy the path string to path
         new_request->path[sizeof(new_request->path) - 1] =
             '\0'; // end it ate 127. path is 128 long
         DEBUG("[FS_TASK][ADD_REQUEST]: path: %s\n", new_request->path);
@@ -91,7 +91,7 @@ int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd,
     // DEBUG("[FS_TASK][ADD_REQUEST]: request added\n");
     task_t *fs_task = task_get(fs_task_pid);
     fs_task->priority =
-        PRIORITY_HIGH; // set fs_task to be high so it is picked more frequently
+        PRIORITY_HIGH;           // set fs_task to be high so it is picked more frequently
     fs_task->state = TASK_READY; // set it ready so it can be picked at all
 
     return STATUS_OK;
@@ -129,7 +129,7 @@ int collect_request(uint32_t pid, char *out) {
                 // DEBUG("[FS_TASK][COLLECT_REQUEST]: File contents %s\n",
                 //      request_queue[i]->buf);
                 memcpy(out, request_queue[i]->buf,
-                       request_queue[i]->buffer_size);
+                    request_queue[i]->buffer_size);
                 request_queue[i]->status = TERMINATED;
                 return STATUS_OK;
 

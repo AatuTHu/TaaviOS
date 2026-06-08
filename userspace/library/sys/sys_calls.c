@@ -3,9 +3,9 @@
 void sys_write(int fd, const char *msg, int len) {
     int retval;
     __asm__ __volatile__("int $0x80"
-                         : "=a"(retval)
-                         : "a"(4), "b"(fd), "c"(msg), "d"(len)
-                         : "memory");
+        : "=a"(retval)
+        : "a"(4), "b"(fd), "c"(msg), "d"(len)
+        : "memory");
 }
 
 void sys_exit(void) {
@@ -21,8 +21,8 @@ int sys_getpid(void) {
 int sys_open(const char *path, uint32_t flags) {
     int fd = -1;
     __asm__ __volatile__("int $0x80"
-                         : "=a"(fd)
-                         : "a"(5), "b"(path), "c"(flags));
+        : "=a"(fd)
+        : "a"(5), "b"(path), "c"(flags));
     return fd;
 }
 
@@ -39,18 +39,18 @@ void sys_close(uint32_t fd) {
 int sys_read(int fd, char *buf, int len) {
     int result;
     __asm__ __volatile__("int $0x80"
-                         : "=a"(result)
-                         : "a"(3), "b"(fd), "c"(buf), "d"(len)
-                         : "memory");
+        : "=a"(result)
+        : "a"(3), "b"(fd), "c"(buf), "d"(len)
+        : "memory");
     return result;
 }
 
 int sys_exec(const char *filename) {
     int result;
     __asm__ __volatile__("int $0x80"
-                         : "=a"(result)
-                         : "a"(11), "c"(filename)
-                         : "memory");
+        : "=a"(result)
+        : "a"(11), "c"(filename)
+        : "memory");
     return result;
 }
 

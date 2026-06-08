@@ -38,8 +38,8 @@ void pmm_init(const struct multiboot_info *mboot) {
     while (vaddr < vend) {
         const struct mmap_entry *entry = (struct mmap_entry *)vaddr;
         klog("[PMM] [%s] base=0x%x length=0x%x\n",
-             entry->type == 1 ? "AVAILABLE" : "RESERVED ", entry->base_low,
-             entry->length_low);
+            entry->type == 1 ? "AVAILABLE" : "RESERVED ", entry->base_low,
+            entry->length_low);
         if (entry->type == 1) {
             uint32_t start_page = entry->base_low / PAGE_SIZE;
             uint32_t num_pages  = entry->length_low / PAGE_SIZE;
@@ -58,8 +58,8 @@ void pmm_init(const struct multiboot_info *mboot) {
     uint32_t kernel_start_page = (uint32_t)&_kernel_start / PAGE_SIZE;
     uint32_t kernel_end_page   = (uint32_t)&_kernel_end / PAGE_SIZE;
     klog("[PMM] Kernel pages: %d-%d (0x%x-0x%x)\n", kernel_start_page,
-         kernel_end_page, kernel_start_page * PAGE_SIZE,
-         kernel_end_page * PAGE_SIZE);
+        kernel_end_page, kernel_start_page * PAGE_SIZE,
+        kernel_end_page * PAGE_SIZE);
     for (uint32_t i = kernel_start_page; i < kernel_end_page; i++) {
         __pmm_set_bit(i);
     }
@@ -69,7 +69,7 @@ void pmm_init(const struct multiboot_info *mboot) {
     uint32_t bitmap_start = bitmap_phys / PAGE_SIZE;
     uint32_t bitmap_end   = (bitmap_phys + bitmap_size) / PAGE_SIZE;
     klog("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n", bitmap_start,
-         bitmap_end, bitmap_phys, bitmap_size);
+        bitmap_end, bitmap_phys, bitmap_size);
     for (uint32_t i = bitmap_start; i < bitmap_end; i++) { __pmm_set_bit(i); }
 
     for (uint32_t i = 0; i < MAX_PAGES; i++) {
@@ -79,8 +79,8 @@ void pmm_init(const struct multiboot_info *mboot) {
             free_pages++;
     }
     klog("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
-         free_pages, (free_pages * PAGE_SIZE) / 1024, used_pages,
-         (used_pages * PAGE_SIZE) / 1024);
+        free_pages, (free_pages * PAGE_SIZE) / 1024, used_pages,
+        (used_pages * PAGE_SIZE) / 1024);
 }
 
 uint32_t pmm_alloc() {

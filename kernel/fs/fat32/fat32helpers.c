@@ -22,7 +22,7 @@ uint32_t __fat32_calculate_lba(uint32_t cluster) {
 uint32_t __fat32_cluster_to_sector(uint32_t cluster) {
     if (cluster < 2) {
         ERROR("[FAT32][CLUSTER_TO_SECTOR]: Invalid cluster number: %d\n",
-              cluster);
+            cluster);
         return INVALID_CLUSTER;
     }
     return f32_fs.data_start + (cluster - 2) * f32_fs.sectors_per_cluster;
@@ -34,7 +34,7 @@ uint32_t __fat32_cluster_to_sector(uint32_t cluster) {
 uint32_t __fat32_calculate_offset(uint32_t cluster) {
     if (cluster >= f32_fs.maximum_cluster_size) {
         ERROR("[FAT32][CALCULATE_OFFSET]: Cluster number too high: %d\n",
-              cluster);
+            cluster);
         return INVALID_CLUSTER;
     }
     return (cluster * FAT32_FAT_ENTRY_SIZE) % f32_fs.bytes_per_sector;
@@ -157,7 +157,7 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
 
     if (ata_read_sector(lba, buf) == STATUS_ERROR) {
         ERROR("[FAT32][NEXT_CLUSTER]: could not read sector with lba: %d\n",
-              lba);
+            lba);
         __fat32_free_buffer(buf);
         return INVALID_CLUSTER;
     }
@@ -203,7 +203,7 @@ int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
      */
     for (uint8_t i = 0; i < f32_fs.sectors_per_cluster; i++) {
         if (ata_read_sector((sector_number + i),
-                            (buf + i * FAT32_SECTOR_SIZE)) == STATUS_ERROR) {
+                (buf + i * FAT32_SECTOR_SIZE)) == STATUS_ERROR) {
             ERROR("[FAT32][READ_CLUSTER]: reading clusters went wrong. "
                   "Aborting \n");
             return STATUS_ERROR;
@@ -392,7 +392,7 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
 
     if (ata_read_sector(lba, buf) == STATUS_ERROR) {
         ERROR("[FAT32][SET_CLUSTER]: Could not read sector with lba: %d\n",
-              lba);
+            lba);
         __fat32_free_buffer(buf);
         return STATUS_ERROR;
     }
@@ -535,8 +535,8 @@ int __fat32_format_83(const char *filename, uint8_t *dst) {
  * Return: STATUS_ERROR or STATUS_OK.
  */
 int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
-                       uint32_t *out_cluster, uint32_t *out_size,
-                       uint8_t *out_attr) {
+    uint32_t *out_cluster, uint32_t *out_size,
+    uint8_t *out_attr) {
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
         return STATUS_ERROR;

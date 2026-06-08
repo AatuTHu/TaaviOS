@@ -32,5 +32,5 @@ void reaper_task_loop() {
 
 void reaper_init(const task_t *reaper_task) {
     blankie_register(reaper_task_pid, reaper_task->context.eip,
-                     reaper_task->kernel_stack);
+        reaper_task->kernel_stack);
 }

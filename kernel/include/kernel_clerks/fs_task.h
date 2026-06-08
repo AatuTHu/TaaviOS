@@ -48,8 +48,8 @@ void fs_recovery();
 void fs_handle_request(request_queue_t *req);
 int collect_request(uint32_t pid, char *out);
 int add_request_to_queue(uint32_t pid, operations_t type, uint32_t fd,
-                         const char *path, const char *buf,
-                         uint32_t buffer_size, uint32_t flags);
+    const char *path, const char *buf,
+    uint32_t buffer_size, uint32_t flags);
 void fs_wake_task(uint32_t pid);
 
 extern int request_queue_count;

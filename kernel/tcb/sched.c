@@ -62,7 +62,7 @@ static int scheduler_find_next_task() {
         int next_idx = (current_idx + i) % task_count;
         if (tasks[next_idx]->priority == PRIORITY_HIGH &&
             (tasks[next_idx]->state == TASK_READY ||
-             tasks[next_idx]->state == TASK_RUNNING)) {
+                tasks[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
         }
     }
@@ -71,7 +71,7 @@ static int scheduler_find_next_task() {
         int next_idx = (current_idx + i) % task_count;
         if (tasks[next_idx]->priority == PRIORITY_NORMAL &&
             (tasks[next_idx]->state == TASK_READY ||
-             tasks[next_idx]->state == TASK_RUNNING)) {
+                tasks[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
         }
     }
@@ -80,7 +80,7 @@ static int scheduler_find_next_task() {
         int next_idx = (current_idx + i) % task_count;
         if (tasks[next_idx]->priority == PRIORITY_LOW &&
             (tasks[next_idx]->state == TASK_READY ||
-             tasks[next_idx]->state == TASK_RUNNING)) {
+                tasks[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
         }
     }

@@ -5,7 +5,7 @@
 #include "pmm.h"
 
 int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
-              uint32_t flags) {
+    uint32_t flags) {
     if (!dir) {
         ERROR("[VMM]: DIRECTORY NOT GIVEN ABORTING ALLOCATION\n");
         return -1;

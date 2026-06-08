@@ -41,9 +41,9 @@ void isr_handler(struct registers *r) {
     ERROR("REASON: ");
     if (r->int_no == 14) {
         ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
-              (r->err_code & 0x1) ? "Yes" : "No",
-              (r->err_code & 0x2) ? "Write" : "Read",
-              (r->err_code & 0x4) ? "User" : "Kernel");
+            (r->err_code & 0x1) ? "Yes" : "No",
+            (r->err_code & 0x2) ? "Write" : "Read",
+            (r->err_code & 0x4) ? "User" : "Kernel");
         ERROR("FAULTING ADDRESS: 0x%x\n", cr2);
     } else if (r->int_no == 13) {
         ERROR("GENERAL PROTECTION FAULT\n");
@@ -52,13 +52,13 @@ void isr_handler(struct registers *r) {
     }
 
     ERROR("LOCATION: %s mode at EIP 0x%x\n", is_user ? "USER" : "KERNEL",
-          r->eip);
+        r->eip);
 
     ERROR("--- REGISTER DUMP ---\n");
     ERROR("EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n", r->eax, r->ebx,
-          r->ecx, r->edx);
+        r->ecx, r->edx);
     ERROR("ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n", r->esi, r->edi,
-          r->ebp, r->esp);
+        r->ebp, r->esp);
     ERROR("CS:  0x%x  EFLAGS: 0x%x\n", r->cs, r->eflags);
 
     if (is_user) {

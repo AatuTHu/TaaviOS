@@ -44,7 +44,7 @@ static void init_arch() {
 
     klog("[KERNEL]: Allocating kernel page directory\n");
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE,
-              PAGE_PRESENT | PAGE_RW);
+        PAGE_PRESENT | PAGE_RW);
 }
 
 static void init_mm(const uint32_t *mboot_info) {
@@ -112,7 +112,7 @@ static void init_kernel_tasks() {
     klog("[KERNEL]: --INIT KERNEL TASKS--\n");
     klog("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, "idle",
-                                      &kernel_page_dir, KERNEL_TASK);
+        &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         scheduler_add(kernel_task);
@@ -120,7 +120,7 @@ static void init_kernel_tasks() {
 
     klog("[KERNEL]: Creating an filesystem kernel task\n");
     kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, "fs_task",
-                              &kernel_page_dir, KERNEL_TASK);
+        &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         fs_init(kernel_task);
@@ -129,7 +129,7 @@ static void init_kernel_tasks() {
 
     klog("[KERNEL]: Creating an reaper kernel task\n");
     kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop,
-                              "reaper_task", &kernel_page_dir, KERNEL_TASK);
+        "reaper_task", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         reaper_init(kernel_task);
@@ -161,7 +161,7 @@ void kernel_main(const uint32_t *mboot_info) {
     if (total_mods > 0) {
         page_directory_t *init_pd = vmm_create_directory();
         uint32_t init_phys        = module_starts[0];
-        uint32_t entry = elf_load((void *)phys_to_virt(init_phys), init_pd);
+        uint32_t entry            = elf_load((void *)phys_to_virt(init_phys), init_pd);
         if (entry != ET_NONE) {
             klog("[KERNEL]: ELF loaded.\n");
             klog("[KERNEL]: Creating init task\n");
@@ -183,10 +183,10 @@ void kernel_main(const uint32_t *mboot_info) {
         _set_scheduler_on();
         vmm_switch(first_task->page_dir);
         klog("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n",
-             first_task->context.eip, first_task->context.useresp,
-             first_task->name);
+            first_task->context.eip, first_task->context.useresp,
+            first_task->name);
         clear_terminal();
         enter_usermode(first_task->context.eip, first_task->context.useresp,
-                       first_task->kernel_stack);
+            first_task->kernel_stack);
     }
 }

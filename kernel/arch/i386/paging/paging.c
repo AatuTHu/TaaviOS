@@ -8,7 +8,7 @@
 page_directory_t kernel_page_dir __attribute__((aligned(PAGE_SIZE_BYTES)));
 
 void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
-                uint32_t flags) {
+    uint32_t flags) {
     if (!dir) {
         ERROR("[PAGING] No directory given for page mapping\n");
         return;
@@ -59,8 +59,8 @@ page_directory_t *paging_create_directory() {
     page_directory_t *virt_dir = (page_directory_t *)vaddr;
 
     memcpy(&(*virt_dir)[KERNEL_PD_INDEX_START],
-           &kernel_page_dir[KERNEL_PD_INDEX_START],
-           KERNEL_PD_ENTRIES * sizeof(uint32_t));
+        &kernel_page_dir[KERNEL_PD_INDEX_START],
+        KERNEL_PD_ENTRIES * sizeof(uint32_t));
     DEBUG("[PAGING][pcd]: Page created\n");
     return (page_directory_t *)(vaddr);
 }
@@ -77,12 +77,12 @@ void paging_init() {
 
     for (uint32_t i = 0; i < ENTRIES_PER_TABLE; i++) {
         paging_map(&kernel_page_dir, KERNEL_VIRTUAL_START + i * PAGE_SIZE,
-                   KERNEL_PHYSICAL_ADDRESS + i * PAGE_SIZE,
-                   PAGE_PRESENT | PAGE_RW);
+            KERNEL_PHYSICAL_ADDRESS + i * PAGE_SIZE,
+            PAGE_PRESENT | PAGE_RW);
     }
 
     paging_map(&kernel_page_dir, VGA_MEMORY_ADDRESS, VGA_PHYSICAL_ADDRESS,
-               PAGE_PRESENT | PAGE_RW);
+        PAGE_PRESENT | PAGE_RW);
     DEBUG("[PAGING] VGA page created\n");
     DEBUG("[PAGING] SWITCHING TO KERNEL PAGE DIRECTORY\n");
     paging_switch(&kernel_page_dir);
@@ -98,7 +98,7 @@ uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
     }
     DEBUG("[PAGING]: getting physical location for page directory: %x, with "
           "virt: %d\n",
-          (uint32_t)dir, virt);
+        (uint32_t)dir, virt);
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
     DEBUG("[PAGING]: page directory index: %d\n", pd_index);
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {

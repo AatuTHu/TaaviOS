@@ -20,7 +20,9 @@ typedef enum {
     TASK_DEAD
 } task_state_t;
 
-typedef enum { PRIORITY_HIGH, PRIORITY_NORMAL, PRIORITY_LOW } task_priority_t;
+typedef enum { PRIORITY_HIGH,
+    PRIORITY_NORMAL,
+    PRIORITY_LOW } task_priority_t;
 
 typedef struct task_t {
     uint32_t pid;
@@ -35,7 +37,7 @@ typedef struct task_t {
 } task_t;
 
 task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
-                    page_directory_t *page_dir, uint8_t task_mode);
+    page_directory_t *page_dir, uint8_t task_mode);
 task_t *task_get(uint32_t pid);
 void task_destroy(task_t *task, uint8_t task_mode);
 

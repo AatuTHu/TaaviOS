@@ -21,11 +21,11 @@
 //  there can be multiple request with the same fd number but it alwasys
 //  correspond to the fd given here once a succesfully file is opened
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size,
-                       uint32_t flags) {
+    uint32_t flags) {
     // DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
     int slot = -1;
     for (int i = free_starting_slot; i < MAX_TASKS;
-         i++) { // free_starting_slot is 3. We reserve them for standtart i/o.
+        i++) { // free_starting_slot is 3. We reserve them for standtart i/o.
         if (fd_entry_table[i] == NULL) {
             slot = i;
             break;
@@ -95,11 +95,11 @@ static int read(request_queue_t *req) {
     //  cape the files end at the real_buf_size.
     DEBUG("[FS_TASK][READ]: Capping (placing the end of file \\ 0) the buffer "
           "at index: %d\n",
-          entry->size);
+        entry->size);
     buf[entry->size] = '\0';
     // Copy the opened file to request buf field
     DEBUG("[FS_TASK][READ]: memcpy to req.buf the read buffer with size: %d\n",
-          entry->size);
+        entry->size);
     memcpy(req->buf, (char *)buf, entry->size);
     kfree(buf);
 
@@ -154,7 +154,7 @@ static int write(request_queue_t *req) {
     }
 
     if (fat32_write_file_at_offset(entry->cluster, entry->curr_offset, req->buf,
-                                   req->buffer_size) == STATUS_ERROR) {
+            req->buffer_size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not write to opened file\n");
         return STATUS_ERROR;
     }
@@ -164,12 +164,12 @@ static int write(request_queue_t *req) {
     entry->size        = req->buffer_size;
 
     if (fat32_update_dirent_size(f32_fs.root_cluster, entry->cluster,
-                                 entry->size) == STATUS_ERROR) {
+            entry->size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not update file\n");
         return STATUS_ERROR;
     }
     DEBUG("[FS_TASK][WRITE]: current offset %d and size %d\n",
-          entry->curr_offset, entry->size);
+        entry->curr_offset, entry->size);
     return STATUS_OK;
 }
 

@@ -58,7 +58,7 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     } else {
         add_request_to_queue(current->pid, READ, fd, NULL, NULL, buff_size,
-                             O_RDONLY);
+            O_RDONLY);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
 
@@ -79,8 +79,8 @@ static int32_t sys_read(struct registers *r) {
 static int32_t sys_write(struct registers *r) {
     int fd          = r->ebx;
     const char *buf = (char *)r->ecx; // ecx has the string
-    uint32_t len    = r->edx; // irrelevant in our case. but it would hold the
-                              // length of the message
+    uint32_t len    = r->edx;         // irrelevant in our case. but it would hold the
+                                      // length of the message
 
     switch (fd) {
     case 1:
@@ -182,7 +182,7 @@ static int32_t sys_exec(struct registers *r) {
     }
 
     DEBUG("[SYSCALL][SYS_EXEC]: continuing to read file with name %s\n",
-          task_name);
+        task_name);
 
     uint8_t *binary_buffer = (uint8_t *)kmalloc(file_size);
     if (fat32_read_file(file_cluster, file_size, binary_buffer) ==

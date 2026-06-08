@@ -71,7 +71,7 @@ void kfree(void *ptr) {
         (block_header_t *)((uint8_t *)ptr - sizeof(block_header_t));
     if (addr->magic != HEAP_MAGIC) {
         ERROR("[KMALLOC] Invalid magic at 0x%x — expected 0x%x\n", addr,
-              HEAP_MAGIC);
+            HEAP_MAGIC);
         return;
     } else {
         block_header_t *prev    = NULL;
