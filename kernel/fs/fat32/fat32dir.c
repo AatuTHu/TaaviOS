@@ -62,8 +62,8 @@ void fat32_list_dir(uint32_t cluster) {
 /**
  * __fat32_create_mkdirp() - Creates directory entry.
  *
- * @starting_cluster: starting directory cluster
- * @path: directory path
+ * @param starting_cluster: starting directory cluster
+ * @param path: directory path
  *
  * Description:
  * This function makes a chain of directories as long as the path is
@@ -279,6 +279,19 @@ error_case:
     return STATUS_ERROR;
 } // update_dir_size
 
+/**
+ * __fat32_create_mkdir() - Creates directory entry.
+ *
+ * @directory_cluster: starting directory cluster
+ * @directory_name: directory path
+ *
+ * Description:
+ * This function makes a chain of directories as long as the path is
+ * Before making a new directory it check if on with the same name exsist
+ * thus preventing a dublication.
+ *
+ * Return: STATUS_ERROR || STATUS_OK.
+ */
 int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
 
     uint8_t *buf = __fat32_allocate_buffer();
@@ -286,7 +299,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
         return;
 
     if (__fat32_read_cluster(directory_cluster, buf) == STATUS_ERROR) {
-        ERROR("[FAT32][LIST_DIR]: Could not read cluster. Aborting\n");
+        ERROR("[FAT32][MKDIR]: Could not read cluster. Aborting\n");
         goto error_case;
     }
 
@@ -295,12 +308,13 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
     uint8_t name83[11];
 
     if (!(dir_entry->attributes & FAT32_ATTR_DIRECTORY)) {
-        ERROR("[FAT32][LIST_DIR]: Cluster was not a directory. Aborting\n");
+        ERROR("[FAT32][MKDIR]: Cluster was not a directory. Aborting\n");
         goto error_case;
     }
 
+    // A conviniant function even tho we are not walking path.  It removes the / and formats the node
     if (__fat32_walk_dir_path(&directory_name, name83) == STATUS_ERROR) {
-        ERROR("[FAT32][LIST_DIR]: Could not format name. Aborting\n");
+        ERROR("[FAT32][MKDIR]: Could not format name. Aborting\n");
         goto error_case;
     }
 
@@ -324,20 +338,20 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
             uint32_t new_dir_cluster = __fat32_alloc_cluster();
 
             if (new_dir_cluster == INVALID_CLUSTER) {
-                ERROR("[FAT32][MKDIRP]: failed to allocate new cluster\n");
+                ERROR("[FAT32][MKDIR]: failed to allocate new cluster\n");
                 goto error_case;
             }
 
-            DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
+            DEBUG("[FAT32][MKDIR]: Chaining next cluster to "
                   "be END OF CHAIN\n");
             if (__fat32_set_cluster(new_dir_cluster, FAT32_CLUSTER_EOC) ==
                 STATUS_ERROR) {
-                ERROR("[FAT32][MKDIRP]: failed to set cluster as EOC\n");
+                ERROR("[FAT32][MKDIR]: failed to set cluster as EOC\n");
                 goto error_case;
             }
 
             memcpy(dir_entry[i].name, name83, 11);
-            DEBUG("[FAT32][MKDIRP]: New dir name %s\n", dir_entry[i].name);
+            DEBUG("[FAT32][MKDIR]: New dir name %s\n", dir_entry[i].name);
             memset(dir_entry[i].reserved, 0, sizeof(dir_entry[i].reserved));
 
             dir_entry[i].cluster_low  = new_dir_cluster & 0xFFFF;
@@ -348,7 +362,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
             dir_entry[i].date         = 0;
             if (__fat32_write_cluster(directory_cluster, buf) ==
                 STATUS_ERROR) {
-                ERROR("[FAT32][MKDIRP]: Failed to write directory entry to "
+                ERROR("[FAT32][MKDIR]: Failed to write directory entry to "
                       "disk\n");
                 goto error_case;
             }
@@ -356,7 +370,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
             // Wipe buffer empty and then format cluster to be empty
             memset(buf, 0, __fat32_calculate_cluster_size());
             if (__fat32_write_cluster(new_dir_cluster, buf) == STATUS_ERROR) {
-                ERROR("[FAT32][MKDIRP]: Failed to format cluster on the disk\n");
+                ERROR("[FAT32][MKDIR]: Failed to format cluster on the disk\n");
                 goto error_case;
             }
 

@@ -206,13 +206,14 @@ static int32_t sys_exec(struct registers *r) {
 static int32_t sys_mkdir(struct registers *r) {
     DEBUG("[SYSCALL][SYS_MKDIR]\n");
     const char *path = (char *)r->ebx;
-    DEBUG("[SYSCALL][SYS_MKDIR]: creating path %s\n", path);
+    uint32_t len     = r->ecx;
+    DEBUG("[SYSCALL][SYS_MKDIR]: creating path %s with len: %d\n", path, len);
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {
         DEBUG("[SYSCALL][SYS_MKDIR]: no current task found\n");
         return STATUS_ERROR;
     }
-    add_request_to_queue(current->pid, CREATE, 0, path, NULL, 0, O_CREAT);
+    add_request_to_queue(current->pid, CREATE, 0, path, NULL, len, O_CREAT);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
