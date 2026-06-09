@@ -3,7 +3,7 @@
 fat32_fs_t f32_fs;
 
 /**
- * __fat32_find_file() - Finds the specific file.
+ * __fat32_find_cluster() - Finds the specific file.
  *
  * @path:        holds the route of the file
  * @out_cluster: after the function this should hold the root cluster of the
@@ -17,11 +17,11 @@ fat32_fs_t f32_fs;
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
-int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
-    char *out_fname) {
+int fat32_find_cluster(const char *path, uint32_t *out_cluster, uint32_t *out_size,
+    char *out_fname, uint32_t *out_attr) {
 
     if (path == NULL) {
-        ERROR("[FAT32][FIND_FILE]: Given path was invalid\n");
+        ERROR("[FAT32][FIND_CLUSTER]: Given path was invalid\n");
         return STATUS_ERROR;
     }
 
@@ -61,7 +61,7 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
         // with the new segment we format it to 83 standard. The formatted
         // segment is copied to name83 array in the __fat32_format_83 function
         if (__fat32_format_83(segment, name83) == STATUS_ERROR) {
-            ERROR("[FAT32][FIND_FILE]: was Unable to format the filename\n");
+            ERROR("[FAT32][FIND_CLUSTER]: was Unable to format the filename\n");
             return STATUS_ERROR;
         }
 
@@ -69,7 +69,7 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
         if (__fat32_search_dir(current_directory_cluster, name83,
                 &found_cluster, &found_size,
                 &found_attr) == STATUS_ERROR) {
-            ERROR("[FAT32][FIND_FILE]: Unable to find the directory\n");
+            ERROR("[FAT32][FIND_CLUSTER]: Unable to find the directory\n");
             return STATUS_ERROR;
         }
 
@@ -81,17 +81,17 @@ int fat32_find_file(const char *path, uint32_t *out_cluster, uint32_t *out_size,
             memcpy(out_fname, segment, 8);
             *out_cluster = found_cluster;
             *out_size    = found_size;
-            DEBUG("[FAT32][FIND_FILE]: Directory cluster found: %d\n",
-                *out_cluster);
-            DEBUG("[FAT32][FIND_FILE]: Size: %d\n", *out_size);
-            DEBUG("[FAT32][FIND_FILE]: last segment: %s\n", out_fname);
+            *out_attr    = found_attr;
+            DEBUG("[FAT32][FIND_CLUSTER]: Directory cluster found: %d\n", *out_cluster);
+            DEBUG("[FAT32][FIND_CLUSTER]: Size: %d\n", *out_size);
+            DEBUG("[FAT32][FIND_CLUSTER]: last segment: %s\n", out_fname);
             return STATUS_OK;
         }
         if (path[0] == '/')
             path++;
         // See if directory bit is present
         if (!(found_attr & FAT32_ATTR_DIRECTORY)) {
-            ERROR("[FAT32][FIND_FILE]: Found invalid attributes\n");
+            ERROR("[FAT32][FIND_CLUSTER]: Found invalid attributes\n");
             return STATUS_ERROR;
         }
         // step further in to a subdirectory
@@ -108,8 +108,7 @@ int fat32_init(uint32_t partition_lba) {
     const fat32_bpb_t *bpb = (fat32_bpb_t *)buf;
 
     if (bpb->bytes_per_sector != FAT32_SECTOR_SIZE) {
-        DEBUG("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n",
-            bpb->bytes_per_sector);
+        DEBUG("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);
     }
 
     f32_fs.partition_lba = partition_lba;
@@ -131,13 +130,11 @@ int fat32_init(uint32_t partition_lba) {
     DEBUG("[FAT32][INIT]: fat_start: %d\n", f32_fs.fat_start);
     DEBUG("[FAT32][INIT]: data_start: %d\n", f32_fs.data_start);
     DEBUG("[FAT32][INIT]: root_cluster: %d\n", f32_fs.root_cluster);
-    DEBUG("[FAT32][INIT]: sectors_per_cluster: %d\n",
-        f32_fs.sectors_per_cluster);
+    DEBUG("[FAT32][INIT]: sectors_per_cluster: %d\n", f32_fs.sectors_per_cluster);
     DEBUG("[FAT32][INIT]: bytes_per_sector: %d\n", f32_fs.bytes_per_sector);
     DEBUG("[FAT32][INIT]: fat_count: %d\n", f32_fs.fat_count);
     DEBUG("[FAT32][INIT]: sectors_per_fat %d\n", f32_fs.sectors_per_fat);
-    DEBUG("[FAT32][INIT]: maximum cluster size: %d\n",
-        f32_fs.maximum_cluster_size);
+    DEBUG("[FAT32][INIT]: maximum cluster size: %d\n", f32_fs.maximum_cluster_size);
 
     return STATUS_OK;
 } // init

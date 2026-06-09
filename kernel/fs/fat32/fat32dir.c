@@ -41,10 +41,10 @@ void fat32_list_dir(uint32_t cluster) {
             FAT32_LONG_FILE_NAME)
             continue;
         DEBUG("[FAT32][LIST_DIR]: name: %s\n", dir_entry[i].name);
-        // DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
+        //  DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
-    // DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
+    DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
     // Usual cluster hopping
     uint32_t next_cluster = __fat32_next_cluster(cluster);
 
@@ -54,7 +54,7 @@ void fat32_list_dir(uint32_t cluster) {
         return;
     }
 
-    // DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
+    DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
     __fat32_free_buffer(buf);
     fat32_list_dir(next_cluster);
 } // list_dir
@@ -133,8 +133,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
                     goto error_case;
                 }
 
-                DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
-                      "be END OF CHAIN\n");
+                DEBUG("[FAT32][MKDIRP]: Chaining next cluster to be END OF CHAIN\n");
                 if (__fat32_set_cluster(new_dir_cluster, FAT32_CLUSTER_EOC) ==
                     STATUS_ERROR) {
                     ERROR("[FAT32][MKDIRP]: failed to set cluster as EOC\n");
@@ -229,8 +228,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
         uint32_t max_dir_entries  = cluster_size / FAT32_DIRENT_SIZE;
 
         DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: dir_enty: %s\n", dir_entry->name);
-        DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: max_dir_entries: %d\n",
-            max_dir_entries);
+        DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: max_dir_entries: %d\n", max_dir_entries);
 
         /*
          * loop the size of dir_enry. At every iteration construct a cluster
@@ -242,11 +240,9 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
         for (uint32_t i = 0; i < max_dir_entries; i++) {
             uint32_t whole_cluster =
                 (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
-            DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n",
-                whole_cluster);
+            DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n", whole_cluster);
             if (whole_cluster == file_cluster) {
-                DEBUG(
-                    "[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
+                DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
                 dir_entry[i].size = new_size;
                 if (__fat32_write_cluster(current_dir_cluster, buf) ==
                     STATUS_ERROR) {
@@ -296,7 +292,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
 
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
-        return;
+        return STATUS_ERROR;
 
     if (__fat32_read_cluster(directory_cluster, buf) == STATUS_ERROR) {
         ERROR("[FAT32][MKDIR]: Could not read cluster. Aborting\n");
@@ -342,8 +338,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
                 goto error_case;
             }
 
-            DEBUG("[FAT32][MKDIR]: Chaining next cluster to "
-                  "be END OF CHAIN\n");
+            DEBUG("[FAT32][MKDIR]: Chaining next cluster to be END OF CHAIN\n");
             if (__fat32_set_cluster(new_dir_cluster, FAT32_CLUSTER_EOC) ==
                 STATUS_ERROR) {
                 ERROR("[FAT32][MKDIR]: failed to set cluster as EOC\n");

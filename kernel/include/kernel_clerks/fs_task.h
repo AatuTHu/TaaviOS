@@ -29,7 +29,7 @@ typedef struct fd_entry_t {
     uint32_t size;
     uint32_t curr_offset;
     uint32_t flags;
-    uint8_t addributes;
+    uint8_t attr;
 } fd_entry_t;
 
 typedef struct request_queue_t {

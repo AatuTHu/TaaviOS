@@ -5,7 +5,7 @@
  * that contains the allocation entry for the given cluster.
  */
 uint32_t __fat32_calculate_lba(uint32_t cluster) {
-    // DEBUG("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n",
+    // //DEBUG("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n",
     // cluster);
     if (cluster >= f32_fs.maximum_cluster_size) {
         ERROR("[FAT32][CALCULATE_LBA]: Cluster number too high: %d\n", cluster);
@@ -148,8 +148,8 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
     uint32_t lba        = __fat32_calculate_lba(cluster);
     uint32_t fat_offset = __fat32_calculate_offset(cluster);
 
-    // DEBUG("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
-    // DEBUG("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
+    // //DEBUG("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
+    // //DEBUG("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
 
     /*
      *   Read the target lba to buffer from the actual hard drive.
@@ -284,7 +284,7 @@ uint32_t __fat32_alloc_cluster(void) {
                 // filesystem
                 uint32_t cluster_index = (i * FAT32_ENTRIES_PER_SECTOR) + j;
 
-                // DEBUG("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
+                // //DEBUG("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
                 //    "index: %d\n",
                 //     cluster_index);
                 // mark index of current j as end of chain
@@ -523,19 +523,19 @@ int __fat32_format_83(const char *filename, uint8_t *dst) {
 /**
  * __fat32_search_dir() - Searches for a specific directory
  *
- * @param dir_cluster: starting directory cluster.
+ * @param start_cluster: starting directory cluster.
  * @param name83:      holds the name taht we are looking for
  * @param out_cluster: function places the found cluster in here
  * @param out_size:    function places found size in here
  * @param out_attr:    function places found attributes in here
  *
  * Description:
- * Function searches for a specific cluster starting from the given dir_cluster.
+ * Function searches for a specific cluster starting from the given start_cluster.
  * if it finds the dir in question it places its metadata to outgoing params.
  *
  * Return: STATUS_ERROR or STATUS_OK.
  */
-int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
+int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
     uint32_t *out_cluster, uint32_t *out_size,
     uint8_t *out_attr) {
     uint8_t *buf = __fat32_allocate_buffer();
@@ -543,7 +543,7 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
         return STATUS_ERROR;
 
     uint8_t is_done          = 0;
-    uint32_t current_cluster = dir_cluster;
+    uint32_t current_cluster = start_cluster;
 
     /*
      *   Start looping and read the data of the current cluster in to a buffer
@@ -591,10 +591,10 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
                                dir_entry[i].cluster_low;
                 *out_size    = dir_entry[i].size;
                 *out_attr    = dir_entry[i].attributes;
-                // DEBUG("[FAT32][SEARCH_DIR]: file name %s\n",
-                // dir_entry[i].name); DEBUG("[FAT32][SEARCH_DIR]: file
-                // found!\n"); DEBUG("[FAT32][SEARCH_DIR]: cluster: %d\n",
-                // *out_cluster); DEBUG("[FAT32][SEARCH_DIR]: size: %d\n",
+                // //DEBUG("[FAT32][SEARCH_DIR]: file name %s\n",
+                // dir_entry[i].name); //DEBUG("[FAT32][SEARCH_DIR]: file
+                // found!\n"); //DEBUG("[FAT32][SEARCH_DIR]: cluster: %d\n",
+                // *out_cluster); //DEBUG("[FAT32][SEARCH_DIR]: size: %d\n",
                 // *out_size);
                 __fat32_free_buffer(buf);
                 return STATUS_OK;
@@ -610,11 +610,11 @@ int __fat32_search_dir(uint32_t dir_cluster, const uint8_t *name83,
          * entries proceed to next cluster
          */
         uint32_t next_cluster = __fat32_next_cluster(current_cluster);
-        // DEBUG("[FAT32][SEARCH_DIR]: Next cluster number: %d\n",
+        // //DEBUG("[FAT32][SEARCH_DIR]: Next cluster number: %d\n",
         // next_cluster);
 
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            // DEBUG("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
+            // //DEBUG("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
             __fat32_free_buffer(buf);
             return STATUS_ERROR;
         }
@@ -647,8 +647,7 @@ int __fat32_link_cluster_chain(uint32_t cluster) {
             return INVALID_CLUSTER;
         }
 
-        DEBUG("[FAT32][MKDIRP]: Chaining next cluster to "
-              "current_directory_cluster\n");
+        DEBUG("[FAT32][MKDIRP]: Chaining next cluster to current_directory_cluster\n");
         if (__fat32_set_cluster(cluster,
                 next_cluster) == STATUS_ERROR) {
             DEBUG("[FAT32][MKDIRP]: Failed to chainclusters\n");
@@ -657,8 +656,7 @@ int __fat32_link_cluster_chain(uint32_t cluster) {
 
         if (__fat32_set_cluster(next_cluster, FAT32_CLUSTER_EOC) ==
             STATUS_ERROR) {
-            DEBUG("[FAT32][MKDIRP]: Failed to set new cluster as "
-                  "endofchain\n");
+            DEBUG("[FAT32][MKDIRP]: Failed to set new cluster as endofchain\n");
             return INVALID_CLUSTER;
         }
 

@@ -19,8 +19,7 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
     uint32_t current_cluster = start_cluster;
 
     DEBUG("[FAT32][READ_FILE]: input param: size: %d\n", size);
-    DEBUG("[FAT32][READ_FILE]: ipnut param: starting cluster: %d\n",
-        start_cluster);
+    DEBUG("[FAT32][READ_FILE]: ipnut param: starting cluster: %d\n", start_cluster);
 
     uint8_t *temp_buf = __fat32_allocate_buffer();
     if (temp_buf == INVALID_BUFFER)

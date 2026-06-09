@@ -89,8 +89,16 @@ void command_mkdir(const char *filename) {
     mkdir(filename);
 }
 
+void command_clear() {
+    for (uint8_t i = 0; i < 100; i++) {
+        print("\n");
+    }
+}
+
 void exec_cmd(char *buf) {
     print("\n");
+    if (str_eq(buf, "clear") == 1)
+        command_clear();
     if (str_eq(buf, "help") == 1)
         command_help();
     if (str_eq(buf, "about") == 1)
