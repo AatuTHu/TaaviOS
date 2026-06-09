@@ -16,8 +16,7 @@
 int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
     const uint8_t *buf, uint32_t size) {
 
-    DEBUG("[FAT32][WRITE_AT_OFFSET]: input param: first_cluster: %d\n",
-        first_cluster);
+    DEBUG("[FAT32][WRITE_AT_OFFSET]: input param: first_cluster: %d\n", first_cluster);
     DEBUG("[FAT32][WRITE_AT_OFFSET]: input param: offset %d\n", offset);
     DEBUG("[FAT32][WRITE_AT_OFFSET]: input size: %d\n", size);
     DEBUG("[FAT32][WRITE_AT_OFFSET]: input param: buf %s\n", buf);
@@ -29,8 +28,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
     uint32_t target_offset = offset % cluster_size; //
 
     DEBUG("[FAT32][WRITE_AT_OFFSET]: cluster_size: %d\n", cluster_size);
-    DEBUG("[FAT32][WRITE_AT_OFFSET]: cluster_chain_length: %d\n",
-        cluster_chain_length);
+    DEBUG("[FAT32][WRITE_AT_OFFSET]: cluster_chain_length: %d\n", cluster_chain_length);
     DEBUG("[FAT32][WRITE_AT_OFFSET]: target_offset: %d\n", target_offset);
 
     // loop through clusers to get to the last cluster
@@ -39,8 +37,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
 
         if (temp_cluster == INVALID_CLUSTER ||
             temp_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG("[FAT32][OFFSE_WRITE]: Cluster walk failed: %d\n",
-                temp_cluster);
+            DEBUG("[FAT32][WRITE_AT_OFFSET]: Cluster walk failed: %d\n", temp_cluster);
             return STATUS_ERROR;
         }
 
@@ -59,7 +56,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
      */
     while (1) {
         if (__fat32_read_cluster(target_cluster, tmp_buf) == STATUS_ERROR) {
-            DEBUG("[FAT32][OFFSE_WRITE]: Could not read the cluster\n");
+            DEBUG("[FAT32][WRITE_AT_OFFSET]: Could not read the cluster\n");
             __fat32_free_buffer(tmp_buf);
             return STATUS_ERROR;
         }
@@ -79,7 +76,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
 
         // write the data to disk
         if (__fat32_write_cluster(target_cluster, tmp_buf) == STATUS_ERROR) {
-            DEBUG("[FAT32][OFFSE_WRITE]: Could not write to cluster\n");
+            DEBUG("[FAT32][WRITE_AT_OFFSET]: Could not write to cluster\n");
             __fat32_free_buffer(tmp_buf);
             return STATUS_ERROR;
         }
@@ -89,8 +86,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
         bytes_written += bytes_to_write;
         DEBUG("[FAT32][WRITE_AT_OFFSET]: bytes_written: %d\n", bytes_written);
         if (bytes_written >= size) {
-            DEBUG("[FAT32][WRITE_AT_OFFSET]: Bytes_read higher or equal to "
-                  "size\n");
+            DEBUG("[FAT32][WRITE_AT_OFFSET]: Bytes_read higher or equal to size\n");
             __fat32_free_buffer(tmp_buf);
             return STATUS_OK;
         }
@@ -136,8 +132,7 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
     // Ceiling division formula to determine the total number of blocks required
     // for data
     uint32_t clusters_needed = (size + (cluster_size - 1)) / cluster_size;
-    DEBUG("[FAT32][WRITE_FILE]: clusters needed for the file %d\n",
-        clusters_needed);
+    DEBUG("[FAT32][WRITE_FILE]: clusters needed for the file %d\n", clusters_needed);
 
     uint32_t first_cluster = 0;
     uint32_t prev_cluster  = 0;

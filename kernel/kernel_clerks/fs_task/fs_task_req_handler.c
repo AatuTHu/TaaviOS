@@ -21,7 +21,7 @@
 //  there can be multiple request with the same fd number but it alwasys
 //  correspond to the fd given here once a succesfully file is opened
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size,
-    uint32_t flags) {
+    uint32_t flags, uint32_t file_attr) {
     // DEBUG("[FS_TASK][ALLOC_FD]: Allocating new entry to fd_table\n");
     int slot = -1;
     for (int i = free_starting_slot; i < MAX_TASKS;
@@ -50,6 +50,7 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size,
     entry->fd          = slot;
     entry->curr_offset = 0;
     entry->flags       = flags;
+    entry->attr        = file_attr;
 
     DEBUG("[FS_TASK][ALLOC_FD]: fd table created\n");
     DEBUG("[FS_TASK][ALLOC_FD]: cluster: %d\n", cluster);
@@ -57,6 +58,7 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t cluster, uint32_t size,
     DEBUG("[FS_TASK][ALLOC_FD]: fd: %d\n", slot);
     DEBUG("[FS_TASK][ALLOC_FD]: current_offset: %d\n", 0);
     DEBUG("[FS_TASK][ALLOC_FD]: flags: %d\n", flags);
+    DEBUG("[FS_TASK][ALLOC_FD]: attr: %d\n", file_attr);
 
     fd_entry_table[slot] = entry;
     // DEBUG("[FS_TASK][ALLOC_FD]: Allocating successfull fd: %d\n", slot);
@@ -112,17 +114,18 @@ static int read(request_queue_t *req) {
 static int open(request_queue_t *req) {
     uint32_t file_cluster = 0;
     uint32_t file_size    = 0;
+    uint32_t file_attr    = 0;
     const char *path      = (char *)req->path;
     char *filename[8];
 
-    if (fat32_find_file(path, &file_cluster, &file_size, filename) ==
+    if (fat32_find_cluster(path, &file_cluster, &file_size, filename, &file_attr) ==
         STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Could not find file.\n");
         return STATUS_ERROR;
     }
 
     // DEBUG("[FS_TASK][OPEN]: File found succesfully, Completing request\n");
-    int fd = fs_alloc_fd(req->caller_pid, file_cluster, file_size, req->flags);
+    int fd = fs_alloc_fd(req->caller_pid, file_cluster, file_size, req->flags, file_attr);
 
     if (fd == STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Invalid fd number. Terminating request\n");
@@ -134,8 +137,25 @@ static int open(request_queue_t *req) {
     return STATUS_OK;
 }
 
-static int create(request_queue_t *r) {
-    // fat32_create_dirent();
+static int create(request_queue_t *req) {
+    DEBUG("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
+
+    uint32_t base_directory = f32_fs.root_cluster;
+
+    if (req->buffer_size > 8) {
+        if (fat32_mkdirp(base_directory, req->path) == STATUS_ERROR) {
+            ERROR("[FS_TASK][OPEN]: mkdirp failed!\n");
+            return STATUS_ERROR;
+        }
+    } else {
+        if (fat32_mkdir(base_directory, req->path) == STATUS_ERROR) {
+            ERROR("[FS_TASK][OPEN]: mkdir failed!\n");
+            return STATUS_ERROR;
+        }
+    }
+
+    fat32_list_dir(base_directory);
+    return STATUS_OK;
 }
 
 static int write(request_queue_t *req) {
@@ -241,11 +261,19 @@ void fs_handle_request(request_queue_t *req) {
         return;
     case CLOSE:
         if (close(req) == STATUS_ERROR) {
-            DEBUG("[FS_TASK][HANDLE_REQ]: CLOSING\n");
             req->status = FAILED;
         } else {
             req->status = TERMINATED;
         }
+        return;
+    case CREATE:
+        if (create(req) == STATUS_ERROR) {
+            req->status = FAILED;
+        } else {
+            req->status = TERMINATED;
+        }
+        fs_task->priority = PRIORITY_LOW;
+        fs_wake_task(req->caller_pid);
         return;
     default:
         ERROR("[FS_TASK][handle_request]: Request type was invalid. "

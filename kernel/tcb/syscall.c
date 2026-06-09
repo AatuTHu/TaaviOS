@@ -69,7 +69,7 @@ static int32_t sys_read(struct registers *r) {
             // scheduler_get_current_task()->name);
             return STATUS_ERROR;
         }
-        DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s\n", buf);
+        // DEBUG("[SYSCALL][SYS_READ]: Resulting buffer: %s\n", buf);
     }
 
     return STATUS_OK;
@@ -152,6 +152,39 @@ static int32_t sys_getpid(struct registers *r) {
 } // sys_getpid
 
 /**
+ * sys_chdir - change directory.
+ * @r: - current context registers
+ *
+ * Description:
+ * Takes in a path variable, makes a request, blocks, yields
+ * waits for request complite then returns accordingly
+ *
+ * Context: to execute tasks.
+ * Return: STATUS_ERROR || STATUS_OK.
+ */
+static int32_t sys_chdir(struct registers *r) {
+    const char *path      = (char *)r->ebx;
+    const task_t *current = scheduler_get_current_task();
+
+    if (current == NULL) {
+        // DEBUG("[SYSCALL][SYS_OPEN]: current task not found\n");
+        return STATUS_ERROR;
+    }
+
+    add_request_to_queue(current->pid, FIND, 0, path, NULL, 0, 0);
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_yield(r);
+
+    if (collect_request(current->pid, NULL) == STATUS_ERROR) {
+        // DEBUG("[SYSCALL][SYS_READ]: Collecting results went wrong %s\n",
+        // scheduler_get_current_task()->name);
+        return STATUS_ERROR;
+    }
+    // DEBUG("[SYSCALL][SYS_OPEN]: Returning fd: %d\n", fd);
+    return STATUS_OK;
+}
+
+/**
  * Sys_exec - Execute binaries.
  * @r: - current context registers
  *
@@ -173,9 +206,10 @@ static int32_t sys_exec(struct registers *r) {
 
     uint32_t file_cluster = 0;
     uint32_t file_size    = 0;
+    uint32_t file_attr    = 0;
     char task_name[8];
     DEBUG("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
-    if (fat32_find_file(filename, &file_cluster, &file_size, &task_name) ==
+    if (fat32_find_cluster(filename, &file_cluster, &file_size, &task_name, &file_attr) ==
         STATUS_ERROR) {
         ERROR("[SYS_EXEC]: Did not find the file\n");
         return STATUS_ERROR;
@@ -206,13 +240,14 @@ static int32_t sys_exec(struct registers *r) {
 static int32_t sys_mkdir(struct registers *r) {
     DEBUG("[SYSCALL][SYS_MKDIR]\n");
     const char *path = (char *)r->ebx;
-    DEBUG("[SYSCALL][SYS_MKDIR]: creating path %s\n", path);
+    uint32_t len     = r->ecx;
+    DEBUG("[SYSCALL][SYS_MKDIR]: creating path %s with len: %d\n", path, len);
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {
         DEBUG("[SYSCALL][SYS_MKDIR]: no current task found\n");
         return STATUS_ERROR;
     }
-    add_request_to_queue(current->pid, CREATE, 0, path, NULL, 0, O_CREAT);
+    add_request_to_queue(current->pid, CREATE, 0, path, NULL, len, O_CREAT);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 

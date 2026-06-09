@@ -13,7 +13,7 @@ int sys_getpid(void);
 
 void sys_idle(void);
 
-int sys_mkdir(const char *path);
+int sys_mkdir(const char *path, uint32_t len);
 
 void sys_yield(void);
 

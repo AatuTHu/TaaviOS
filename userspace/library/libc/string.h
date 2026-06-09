@@ -7,6 +7,7 @@
 void memcpy(void *dst, const void *src, uint32_t n);
 void memset(void *ptr, int value, int size);
 int strlen(const char *s);
+int strnlen(const char *s, int n);
 int strcmp(const char *a, const char *b);
 int str_eq(char *a, char *b);
 void itoa(int n, char *buf);

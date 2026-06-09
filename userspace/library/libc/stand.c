@@ -27,7 +27,8 @@ void write(int fd, const char *msg) {
 }
 
 int mkdir(const char *path) {
-    sys_mkdir(path);
+    int len = strnlen(path, 128);
+    sys_mkdir(path, len);
 }
 
 int read(int fd, char *buf, int buffer_size) {
