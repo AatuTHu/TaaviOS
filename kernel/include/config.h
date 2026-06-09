@@ -54,7 +54,8 @@ typedef enum {
 #define O_RDWR   0x04
 #define O_CREAT  0x08
 
-#define CLERK_COUNT 3 // amount of clerks. Very important. hardcoded for now
+#define CLERK_COUNT    3 // amount of clerks. Very important. hardcoded for now
+#define MAX_FD_ENTRIES 256
 
 #define idle_task_pid   0
 #define fs_task_pid     1

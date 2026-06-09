@@ -18,7 +18,7 @@ fat32_fs_t f32_fs;
  * Return: STATUS_ERROR || STATUS_OK.
  */
 int fat32_find_cluster(const char *path, uint32_t *out_cluster, uint32_t *out_size,
-    char *out_fname, uint32_t *out_attr) {
+    char *out_fname, uint8_t *out_attr) {
 
     if (path == NULL) {
         ERROR("[FAT32][FIND_CLUSTER]: Given path was invalid\n");

@@ -9,6 +9,7 @@
 #include "keyboard.h"
 #include "klog.h"
 #include "kmalloc.h"
+#include "ledger.h"
 #include "mbr.h"
 #include "mm.h"
 #include "paging.h"
@@ -109,7 +110,7 @@ static void init_filesystems() {
      }*/
 }
 
-static void init_kernel_tasks() {
+static void init_microlithic_mode() {
     klog("[KERNEL]: --INIT KERNEL TASKS--\n");
     klog("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, "idle",
@@ -136,6 +137,8 @@ static void init_kernel_tasks() {
         reaper_init(kernel_task);
         scheduler_add(kernel_task);
     }
+
+    ledger_init();
 }
 
 void kernel_main(const uint32_t *mboot_info) {
@@ -155,7 +158,7 @@ void kernel_main(const uint32_t *mboot_info) {
 
     scheduler_init();
     syscall_init();
-    init_kernel_tasks();
+    init_microlithic_mode();
 
     task_t *first_task = NULL;
 
