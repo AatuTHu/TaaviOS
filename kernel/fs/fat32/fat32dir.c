@@ -203,6 +203,10 @@ directory
 */
 int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, uint32_t new_size) {
 
+    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", starting_cluster);
+    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: file_cluster: %d\n", file_cluster);
+    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", new_size);
+
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
         return STATUS_ERROR;
@@ -238,14 +242,14 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
          */
 
         for (uint32_t i = 0; i < max_dir_entries; i++) {
-            uint32_t whole_cluster =
-                (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
-            DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n", whole_cluster);
+            uint32_t whole_cluster = (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
+            // DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n", whole_cluster);
             if (whole_cluster == file_cluster) {
                 DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
                 dir_entry[i].size = new_size;
                 if (__fat32_write_cluster(current_dir_cluster, buf) ==
                     STATUS_ERROR) {
+                    ERROR("[FAT32][UPDATE_DIRENT_SIZE]: Failed to write in the cluste.");
                     goto error_case;
                 }
                 DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Update complete!\n");
@@ -259,15 +263,8 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
          * Follow the chain link to fetch the next directory cluster block from
          * the FAT.
          */
-        uint32_t next = __fat32_next_cluster(current_dir_cluster);
 
-        if (next >= FAT32_CLUSTER_EOC) {
-            ERROR("[FAT32][UPDATE_DIRENT_SIZE]: Next cluster is end of the "
-                  "chain. Aborting\n");
-            goto error_case;
-        }
-
-        current_dir_cluster = next;
+        current_dir_cluster = __fat32_link_cluster_chain(current_dir_cluster);
     }
 
 error_case:

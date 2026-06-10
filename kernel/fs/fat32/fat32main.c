@@ -17,7 +17,7 @@ fat32_fs_t f32_fs;
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
-int fat32_find_cluster(const char *path, uint32_t *out_file_cluster, uint32_t *out_dir_cluster, uint32_t *out_size,
+int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t *out_file_cluster, uint32_t *out_dir_cluster, uint32_t *out_size,
     char *out_fname, uint8_t *out_attr) {
 
     if (path == NULL) {
@@ -25,9 +25,9 @@ int fat32_find_cluster(const char *path, uint32_t *out_file_cluster, uint32_t *o
         return STATUS_ERROR;
     }
 
-    // currenct cluster starts from root_cluster as we start looking from there
-    uint32_t current_directory_cluster = f32_fs.root_cluster;
-    uint32_t found_cluster, found_size;
+    uint32_t current_directory_cluster = starting_dir_cluster;
+    uint32_t found_cluster,
+        found_size;
     uint8_t found_attr;
     uint8_t name83[11];
 
@@ -46,7 +46,6 @@ int fat32_find_cluster(const char *path, uint32_t *out_file_cluster, uint32_t *o
         // forward breaking the loop if we find end of file or a slash sooner
         while (index < 12) {
             if (path[index] == '\0' || path[index] == '/') {
-                segment[index] = '\0';
                 break;
             }
             segment[index] = path[index];

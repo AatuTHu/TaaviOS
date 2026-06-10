@@ -1,4 +1,5 @@
 #include "ledger.h"
+#include "blankie.h"
 
 request_table *request_queue[CLERK_COUNT][MAX_REQ_ENTRIES];
 
@@ -151,6 +152,7 @@ request_table *fetch_next_task(uint32_t clerk_pid) {
     }
 
     DEBUG("[LEDGER][NEXT_REQUEST]: could not find new request\n");
+    blankie_activate(clerk_pid);
     return NULL;
 }
 

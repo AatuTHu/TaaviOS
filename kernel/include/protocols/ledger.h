@@ -6,8 +6,6 @@
 #include "kstring.h"
 #include "sched.h"
 
-#define MAX_REQ_ENTRIES 50
-
 typedef enum {
     PENDING,
     IN_PROGRESS,

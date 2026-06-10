@@ -18,6 +18,7 @@ int read(int fd, char *buf, int buffer_size);
 void write(int fd, const char *msg);
 void close(uint32_t fd);
 int mkdir(const char *path);
+int change_directory(const char *path, char *directory_name);
 
 int exec(const char *filename);
 void idle(void);

@@ -18,6 +18,16 @@ int open(const char *path, uint32_t flags) {
     return sys_open(path, flags);
 }
 
+int change_directory(const char *path, char *directory_name) {
+    int len     = strnlen(path, 128);
+    int respone = sys_chdir(path, len);
+
+    if (respone != -1) {
+        memcpy(directory_name, path, 8);
+    }
+    return respone;
+}
+
 void close(uint32_t fd) {
     sys_close(fd);
 }
@@ -27,8 +37,9 @@ void write(int fd, const char *msg) {
 }
 
 int mkdir(const char *path) {
-    int len = strnlen(path, 128);
-    sys_mkdir(path, len);
+    int len      = strnlen(path, 128);
+    int response = sys_mkdir(path, len);
+    return response;
 }
 
 int read(int fd, char *buf, int buffer_size) {

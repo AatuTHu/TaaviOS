@@ -60,5 +60,6 @@ typedef enum {
 #define idle_task_pid   0
 #define fs_task_pid     1
 #define reaper_task_pid 2
+#define MAX_REQ_ENTRIES 50
 
 #endif

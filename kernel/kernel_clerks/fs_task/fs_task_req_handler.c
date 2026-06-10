@@ -1,11 +1,71 @@
 #include "fat32.h"
 #include "fs_task.h"
-#include "ledger.h"
+
+static dir_traversal_t *dir_map[MAX_REQ_ENTRIES];
 
 /*
  * Fs_task
  * Design & Implementation: A.H, 2026
  */
+
+static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, uint32_t prev_cluster) {
+
+    int slot = -1;
+
+    for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+        if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
+            slot = i;
+        }
+    }
+
+    if (slot == -1) {
+        for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+            if (dir_map[i] == NULL) {
+                slot = i;
+                break;
+            }
+        }
+    }
+
+    if (slot == -1) {
+        DEBUG("[FS_TASK][DIR_MAPPER]: No free slots in the map\n");
+        return STATUS_ERROR;
+    }
+
+    dir_traversal_t *entry = (dir_traversal_t *)kmalloc(sizeof(dir_traversal_t));
+
+    if (entry == NULL) {
+        DEBUG("[FS_TASK][DIR_MAPPER]: Heap allocation failed\n");
+        return STATUS_ERROR;
+    }
+
+    if (prev_cluster <= 2) {
+        prev_cluster = f32_fs.root_cluster;
+    }
+
+    entry->owner_pid       = owner_pid;
+    entry->current_cluster = current_cluster;
+    entry->prev_cluster    = prev_cluster;
+
+    DEBUG("[FS_TASK][MAPPER]: owner_pid: %d\n", owner_pid);
+    DEBUG("[FS_TASK][MAPPER]: current_cluster: %d\n", current_cluster);
+    DEBUG("[FS_TASK][MAPPER]: prev_cluster: %d\n", prev_cluster);
+
+    dir_map[slot] = entry;
+
+    return STATUS_OK;
+}
+
+static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
+    for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+        if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
+            DEBUG("[FS_TASK][GET_DIRECTION]: directions found!\n");
+            return dir_map[i];
+        }
+    }
+    DEBUG("[FS_TASK][GET_DIRECTION]: directions not found for %d!\n", owner_pid);
+    return NULL;
+}
 
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_cluster, uint32_t size,
     uint32_t flags, uint8_t file_attr) {
@@ -81,14 +141,21 @@ static int read(request_table *req) {
 }
 
 static int open(request_table *req) {
-    uint32_t file_cluster = 0;
-    uint32_t dir_cluster  = 0;
-    uint32_t file_size    = 0;
-    uint8_t file_attr     = 0;
-    const char *path      = (char *)req->path;
+    uint32_t file_cluster     = 0;
+    uint32_t dir_cluster      = 0;
+    uint32_t file_size        = 0;
+    uint8_t file_attr         = 0;
+    uint32_t starting_cluster = f32_fs.root_cluster;
+    const char *path          = (char *)req->path;
     char filename[8];
 
-    if (fat32_find_cluster(path, &file_cluster, &dir_cluster, &file_size, filename, &file_attr) ==
+    dir_traversal_t *map = dir_get_direction(req->caller_pid);
+
+    if (map != NULL) {
+        starting_cluster = map->current_cluster;
+    }
+
+    if (fat32_find_cluster(starting_cluster, path, &file_cluster, &dir_cluster, &file_size, filename, &file_attr) ==
         STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Could not find file.\n");
         return STATUS_ERROR;
@@ -97,6 +164,11 @@ static int open(request_table *req) {
     int fd = fs_alloc_fd(req->caller_pid, file_cluster, dir_cluster, file_size, req->flags, file_attr);
     if (fd == STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Invalid fd number. Terminating request\n");
+        return STATUS_ERROR;
+    }
+
+    if (dir_traversal_mapper(req->caller_pid, file_cluster, dir_cluster) == STATUS_ERROR) {
+        DEBUG("[FS_TASK][OPEN]: Making a traversal, map failed\n");
         return STATUS_ERROR;
     }
 
@@ -172,6 +244,35 @@ static int close(request_table *req) {
     return STATUS_OK;
 }
 
+static int find(request_table *req) {
+    uint32_t file_cluster     = 0;
+    uint32_t dir_cluster      = 0;
+    uint32_t file_size        = 0;
+    uint8_t file_attr         = 0;
+    uint32_t starting_cluster = f32_fs.root_cluster;
+    const char *path          = (char *)req->path;
+    char filename[8];
+
+    dir_traversal_t *map = dir_get_direction(req->caller_pid);
+
+    if (map != NULL) {
+        starting_cluster = map->current_cluster;
+    }
+
+    if (fat32_find_cluster(starting_cluster, path, &file_cluster, &dir_cluster, &file_size, filename, &file_attr) ==
+        STATUS_ERROR) {
+        ERROR("[FS_TASK][OPEN]: Could not find file.\n");
+        return STATUS_ERROR;
+    }
+
+    if (dir_traversal_mapper(req->caller_pid, file_cluster, dir_cluster) == STATUS_ERROR) {
+        DEBUG("[FS_TASK][OPEN]: Making a traversal, map failed\n");
+        return STATUS_ERROR;
+    }
+
+    return STATUS_OK;
+}
+
 void fs_handle_request(request_table *req) {
     task_t *fs_task = task_get(fs_task_pid);
 
@@ -200,6 +301,11 @@ void fs_handle_request(request_table *req) {
         return;
     case CREATE:
         req->status       = (create(req) == STATUS_ERROR) ? FAILED : TERMINATED;
+        fs_task->priority = PRIORITY_LOW;
+        fs_wake_task(req->caller_pid);
+        return;
+    case FIND:
+        req->status       = (find(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_LOW;
         fs_wake_task(req->caller_pid);
         return;

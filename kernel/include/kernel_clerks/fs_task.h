@@ -5,6 +5,7 @@
 #include "klog.h"
 #include "kmalloc.h"
 #include "kstring.h"
+#include "ledger.h"
 #include "sched.h"
 #include "task.h"
 #include <stdint.h>
@@ -23,13 +24,18 @@ typedef struct fd_entry_t {
     uint8_t attr;
 } fd_entry_t;
 
+typedef struct dir_traversal_t {
+    uint32_t owner_pid;
+    uint32_t current_cluster;
+    uint32_t prev_cluster;
+} dir_traversal_t;
+
 void fs_init(const task_t *fs_task);
 void fs_task_loop();
 void fs_recovery();
 void fs_wake_task(uint32_t pid);
+void fs_handle_request(request_table *req);
 
-extern int request_queue_count;
-extern int current_req_index;
 extern fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
 
 #endif

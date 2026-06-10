@@ -4,28 +4,29 @@
 #include <stdint.h>
 
 static int fd = -1;
+static char dir_name[8];
 
 void command_help() {
     print("\n------------------------------------------------------------------"
           "-------------\n");
     print("Available commands\n");
-    print("- help               'Prints this list'     \n");
-    print("- about              'Useless function'     \n");
-    print("- get my pid         'Shells pid'           \n");
-    print("- exec  [task]       'Executes a task'      \n");
-    print("- open  [path]       'Open a file'          \n");
-    print("- write [text]       'Writes to opened file \n");
-    print("- close              'close opened file'    \n");
-    print("- read               'Reads the opened file'\n");
-    print("- exit               'Exits and kills shell'\n");
+    print("- help               'Prints this list'          \n");
+    print("- about              'Useless function'          \n");
+    print("- get my pid         'Shells pid'                \n");
+    print("- exec  [task]       'Executes a task'           \n");
+    print("- open  [path]       'Open a file'               \n");
+    print("- write [text]       'Writes to opened file'     \n");
+    print("- mkdir [text]       'Creates a directory'       \n");
+    print("- cd    [text]       'Changes working directory' \n");
+    print("- read               'Reads the opened file'     \n");
+    print("- close              'close opened file'         \n");
+    print("- exit               'Exits and kills shell'     \n");
     print("\n");
 }
 
 void command_about() {
-    print("\n------------------------------------------------------------------"
-          "-------------\n");
+    print("\n---------------------------------------------------------------\n");
     print("TaaviOS v0.6.0 - Author: Aatu H\n");
-    print("\n");
 }
 
 void command_get_pid() {
@@ -39,30 +40,30 @@ void command_get_pid() {
 }
 
 void command_exit() {
-    print("\n");
     terminate_program();
-    print("\n");
 }
 
-void command_exec(const char *filename) {
-    print("\n");
-    exec(filename);
-    print("\n");
+void command_exec(const char *path) {
+    exec(path);
 }
 
 void command_write(const char *buf) {
+    print("\n");
     write(fd, buf);
     print("\n");
 }
 
 void command_open(const char *filename) {
-    print("\n");
     fd = open(filename, O_RDONLY | O_WRONLY);
 
     if (fd != -1) {
+        print("\n");
         print("Succesfully opened the file\n");
+        print("\n");
     } else {
+        print("\n");
         error("Error on opening the file\n");
+        print("\n");
     }
 }
 
@@ -76,23 +77,28 @@ void command_read() {
         print("\n");
     } else {
         error("Read failed or file empty\n");
+        print("\n");
     }
 }
 
 void command_close() {
-    print("\nclosing file\n");
+    print("closing file\n");
     close(fd);
     fd = -1;
 }
 
-void command_mkdir(const char *filename) {
-    mkdir(filename);
+void command_mkdir(const char *directory_name) {
+    mkdir(directory_name);
 }
 
 void command_clear() {
     for (uint8_t i = 0; i < 100; i++) {
         print("\n");
     }
+}
+
+void command_cd(const char *path) {
+    change_directory(path, dir_name);
 }
 
 void exec_cmd(char *buf) {
@@ -119,6 +125,8 @@ void exec_cmd(char *buf) {
         command_exec(buf + 5);
     if (str_starts_with(buf, "mkdir ") == 1)
         command_mkdir(buf + 6);
+    if (str_starts_with(buf, "cd ") == 1)
+        command_cd(buf + 3);
     print("\n");
 }
 
@@ -178,7 +186,9 @@ void main(void) {
      }*/
 
     while (1) {
-        print("\n> ");
+        print("\n");
+        print(dir_name);
+        print(" >> ");
         pos = 0;
         while (1) {
             int n = scan(&c);

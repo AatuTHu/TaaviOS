@@ -32,15 +32,15 @@ static volatile uint8_t scheduler_on = 0;
 
 static void scheduler_check_clerks() {
 
-    ////DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
+    DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
     if (dead_task_count > 0) {
         clerk = tasks[reaper_task_pid];
         if (clerk == NULL || clerk->task_mode == USER_TASK) {
-            // DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
+            DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
             return;
         }
-        //  //DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
+        DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
         clerk->state = TASK_READY;
     }
 
@@ -109,7 +109,7 @@ static int scheduler_find_first_task_based_on_state(task_state_t state) {
 static void scheduler_switch(struct registers *r) {
     task_t *current = scheduler_get_current_task();
 
-    if (current != NULL && current->started && current->state != TASK_DEAD) {
+    if (current != NULL && current->started && current->state != TASK_DEAD && current->state != TASK_SLEEPING) {
         // //DEBUG("[SCHEDULER][SWITCH]: Saving: %s with state: %d\n",
         // current->name, current->state);
         memcpy(&current->context, r, sizeof(struct registers));

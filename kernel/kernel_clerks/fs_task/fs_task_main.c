@@ -1,7 +1,6 @@
 #include "blankie.h"
 #include "fs_task.h"
 #include "hail_mary.h"
-#include "ledger.h"
 
 /*
  * Fs_task
@@ -18,18 +17,29 @@ void fs_wake_task(uint32_t pid) {
  * fs_task_loop - entry point and the work algo.
  * Context: So there would be a work loop.
  */
+/*
+ * Main task loop of fs_task the algorithm
+ */
 void fs_task_loop() {
+    // DEBUG("[FS_TASK]: \n");
+
     while (1) {
         request_table *request = fetch_next_task(fs_task_pid);
-        if (request == NULL) {
-            blankie_activate(fs_task_pid);
-            return;
+
+        if (request != NULL) {
+            if (request->status == PENDING || request->status == IN_PROGRESS) {
+                __asm__ __volatile__("cli");
+                DEBUG("[FS_TASK][LOOP]: handling request\n");
+                fs_handle_request(request);
+                __asm__ __volatile__("sti");
+            }
         }
 
-        if (request->status == PENDING || request->status == IN_PROGRESS) {
-            request->status = IN_PROGRESS;
-            fs_handle_request(request);
-        }
+        /*
+         * if(virt file needs servicing)
+         * calculate next possible cluster/file
+         * close / delete
+         */
     }
 }
 

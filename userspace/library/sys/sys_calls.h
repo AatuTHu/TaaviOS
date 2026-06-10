@@ -21,6 +21,8 @@ int sys_read(int fd, char *buf, int len);
 
 int sys_open(const char *path, uint32_t flags);
 
+int sys_chdir(const char *path, uint32_t len);
+
 int sys_exec(const char *filename);
 
 #endif

@@ -26,7 +26,7 @@ typedef enum { PRIORITY_HIGH,
 
 typedef struct task_t {
     uint32_t pid;
-    char name[8];
+    char name[9];
     task_state_t state;
     page_directory_t *page_dir;
     uint32_t kernel_stack;

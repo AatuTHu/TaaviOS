@@ -171,12 +171,13 @@ static int32_t sys_getpid(struct registers *r) {
  */
 static int32_t sys_chdir(struct registers *r) {
     const char *path      = (char *)r->ebx;
+    uint32_t len          = r->ecx;
     const task_t *current = scheduler_get_current_task();
 
     if (current == NULL)
         return STATUS_ERROR;
 
-    add_request_to_ledger(current->pid, fs_task_pid, FIND, 0, path, NULL, 0, 0);
+    add_request_to_ledger(current->pid, fs_task_pid, FIND, 0, path, NULL, len, 0);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -200,14 +201,15 @@ static int32_t sys_exec(struct registers *r) {
     if (current == NULL || filename == NULL)
         return STATUS_ERROR;
 
-    uint32_t file_cluster = 0;
-    uint32_t dir_cluster  = 0;
-    uint32_t file_size    = 0;
-    uint8_t file_attr     = 0;
-    char task_name[8];
+    uint32_t file_cluster      = 0;
+    uint32_t dir_cluster       = 0;
+    uint32_t file_size         = 0;
+    uint32_t start_dir_cluster = f32_fs.root_cluster;
+    uint8_t file_attr          = 0;
+    char task_name[9];
 
     DEBUG("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
-    if (fat32_find_cluster(filename, &file_cluster, &dir_cluster, &file_size, task_name, &file_attr) ==
+    if (fat32_find_cluster(start_dir_cluster, filename, &file_cluster, &dir_cluster, &file_size, task_name, &file_attr) ==
         STATUS_ERROR) {
         ERROR("[SYS_EXEC]: Did not find the file\n");
         return STATUS_ERROR;
