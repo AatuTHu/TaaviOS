@@ -24,15 +24,16 @@ void fs_task_loop() {
     // DEBUG("[FS_TASK]: \n");
 
     while (1) {
+        DEBUG("[FS_TASK]: Current pid value is: %d\n", fs_task_pid);
         request_table *request = fetch_next_task(fs_task_pid);
 
         if (request != NULL) {
             if (request->status == PENDING || request->status == IN_PROGRESS) {
-                __asm__ __volatile__("cli");
                 DEBUG("[FS_TASK][LOOP]: handling request\n");
                 fs_handle_request(request);
-                __asm__ __volatile__("sti");
             }
+        } else {
+            blankie_activate(fs_task_pid);
         }
 
         /*

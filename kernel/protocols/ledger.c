@@ -111,6 +111,7 @@ int collect_request(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
             case READ:
                 memcpy(out, request_queue[clerk_pid][i]->buf,
                     request_queue[clerk_pid][i]->buffer_size);
+
                 request_queue[clerk_pid][i]->status = TERMINATED;
                 return STATUS_OK;
 
@@ -130,6 +131,9 @@ int collect_request(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
 }
 
 request_table *fetch_next_task(uint32_t clerk_pid) {
+
+    DEBUG("[LEDGER][FETCH_NEXT_TASK]: %d came to look for a taks!\n", clerk_pid);
+
     if (clerk_pid >= CLERK_COUNT) {
         ERROR("[LEDGER][FETCH_NEXT_TASK]: clerk pid is invalid\n");
         return NULL;
@@ -152,7 +156,6 @@ request_table *fetch_next_task(uint32_t clerk_pid) {
     }
 
     DEBUG("[LEDGER][NEXT_REQUEST]: could not find new request\n");
-    blankie_activate(clerk_pid);
     return NULL;
 }
 

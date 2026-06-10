@@ -30,6 +30,16 @@ static int dead_task_count           = 0;
 static int current_idx               = -1;
 static volatile uint8_t scheduler_on = 0;
 
+static int scheduler_has_runnable_task() {
+
+    for (int i = 0; i < task_count; i++) {
+        if (tasks[i] && tasks[i]->state == TASK_READY) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static void scheduler_check_clerks() {
 
     DEBUG("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
@@ -267,22 +277,11 @@ int scheduler_get_task_count() {
     return task_count;
 }
 
-int scheduler_has_runnable_task() {
-
-    for (int i = 0; i < task_count; i++) {
-        if (tasks[i] && tasks[i]->state == TASK_READY) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 void scheduler_wake_task(uint32_t pid) {
     // DEBUG("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for (int i = 0; i < task_count; i++) {
-        if (tasks[i] && tasks[i]->pid == pid) {
-            ////DEBUG("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n",
-            /// tasks[i]->name, tasks[i]->pid, i);
+        if (tasks[i] != NULL && tasks[i]->pid == pid) {
+            DEBUG("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
             tasks[i]->state = TASK_READY;
             return;
         }

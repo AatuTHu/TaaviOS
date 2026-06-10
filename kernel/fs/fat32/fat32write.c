@@ -99,10 +99,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
          * to target and finally mark that as end of chain. alternatively just
          * use the next cluster
          */
-        target_offset = 0;
-        uint32_t next = __fat32_next_cluster(target_cluster);
-        bytes_left    = size - bytes_written;
-        DEBUG("[FAT32][WRITE_AT_OFFSET]: next cluster %d\n", next);
+        target_offset  = 0;
         target_cluster = __fat32_link_cluster_chain(target_cluster);
 
         if (target_cluster == INVALID_CLUSTER)
