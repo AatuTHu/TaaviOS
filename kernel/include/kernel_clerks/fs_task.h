@@ -15,7 +15,8 @@
 typedef struct fd_entry_t {
     uint32_t owner_pid;
     uint32_t fd;
-    uint32_t cluster;
+    uint32_t file_cluster;
+    uint32_t dir_cluster;
     uint32_t size;
     uint32_t curr_offset;
     uint32_t flags;

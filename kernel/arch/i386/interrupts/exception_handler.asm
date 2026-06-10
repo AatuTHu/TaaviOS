@@ -1,3 +1,5 @@
+[bits 32]
+
 %macro ISR_NOERRCODE 1
 global isr%1
 isr%1:

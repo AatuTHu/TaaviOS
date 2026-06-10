@@ -21,6 +21,7 @@ typedef uint32_t page_directory_t[1024];
 typedef uint32_t page_table_t[1024];
 extern page_directory_t kernel_page_dir;
 
+extern switch_page_dir(page_directory_t *dir);
 void paging_init(void);
 void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
     uint32_t flags);

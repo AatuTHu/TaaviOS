@@ -201,12 +201,13 @@ static int32_t sys_exec(struct registers *r) {
         return STATUS_ERROR;
 
     uint32_t file_cluster = 0;
+    uint32_t dir_cluster  = 0;
     uint32_t file_size    = 0;
-    uint32_t file_attr    = 0;
+    uint8_t file_attr     = 0;
     char task_name[8];
 
     DEBUG("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
-    if (fat32_find_cluster(filename, &file_cluster, &file_size, task_name, &file_attr) ==
+    if (fat32_find_cluster(filename, &file_cluster, &dir_cluster, &file_size, task_name, &file_attr) ==
         STATUS_ERROR) {
         ERROR("[SYS_EXEC]: Did not find the file\n");
         return STATUS_ERROR;

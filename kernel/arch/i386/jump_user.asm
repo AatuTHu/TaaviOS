@@ -1,7 +1,16 @@
 [GLOBAL jump_to_usermode]
+
+extern tss_set_kernel_stack;
+
 jump_to_usermode:
-    mov eax, [esp+4]
+    mov edx, [esp+4]
     mov ecx, [esp+8]
+    mov eax, [esp+12]
+
+    push eax
+    call tss_set_kernel_stack
+
+    mov eax, edx
 
     mov dx, 0x23
     mov ds, dx

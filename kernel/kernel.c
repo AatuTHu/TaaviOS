@@ -21,10 +21,10 @@
 #include "syscall.h"
 #include "task.h"
 #include "tss.h"
-#include "usermode.h"
 #include "vga.h"
 #include "vmm.h"
 
+extern void jump_to_usermode(uint32_t entry, uint32_t user_stack, uint32_t kernel_stack);
 #define MAX_MODS 10
 uint32_t module_starts[MAX_MODS];
 uint32_t module_ends[MAX_MODS];
@@ -190,7 +190,6 @@ void kernel_main(const uint32_t *mboot_info) {
             first_task->context.eip, first_task->context.useresp,
             first_task->name);
         clear_terminal();
-        enter_usermode(first_task->context.eip, first_task->context.useresp,
-            first_task->kernel_stack);
+        jump_to_usermode(first_task->context.eip, first_task->context.useresp, first_task->kernel_stack);
     }
 }

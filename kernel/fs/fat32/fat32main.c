@@ -17,7 +17,7 @@ fat32_fs_t f32_fs;
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
-int fat32_find_cluster(const char *path, uint32_t *out_cluster, uint32_t *out_size,
+int fat32_find_cluster(const char *path, uint32_t *out_file_cluster, uint32_t *out_dir_cluster, uint32_t *out_size,
     char *out_fname, uint8_t *out_attr) {
 
     if (path == NULL) {
@@ -79,10 +79,10 @@ int fat32_find_cluster(const char *path, uint32_t *out_cluster, uint32_t *out_si
         // attributes to see that it is a directory and not a file
         if (*path == '\0') {
             memcpy(out_fname, segment, 8);
-            *out_cluster = found_cluster;
-            *out_size    = found_size;
-            *out_attr    = found_attr;
-            DEBUG("[FAT32][FIND_CLUSTER]: Directory cluster found: %d\n", *out_cluster);
+            *out_file_cluster = found_cluster;
+            *out_size         = found_size;
+            *out_attr         = found_attr;
+            DEBUG("[FAT32][FIND_CLUSTER]: Directory cluster found: %d\n", *out_file_cluster);
             DEBUG("[FAT32][FIND_CLUSTER]: Size: %d\n", *out_size);
             DEBUG("[FAT32][FIND_CLUSTER]: last segment: %s\n", out_fname);
             return STATUS_OK;
@@ -95,6 +95,7 @@ int fat32_find_cluster(const char *path, uint32_t *out_cluster, uint32_t *out_si
             return STATUS_ERROR;
         }
         // step further in to a subdirectory
+        *out_dir_cluster          = found_cluster;
         current_directory_cluster = found_cluster;
     }
 

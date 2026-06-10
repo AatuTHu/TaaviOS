@@ -1,27 +1,26 @@
-Taavi OS — TODO
+**Taavi OS — TODO**
 
-Ledger Protocol
+**Ledger Protocol**
+- Reaper dead request cleanup — scan for TERMINATED, kfree, NULL slot. Woken by Ledger on collect
 
-Cursor fragmentation — freed slots get reused via size==0 scan but cursor never rewinds. Acceptable for now but will fragment protocol address space over time. Revisit when sys_close is built. 
- -> retired & replaced with hail mary protocol. Still thingking a way of using this later.
+**Reaper**
+- Expand Reaper to handle dead request cleanup — scan for TERMINATED, kfree, NULL slot
+- Reaper woken by Ledger on collect, not polling
 
-Kernel / Syscall
+**Kernel / Syscall**
+- sys_chdir — stub. Needs cwd, directory attribute check, path resolution
+- O_CREAT for files — not started. Needs path traversal helper first
+- Flag constants not in a shared userspace-visible header yet
+- Dead variable `entry` in READ case of old collect_request — gone with fs_task_interact.c
 
-sys_exec is a hack — no ELF loading, needs a real implementation -> store entry to filesystem and read it at runtime?
+**Filesystem**
+- Path traversal helper -> takes full path, returns parent cluster
+- curr_offset open behavior not finalized
+- sys_delete — not started
+- sys_open, sys_read, sys_write, sys_close, sys_mkdir, sys_mkdirp -> working
+- update dir -> not working. if used the sysbin folder that is created with make
 
-VGA
-
-VGA is mapped directly in paging. Should go through VMM like all other memory
-VGA driver is poorly written -> scroll is broken or missing
-Scroll up/down on arrow key press
-
-Filesystem
-
-sys_open -> working
-sys_read -> working
-sys_write -> working
-sys_delete -> not started
-sys_close -> not started
-
-fs_task request handle -> expand for write and delete operations
-
+**VGA**
+- VGA mapped directly in paging -> should go through VMM like all other memory
+- VGA driver poorly written -> scroll maybe broken
+- Scroll up/down on arrow key press
