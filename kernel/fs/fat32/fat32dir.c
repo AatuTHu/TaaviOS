@@ -211,6 +211,10 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
     if (buf == INVALID_BUFFER)
         return STATUS_ERROR;
 
+    if (starting_cluster == 0) {
+        starting_cluster = f32_fs.root_cluster;
+    }
+
     uint32_t cluster_size        = __fat32_calculate_cluster_size();
     uint32_t current_dir_cluster = starting_cluster;
 
@@ -264,7 +268,14 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
          * the FAT.
          */
 
-        current_dir_cluster = __fat32_link_cluster_chain(current_dir_cluster);
+        uint32_t next = __fat32_next_cluster(current_dir_cluster);
+
+        if (next >= FAT32_CLUSTER_EOC_MIN) {
+            ERROR("[FAT32][UPDATE_DIRENT_SIZE]: Next cluster was end of the chain.");
+            goto error_case;
+        }
+
+        current_dir_cluster = next;
     }
 
 error_case:

@@ -80,6 +80,7 @@ int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t
             *out_file_cluster = found_cluster;
             *out_size         = found_size;
             *out_attr         = found_attr;
+            *out_dir_cluster  = (current_directory_cluster == 0) ? f32_fs.root_cluster : current_directory_cluster;
             // DEBUG("[FAT32][FIND_CLUSTER]: Directory cluster found: %d\n", *out_file_cluster);
             // DEBUG("[FAT32][FIND_CLUSTER]: Size: %d\n", *out_size);
             // DEBUG("[FAT32][FIND_CLUSTER]: last segment: %s\n", out_fname);
@@ -91,12 +92,6 @@ int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t
         if (!(found_attr & FAT32_ATTR_DIRECTORY)) {
             ERROR("[FAT32][FIND_CLUSTER]: Found invalid attributes\n");
             return STATUS_ERROR;
-        }
-
-        if (found_cluster == 0) {
-            *out_dir_cluster = f32_fs.root_cluster;
-        } else {
-            *out_dir_cluster = found_cluster;
         }
         // step further in to a subdirectory
         current_directory_cluster = found_cluster;

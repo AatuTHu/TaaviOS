@@ -220,6 +220,7 @@ static int write(const request_table *req) {
     entry->curr_offset = req->buffer_size;
     entry->size        = req->buffer_size;
 
+    
     if (fat32_update_dirent_size(entry->dir_cluster, entry->file_cluster,
             entry->size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not update file\n");

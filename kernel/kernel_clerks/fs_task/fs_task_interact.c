@@ -80,10 +80,7 @@ case_error:
  * Collect request - Should a task want to collect results.
  * @pid: Callers pid to match with request pid
  * @buf: on read situation. Read the contents of a request to buffer
- *
- * Description:
- * more lenghty desription on what the function DOES
- *
+
  * Context: It was made so that caller could do other things and be notified to
  * when to collect. Return: the type of request or STATUS_ERROR
  */
