@@ -1,4 +1,4 @@
-#ifndef LEDGER_H
+/*#ifndef LEDGER_H
 #define LEDGER_H
 #include "config.h"
 #include "klog.h"
@@ -32,7 +32,8 @@ int add_request_to_ledger(uint32_t caller_pid, uint32_t clerk_pid,
     const char *buf, uint32_t buffer_size, uint32_t flags);
 request_table *fetch_next_task(uint32_t clerk_pid);
 void ledger_init();
+int remove_request();
 
 extern request_table *request_queue[CLERK_COUNT][MAX_REQ_ENTRIES];
 
-#endif
+#endif*/

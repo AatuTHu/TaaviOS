@@ -2,6 +2,7 @@
 #include "blankie.h"
 #include "config.h"
 #include "klog.h"
+#include "ledger.h"
 #include "sched.h"
 
 /*
@@ -19,14 +20,12 @@
 
 void reaper_task_loop() {
     while (1) {
-        if (scheduler_get_dead_task_count() > 0) {
+        while (scheduler_get_dead_task_count() != 0) {
             __asm__ __volatile__("cli");
             scheduler_remove_task();
             __asm__ __volatile__("sti");
         }
-        if (scheduler_get_dead_task_count() == 0) {
-            blankie_activate(reaper_task_pid);
-        }
+        blankie_activate(reaper_task_pid);
     }
 }
 

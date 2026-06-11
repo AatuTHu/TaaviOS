@@ -9,12 +9,14 @@ static dir_traversal_t *dir_map[MAX_REQ_ENTRIES];
  */
 
 static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, uint32_t prev_cluster) {
-
     int slot = -1;
 
     for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
-            slot = i;
+            if (dir_map[slot] != NULL) {
+                kfree(dir_map[slot]);
+                dir_map[slot] = NULL;
+            }
         }
     }
 
@@ -111,6 +113,11 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_c
 }
 
 static int read(request_table *req) {
+
+    /*
+     * Dont fucking touch this function ever again.
+     */
+
     fd_entry_t *entry = fd_entry_table[req->fd];
     if (entry == NULL) {
         ERROR("[FS_TASK][READ]: entry not found\n");
@@ -144,8 +151,8 @@ static int open(request_table *req) {
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
-    const char *path          = (char *)req->path;
-    char filename[8];
+    uint8_t filename[9];
+    const char *path = (char *)req->path;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
@@ -162,11 +169,6 @@ static int open(request_table *req) {
     int fd = fs_alloc_fd(req->caller_pid, file_cluster, dir_cluster, file_size, req->flags, file_attr);
     if (fd == STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Invalid fd number. Terminating request\n");
-        return STATUS_ERROR;
-    }
-
-    if (dir_traversal_mapper(req->caller_pid, file_cluster, dir_cluster) == STATUS_ERROR) {
-        DEBUG("[FS_TASK][OPEN]: Making a traversal, map failed\n");
         return STATUS_ERROR;
     }
 
@@ -249,11 +251,12 @@ static int find(const request_table *req) {
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     const char *path          = (char *)req->path;
-    char filename[8];
+    uint8_t *filename[9];
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
+        DEBUG("[FS_TASK][FIND]: directions found. starting cluster %d\n", map->current_cluster);
         starting_cluster = map->current_cluster;
     }
 

@@ -9,9 +9,9 @@
 #include "keyboard.h"
 #include "klog.h"
 #include "kmalloc.h"
-#include "ledger.h"
 #include "mbr.h"
 #include "mm.h"
+#include "multiboot.h"
 #include "paging.h"
 #include "pit.h"
 #include "pmm.h"
@@ -131,14 +131,12 @@ static void init_microlithic_mode() {
 
     klog("[KERNEL]: Creating an reaper kernel task\n");
     kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop,
-        "reaper_task", &kernel_page_dir, KERNEL_TASK);
+        "reaper", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         reaper_init(kernel_task);
         scheduler_add(kernel_task);
     }
-
-    ledger_init();
 }
 
 void kernel_main(const uint32_t *mboot_info) {
