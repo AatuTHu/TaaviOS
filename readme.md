@@ -8,7 +8,7 @@ TaaviOS uses a **microlithic kernel**: service tasks ("clerks") that run in Ring
 
 **Clerks as scheduler tasks.** A clerk is a `task_t` same struct, same scheduler, same context-switch path as a user process. There's no separate dispatch mechanism. The fs_task is PID 1, reaper_task is PID 2, visible and scheduled alongside user tasks. No CR3 switch needed when scheduling between clerks since they share the kernel page directory.
 
-**Ledger mailbox.** Requests go through a shared table (caller submits -> clerk is awoken -> clerk fetches -> clerk signals completion -> caller collects). This is the *only* way to interact with a clerk.
+**Ledger mailbox.** Requests go through a shared table (caller submits -> clerk is awoken -> clerk fetches -> clerk signals completion -> caller collects). This is the *only* way to interact with a clerk. **ON RETIREMENT**
 
 **Blankie Protocol.** After all requests are complited, the clerk uses blankie protocol to reset its context (EIP, ESP, EBP). This resets its entry point with a clean stack. Then it sleeps until the next request arrives.
 

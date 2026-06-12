@@ -100,6 +100,58 @@ int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t
     return STATUS_ERROR;
 }
 
+int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent) {
+
+    DEBUG("[FAT32][FIND_PARENT]: oprhan cluster: %d\n", oprhan_cluster);
+
+    uint32_t current_directory_cluster = f32_fs.root_cluster;
+    uint8_t *buf                       = __fat32_allocate_buffer();
+    if (buf == INVALID_BUFFER) {
+        ERROR("[FAT32][FIND_PARENT_CLUSTER]: Buffer alloc failed\n");
+        return STATUS_ERROR;
+    }
+
+    while (1) {
+        if (__fat32_read_cluster(current_directory_cluster, buf) == STATUS_ERROR) {
+            ERROR("[FAT32][FIND_PARENT_CLUSTER]: failed to read cluster\n");
+            return STATUS_ERROR;
+        }
+
+        if (current_directory_cluster == oprhan_cluster) {
+            DEBUG("[FAT32][FIND_PARENT]: oprhan cluster: %d\n", oprhan_cluster);
+            DEBUG("[FAT32][FIND_PARENT]: current cluster: %d\n", current_directory_cluster);
+            DEBUG("[FAT32][FIND_PARENT_CLUSTER]: Current cluster is the orphan cluster. Aborting\n");
+            return STATUS_ERROR;
+        }
+
+        fat32_dirent_t *dir_ent   = (fat32_dirent_t *)buf;
+        uint32_t max_entry_length = __fat32_calculate_max_dir_entries();
+
+        for (int i = 0; i < max_entry_length; i++) {
+
+            uint32_t oprhan_low  = oprhan_cluster & 0xFFFF;
+            uint32_t orphan_high = (oprhan_cluster >> 16) & 0xFFFF;
+
+            if (dir_ent[i].cluster_high == orphan_high && dir_ent[i].cluster_low == oprhan_low) {
+                DEBUG("[FAT32][FIND_PARENT_CLUSTER]: Found %d\n", current_directory_cluster);
+                *out_parent = current_directory_cluster;
+                return STATUS_OK;
+            } else {
+                DEBUG("[FAT32][FIND_PARENT_CLUSTER]: parent not found.\n");
+            }
+        }
+
+        uint32_t next = __fat32_next_cluster(current_directory_cluster);
+
+        if (next >= FAT32_CLUSTER_EOC_MIN) {
+            ERROR("[FAT32][FIND_PARENT_CLUSTER]: Cluster was end of the chain\n");
+            return STATUS_ERROR;
+        }
+
+        next = current_directory_cluster;
+    }
+}
+
 // constucts a fat table of from the partition lba
 int fat32_init(uint32_t partition_lba) {
     uint8_t buf[FAT32_SECTOR_SIZE];

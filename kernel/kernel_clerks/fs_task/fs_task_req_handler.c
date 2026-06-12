@@ -62,6 +62,8 @@ static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
     for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
             DEBUG("[FS_TASK][GET_DIRECTION]: directions found!\n");
+            DEBUG("[FS_TASK][GET_DIRECTION]: Current cluster %d\n", dir_map[i]->current_cluster);
+            DEBUG("[FS_TASK][GET_DIRECTION]: Prev_cluster %d\n", dir_map[i]->prev_cluster);
             return dir_map[i];
         }
     }
@@ -220,7 +222,6 @@ static int write(const request_table *req) {
     entry->curr_offset = req->buffer_size;
     entry->size        = req->buffer_size;
 
-    
     if (fat32_update_dirent_size(entry->dir_cluster, entry->file_cluster,
             entry->size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not update file\n");
@@ -246,13 +247,19 @@ static int close(const request_table *req) {
 }
 
 static int find(const request_table *req) {
-    uint32_t file_cluster     = 0;
-    uint32_t dir_cluster      = 0;
+    uint8_t direction        = forwards;
+    uint32_t current_cluster = 0;
+    uint32_t prev_cluster    = 0;
+
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     const char *path          = (char *)req->path;
     uint8_t *filename[9];
+
+    if (path[0] == '.' && path[1] == '.' && path[2] == '/') {
+        direction = backwards;
+    }
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
@@ -261,13 +268,23 @@ static int find(const request_table *req) {
         starting_cluster = map->current_cluster;
     }
 
-    if (fat32_find_cluster(starting_cluster, path, &file_cluster, &dir_cluster, &file_size, filename, &file_attr) ==
-        STATUS_ERROR) {
-        ERROR("[FS_TASK][FIND]: Could not find file.\n");
-        return STATUS_ERROR;
+    if (direction == forwards) {
+        if (fat32_find_cluster(starting_cluster, path, &current_cluster, &prev_cluster, &file_size, filename, &file_attr) ==
+            STATUS_ERROR) {
+            ERROR("[FS_TASK][FIND]: Could not find file.\n");
+            return STATUS_ERROR;
+        }
+    } else if (direction == backwards && map != NULL) {
+        current_cluster = map->prev_cluster;
+        prev_cluster    = map->current_cluster;
+
+        if (fat32_find_parent_cluster(map->prev_cluster, &prev_cluster) == STATUS_ERROR) {
+            ERROR("[FS_TASK][FIND]: Couldnt find parent\n");
+            return STATUS_ERROR;
+        }
     }
 
-    if (dir_traversal_mapper(req->caller_pid, file_cluster, dir_cluster) == STATUS_ERROR) {
+    if (dir_traversal_mapper(req->caller_pid, current_cluster, prev_cluster) == STATUS_ERROR) {
         DEBUG("[FS_TASK][FIND]: Making a traversal, map failed\n");
         return STATUS_ERROR;
     }

@@ -11,6 +11,8 @@
 
 #define INVALID_IDX        -1
 #define free_starting_slot 3
+#define backwards          0
+#define forwards           1
 
 typedef enum {
     PENDING,

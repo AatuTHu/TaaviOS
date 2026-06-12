@@ -131,6 +131,7 @@ uint8_t *__fat32_allocate_buffer();
 void __fat32_free_buffer(uint8_t *buf);
 int __fat32_walk_dir_path(const char **path, uint8_t name83[11]);
 int __fat32_link_cluster_chain(uint32_t cluster);
+int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent);
 
 extern fat32_fs_t f32_fs;
 
