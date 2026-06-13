@@ -17,7 +17,7 @@ void fat32_list_dir(uint32_t cluster) {
 
     if (__fat32_read_cluster(cluster, buf) == STATUS_ERROR) {
         ERROR("[FAT32][LIST_DIR]: Could not read cluster. Aborting\n");
-        __fat32_free_buffer(buf);
+        kfree(buf);
         return;
     }
 
@@ -40,22 +40,22 @@ void fat32_list_dir(uint32_t cluster) {
         if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) ==
             FAT32_LONG_FILE_NAME)
             continue;
-        DEBUG("[FAT32][LIST_DIR]: name: %s\n", dir_entry[i].name);
-        //  DEBUG("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
+        DEBUG_FAT32("[FAT32][LIST_DIR]: name: %s\n", dir_entry[i].name);
+        //  DEBUG_FAT32("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
     }
 
-    DEBUG("[FAT32][LIST_DIR]: searching for more clusters\n");
+    DEBUG_FAT32("[FAT32][LIST_DIR]: searching for more clusters\n");
     // Usual cluster hopping
     uint32_t next_cluster = __fat32_next_cluster(cluster);
 
     if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-        //   DEBUG("[FAT32][LIST_DIR]: End of the chain reached\n");
-        __fat32_free_buffer(buf);
+        //   DEBUG_FAT32("[FAT32][LIST_DIR]: End of the chain reached\n");
+        kfree(buf);
         return;
     }
 
-    DEBUG("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
-    __fat32_free_buffer(buf);
+    DEBUG_FAT32("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
+    kfree(buf);
     fat32_list_dir(next_cluster);
 } // list_dir
 
@@ -74,8 +74,8 @@ void fat32_list_dir(uint32_t cluster) {
  */
 int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
 
-    DEBUG("[FAT32][MKDIRP]: Current parent_cluster %d\n", parent_cluster);
-    DEBUG("[FAT32][MKDIRP]: Current path %s\n", path);
+    DEBUG_FAT32("[FAT32][MKDIRP]: Current parent_cluster %d\n", parent_cluster);
+    DEBUG_FAT32("[FAT32][MKDIRP]: Current path %s\n", path);
 
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
@@ -96,7 +96,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
         fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
 
         if (__fat32_walk_dir_path(&path, name83) == STATUS_ERROR) {
-            DEBUG("[FAT32][MKDIRP]: Problem in path walking");
+            DEBUG_FAT32("[FAT32][MKDIRP]: Problem in path walking");
             goto error_case;
         }
 
@@ -108,7 +108,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
 
             if (memcmp(name83, dir_entry[i].name, 11) == 0 &&
                 dir_entry[i].attributes & FAT32_ATTR_DIRECTORY) {
-                DEBUG("[FAT32][MKDIRP]: Match found %s\n", dir_entry[i].name);
+                DEBUG_FAT32("[FAT32][MKDIRP]: Match found %s\n", dir_entry[i].name);
                 current_directory_cluster = (dir_entry[i].cluster_high << 16) |
                                             dir_entry[i].cluster_low;
                 found                     = 1;
@@ -117,11 +117,11 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
         }
 
         if (found == 1) {
-            DEBUG("[FAT32][MKDIRP]: match found!\n");
+            DEBUG_FAT32("[FAT32][MKDIRP]: match found!\n");
             continue;
         }
 
-        DEBUG("[FAT32][MKDIRP]: There were no match in the directory\n");
+        DEBUG_FAT32("[FAT32][MKDIRP]: There were no match in the directory\n");
         int slot_found = 0;
         for (uint32_t i = 0; i < max_entries; i++) {
             if (dir_entry[i].name[0] == FAT32_DIRENT_FREE ||
@@ -133,7 +133,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
                     goto error_case;
                 }
 
-                DEBUG("[FAT32][MKDIRP]: Chaining next cluster to be END OF CHAIN\n");
+                DEBUG_FAT32("[FAT32][MKDIRP]: Chaining next cluster to be END OF CHAIN\n");
                 if (__fat32_set_cluster(new_dir_cluster, FAT32_CLUSTER_EOC) ==
                     STATUS_ERROR) {
                     ERROR("[FAT32][MKDIRP]: failed to set cluster as EOC\n");
@@ -141,7 +141,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
                 }
 
                 memcpy(dir_entry[i].name, name83, 11);
-                DEBUG("[FAT32][MKDIRP]: New dir name %s\n", dir_entry[i].name);
+                DEBUG_FAT32("[FAT32][MKDIRP]: New dir name %s\n", dir_entry[i].name);
                 memset(dir_entry[i].reserved, 0, sizeof(dir_entry[i].reserved));
 
                 dir_entry[i].cluster_low  = new_dir_cluster & 0xFFFF;
@@ -158,7 +158,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
                 }
 
                 // Wipe buffer empty and then format cluster to be empty
-                memset(buf, 0, __fat32_calculate_cluster_size());
+                memset(buf, 0, f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE);
                 if (__fat32_write_cluster(new_dir_cluster, buf) == STATUS_ERROR) {
                     ERROR("[FAT32][MKDIRP]: Failed to format cluster on the disk\n");
                     goto error_case;
@@ -178,12 +178,12 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path) {
         }
     }
 
-    DEBUG("[FAT32][MKDIRP]: end of path\n");
-    __fat32_free_buffer(buf);
+    DEBUG_FAT32("[FAT32][MKDIRP]: end of path\n");
+    kfree(buf);
     return STATUS_OK;
 
 error_case:
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return STATUS_ERROR;
 } // create_mkdrip
 
@@ -203,9 +203,9 @@ directory
 */
 int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, uint32_t new_size) {
 
-    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", starting_cluster);
-    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: file_cluster: %d\n", file_cluster);
-    DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", new_size);
+    DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", starting_cluster);
+    DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: file_cluster: %d\n", file_cluster);
+    DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", new_size);
 
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
@@ -215,7 +215,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
         starting_cluster = f32_fs.root_cluster;
     }
 
-    uint32_t cluster_size        = __fat32_calculate_cluster_size();
+    uint32_t cluster_size        = f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
     uint32_t current_dir_cluster = starting_cluster;
 
     /*
@@ -235,8 +235,8 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
         fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
         uint32_t max_dir_entries  = cluster_size / FAT32_DIRENT_SIZE;
 
-        DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: dir_enty: %s\n", dir_entry->name);
-        DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: max_dir_entries: %d\n", max_dir_entries);
+        DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: dir_enty: %s\n", dir_entry->name);
+        DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: max_dir_entries: %d\n", max_dir_entries);
 
         /*
          * loop the size of dir_enry. At every iteration construct a cluster
@@ -247,17 +247,17 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
 
         for (uint32_t i = 0; i < max_dir_entries; i++) {
             uint32_t whole_cluster = (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
-            // DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n", whole_cluster);
+            // DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: whole cluster: %d\n", whole_cluster);
             if (whole_cluster == file_cluster) {
-                DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
+                DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: Right dir cluster found!\n");
                 dir_entry[i].size = new_size;
                 if (__fat32_write_cluster(current_dir_cluster, buf) ==
                     STATUS_ERROR) {
                     ERROR("[FAT32][UPDATE_DIRENT_SIZE]: Failed to write in the cluste.");
                     goto error_case;
                 }
-                DEBUG("[FAT32][UPDATE_DIRENT_SIZE]: Update complete!\n");
-                __fat32_free_buffer(buf);
+                DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: Update complete!\n");
+                kfree(buf);
                 return STATUS_OK;
             }
         }
@@ -279,7 +279,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
     }
 
 error_case:
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return STATUS_ERROR;
 } // update_dir_size
 
@@ -329,8 +329,8 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
 
         if (memcmp(name83, dir_entry[i].name, 11) == 0 &&
             dir_entry[i].attributes & FAT32_ATTR_DIRECTORY) {
-            DEBUG("[FAT32][MKDIR]: Dir exist %s\n", dir_entry[i].name);
-            __fat32_free_buffer(buf);
+            DEBUG_FAT32("[FAT32][MKDIR]: Dir exist %s\n", dir_entry[i].name);
+            kfree(buf);
             return STATUS_OK;
         }
     }
@@ -346,7 +346,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
                 goto error_case;
             }
 
-            DEBUG("[FAT32][MKDIR]: Chaining next cluster to be END OF CHAIN\n");
+            DEBUG_FAT32("[FAT32][MKDIR]: Chaining next cluster to be END OF CHAIN\n");
             if (__fat32_set_cluster(new_dir_cluster, FAT32_CLUSTER_EOC) ==
                 STATUS_ERROR) {
                 ERROR("[FAT32][MKDIR]: failed to set cluster as EOC\n");
@@ -354,7 +354,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
             }
 
             memcpy(dir_entry[i].name, name83, 11);
-            DEBUG("[FAT32][MKDIR]: New dir name %s\n", dir_entry[i].name);
+            DEBUG_FAT32("[FAT32][MKDIR]: New dir name %s\n", dir_entry[i].name);
             memset(dir_entry[i].reserved, 0, sizeof(dir_entry[i].reserved));
 
             dir_entry[i].cluster_low  = new_dir_cluster & 0xFFFF;
@@ -371,7 +371,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
             }
 
             // Wipe buffer empty and then format cluster to be empty
-            memset(buf, 0, __fat32_calculate_cluster_size());
+            memset(buf, 0, f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE);
             if (__fat32_write_cluster(new_dir_cluster, buf) == STATUS_ERROR) {
                 ERROR("[FAT32][MKDIR]: Failed to format cluster on the disk\n");
                 goto error_case;
@@ -382,7 +382,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
         }
     }
 
-    __fat32_free_buffer(buf);
+    kfree(buf);
     if (succeeded) {
         return STATUS_OK;
     } else {
@@ -390,6 +390,6 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
     }
 
 error_case:
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return STATUS_ERROR;
 }

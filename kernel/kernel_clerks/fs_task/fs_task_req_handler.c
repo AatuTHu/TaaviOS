@@ -13,10 +13,10 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
 
     for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
-            if (dir_map[slot] != NULL) {
-                kfree(dir_map[slot]);
-                dir_map[slot] = NULL;
-            }
+            DEBUG_FS_TASK("[FS_TASK][DIR_MAPPER]: entry found with slot: %d\n", i);
+            kfree(dir_map[i]);
+            dir_map[i] = NULL;
+            slot       = i;
         }
     }
 
@@ -30,14 +30,14 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
     }
 
     if (slot == -1) {
-        DEBUG("[FS_TASK][DIR_MAPPER]: No free slots in the map\n");
+        DEBUG_FS_TASK("[FS_TASK][DIR_MAPPER]: No free slots in the map\n");
         return STATUS_ERROR;
     }
 
     dir_traversal_t *entry = (dir_traversal_t *)kmalloc(sizeof(dir_traversal_t));
 
     if (entry == NULL) {
-        DEBUG("[FS_TASK][DIR_MAPPER]: Heap allocation failed\n");
+        DEBUG_FS_TASK("[FS_TASK][DIR_MAPPER]: Heap allocation failed\n");
         return STATUS_ERROR;
     }
 
@@ -49,9 +49,9 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
     entry->current_cluster = current_cluster;
     entry->prev_cluster    = prev_cluster;
 
-    DEBUG("[FS_TASK][MAPPER]: owner_pid: %d\n", owner_pid);
-    DEBUG("[FS_TASK][MAPPER]: current_cluster: %d\n", current_cluster);
-    DEBUG("[FS_TASK][MAPPER]: prev_cluster: %d\n", prev_cluster);
+    DEBUG_FS_TASK("[FS_TASK][MAPPER]: owner_pid: %d\n", owner_pid);
+    DEBUG_FS_TASK("[FS_TASK][MAPPER]: current_cluster: %d\n", current_cluster);
+    DEBUG_FS_TASK("[FS_TASK][MAPPER]: prev_cluster: %d\n", prev_cluster);
 
     dir_map[slot] = entry;
 
@@ -61,13 +61,13 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
 static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
     for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
-            DEBUG("[FS_TASK][GET_DIRECTION]: directions found!\n");
-            DEBUG("[FS_TASK][GET_DIRECTION]: Current cluster %d\n", dir_map[i]->current_cluster);
-            DEBUG("[FS_TASK][GET_DIRECTION]: Prev_cluster %d\n", dir_map[i]->prev_cluster);
+            DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: directions found!\n");
+            DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: Current cluster %d\n", dir_map[i]->current_cluster);
+            DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: Prev_cluster %d\n", dir_map[i]->prev_cluster);
             return dir_map[i];
         }
     }
-    DEBUG("[FS_TASK][GET_DIRECTION]: directions not found for %d!\n", owner_pid);
+    DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: directions not found for task pid: %d!\n", owner_pid);
     return NULL;
 }
 
@@ -101,14 +101,14 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_c
     entry->flags        = flags;
     entry->attr         = file_attr;
 
-    DEBUG("[FS_TASK][ALLOC_FD]: fd table created\n");
-    DEBUG("[FS_TASK][ALLOC_FD]: file_cluster: %d\n", file_cluster);
-    DEBUG("[FS_TASK][ALLOC_FD]: dir_cluster: %d\n", dir_cluster);
-    DEBUG("[FS_TASK][ALLOC_FD]: size: %d\n", size);
-    DEBUG("[FS_TASK][ALLOC_FD]: fd: %d\n", slot);
-    DEBUG("[FS_TASK][ALLOC_FD]: current_offset: %d\n", 0);
-    DEBUG("[FS_TASK][ALLOC_FD]: flags: %d\n", flags);
-    DEBUG("[FS_TASK][ALLOC_FD]: attr: %d\n", file_attr);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: fd table created\n");
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: file_cluster: %d\n", file_cluster);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: dir_cluster: %d\n", dir_cluster);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: size: %d\n", size);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: fd: %d\n", slot);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: current_offset: %d\n", 0);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: flags: %d\n", flags);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: attr: %d\n", file_attr);
 
     fd_entry_table[slot] = entry;
     return slot;
@@ -138,9 +138,9 @@ static int read(request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG("[FS_TASK][READ]: Capping buffer at index: %d\n", entry->size);
+    DEBUG_FS_TASK("[FS_TASK][READ]: Capping buffer at index: %d\n", entry->size);
     buf[entry->size] = '\0';
-    DEBUG("[FS_TASK][READ]: memcpy to req.buf with size: %d\n", entry->size);
+    DEBUG_FS_TASK("[FS_TASK][READ]: memcpy to req.buf with size: %d\n", entry->size);
     memcpy(req->buf, (char *)buf, entry->size);
     req->buffer_size = entry->size;
     kfree(buf);
@@ -180,7 +180,7 @@ static int open(request_table *req) {
 }
 
 static int create(const request_table *req) {
-    DEBUG("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
+    DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
 
     uint32_t base_directory = f32_fs.root_cluster;
 
@@ -218,7 +218,7 @@ static int write(const request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG("[FS_TASK][WRITE]: Write was successful\n");
+    DEBUG_FS_TASK("[FS_TASK][WRITE]: Write was successful\n");
     entry->curr_offset = req->buffer_size;
     entry->size        = req->buffer_size;
 
@@ -228,7 +228,7 @@ static int write(const request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG("[FS_TASK][WRITE]: current offset %d and size %d\n",
+    DEBUG_FS_TASK("[FS_TASK][WRITE]: current offset %d and size %d\n",
         entry->curr_offset, entry->size);
     return STATUS_OK;
 }
@@ -240,7 +240,7 @@ static int close(const request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG("[FS_TASK][CLOSE]: Closing fd: %d\n", entry->fd);
+    DEBUG_FS_TASK("[FS_TASK][CLOSE]: Closing fd: %d\n", entry->fd);
     fd_entry_table[req->fd] = NULL;
     kfree(entry);
     return STATUS_OK;
@@ -257,14 +257,14 @@ static int find(const request_table *req) {
     const char *path          = (char *)req->path;
     uint8_t *filename[9];
 
-    if (path[0] == '.' && path[1] == '.' && path[2] == '/') {
+    if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
         direction = backwards;
     }
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
-        DEBUG("[FS_TASK][FIND]: directions found. starting cluster %d\n", map->current_cluster);
+        DEBUG_FS_TASK("[FS_TASK][FIND]: directions found. starting cluster %d\n", map->current_cluster);
         starting_cluster = map->current_cluster;
     }
 
@@ -275,17 +275,21 @@ static int find(const request_table *req) {
             return STATUS_ERROR;
         }
     } else if (direction == backwards && map != NULL) {
+        DEBUG_FS_TASK("\n");
+        DEBUG_FS_TASK("[FS_TASK][FIND]: Going backwards\n");
         current_cluster = map->prev_cluster;
-        prev_cluster    = map->current_cluster;
 
-        if (fat32_find_parent_cluster(map->prev_cluster, &prev_cluster) == STATUS_ERROR) {
+        DEBUG_FS_TASK("[FS_TASK][FIND]: current_cluster: %d\n", current_cluster);
+        DEBUG_FS_TASK("\n");
+
+        if (fat32_find_parent_cluster(current_cluster, &prev_cluster) == STATUS_ERROR) {
             ERROR("[FS_TASK][FIND]: Couldnt find parent\n");
             return STATUS_ERROR;
         }
     }
 
     if (dir_traversal_mapper(req->caller_pid, current_cluster, prev_cluster) == STATUS_ERROR) {
-        DEBUG("[FS_TASK][FIND]: Making a traversal, map failed\n");
+        DEBUG_FS_TASK("[FS_TASK][FIND]: Making a traversal, map failed\n");
         return STATUS_ERROR;
     }
 

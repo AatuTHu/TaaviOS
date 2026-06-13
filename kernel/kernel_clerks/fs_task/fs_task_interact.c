@@ -48,25 +48,25 @@ int fs_add_reqs(uint32_t caller_pid,
 
     if (type == WRITE) {
         strncpy(new_request->buf, buf, sizeof(new_request->buf));
-        DEBUG("[FS_TASK][ADD_REQUEST]: buf: %s and buf length: %d\n",
+        DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: buf: %s and buf length: %d\n",
             new_request->buf, buffer_size);
     }
 
     if (type == OPEN || type == FIND || type == CREATE) {
         strncpy(new_request->path, path, sizeof(new_request->path));
-        DEBUG("[FS_TASK][ADD_REQUEST]: path: %s and buf length: %d\n",
+        DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: path: %s and buf length: %d\n",
             new_request->path, buffer_size);
     }
 
     request_queue[request_queue_count] = new_request;
     request_queue_count++;
 
-    DEBUG("[FS_TASK][ADD_REQUEST]: request added\n");
-    DEBUG("[FS_TASK][ADD_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
-    DEBUG("[FS_TASK][ADD_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    DEBUG("[FS_TASK][ADD_REQUEST]: flags: %d\n", new_request->flags);
+    DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: request added\n");
+    DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
+    DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: fd: %d\n", new_request->fd);
+    DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    DEBUG_FS_TASK("[FS_TASK][ADD_REQUEST]: flags: %d\n", new_request->flags);
 
     scheduler_wake_task(fs_task_pid);
     return STATUS_OK;

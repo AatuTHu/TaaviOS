@@ -9,6 +9,9 @@
 #define O_RDWR   0x04
 #define O_CREAT  0x08
 
+#define STATUS_OK    0
+#define STATUS_ERROR -1
+
 void print(const char *msg);
 void error(const char *msg);
 int scan(char *buf);

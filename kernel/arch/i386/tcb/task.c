@@ -88,20 +88,20 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     if (task == NULL)
         return;
 
-    DEBUG("[TASK]: Destroyn task: %s \n", task->name);
+    DEBUG_TASK("[TASK]: Destroyn task: %s \n", task->name);
     task_table[task->pid] = NULL;
 
-    DEBUG("[TASK]: Freeing virtual memory \n");
+    DEBUG_TASK("[TASK]: Freeing virtual memory \n");
     task_mode == USER_TASK ? vmm_free_user_space(task->page_dir) : NULL;
 
-    DEBUG("[TASK]: Freeing kernel_stack\n");
+    DEBUG_TASK("[TASK]: Freeing kernel_stack\n");
     uint32_t phys = virt_to_phys(task->kernel_stack - KERNEL_STACK_SIZE);
     pmm_free(phys);
 
-    DEBUG("[TASK]: Freeing physical page directory\n");
+    DEBUG_TASK("[TASK]: Freeing physical page directory\n");
     pmm_free(virt_to_phys((uint32_t)task->page_dir));
 
-    DEBUG("[TASK]: Freeing task\n");
+    DEBUG_TASK("[TASK]: Freeing task\n");
     kfree(task);
 }
 

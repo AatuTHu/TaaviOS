@@ -47,6 +47,7 @@ typedef enum {
     CLOSE,
     CREATE,
     FIND,
+    LIST
 } operations_t;
 
 #define O_RDONLY 0x01

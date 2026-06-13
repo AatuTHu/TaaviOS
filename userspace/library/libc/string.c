@@ -96,3 +96,23 @@ void itoa(int n, char *buf) {
 
     buf[i] = '\0';
 }
+
+int strcat(char *dst, const char *src, int max_len) {
+    int dst_len = strlen(dst);
+    int i       = 0;
+
+    if (dst_len > 0 && dst[dst_len - 1] != '/' && src[0] != '/') {
+        if (dst_len + 1 < max_len) {
+            dst[dst_len]     = '/';
+            dst[dst_len + 1] = '\0';
+            dst_len++;
+        }
+    }
+
+    while (src[i] != '\0' && (dst_len + i) < (max_len - 1)) {
+        dst[dst_len + i] = src[i];
+        i++;
+    }
+    dst[dst_len + i] = '\0';
+    return 0;
+}

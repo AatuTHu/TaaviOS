@@ -4,9 +4,8 @@
  * Calculate the Logical Block Address (LBA) of the FAT sector
  * that contains the allocation entry for the given cluster.
  */
-uint32_t __fat32_calculate_lba(uint32_t cluster) {
-    // //DEBUG("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n",
-    // cluster);
+inline uint32_t __fat32_calculate_lba(uint32_t cluster) {
+    DEBUG_FAT32("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n",cluster);
     if (cluster >= f32_fs.maximum_cluster_size) {
         ERROR("[FAT32][CALCULATE_LBA]: Cluster number too high: %d\n", cluster);
         return INVALID_LBA;
@@ -19,7 +18,7 @@ uint32_t __fat32_calculate_lba(uint32_t cluster) {
  * Calculate the real sector number in the data region based on the given
  * cluster
  */
-uint32_t __fat32_cluster_to_sector(uint32_t cluster) {
+inline uint32_t __fat32_cluster_to_sector(uint32_t cluster) {
     if (cluster < 2) {
         ERROR("[FAT32][CLUSTER_TO_SECTOR]: Invalid cluster number: %d\n",
             cluster);
@@ -31,7 +30,7 @@ uint32_t __fat32_cluster_to_sector(uint32_t cluster) {
 /*
  * Calculate the byte offset of the given cluster's entry within the FAT sector
  */
-uint32_t __fat32_calculate_offset(uint32_t cluster) {
+inline uint32_t __fat32_calculate_offset(uint32_t cluster) {
     if (cluster >= f32_fs.maximum_cluster_size) {
         ERROR("[FAT32][CALCULATE_OFFSET]: Cluster number too high: %d\n",
             cluster);
@@ -41,18 +40,10 @@ uint32_t __fat32_calculate_offset(uint32_t cluster) {
 }
 
 /*
- * Calculate the total size of a cluster in bytes
- * sector_per_cluster * (sector_size = 512)
- */
-uint32_t __fat32_calculate_cluster_size() {
-    return f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
-}
-
-/*
  * Calculate the maximum number of directory entries that can fit in a single
  * cluster (sector_per_cluster * (sector_size = 512)) / (dirent_size = 32);
  */
-uint32_t __fat32_calculate_max_dir_entries() {
+inline uint32_t __fat32_calculate_max_dir_entries() {
     return (f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE) / FAT32_DIRENT_SIZE;
 }
 
@@ -62,7 +53,7 @@ uint32_t __fat32_calculate_max_dir_entries() {
  * dynamic with a few addition but will do for now
  */
 uint8_t *__fat32_allocate_buffer() {
-    uint32_t cluster_size = __fat32_calculate_cluster_size();
+    uint32_t cluster_size = f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
     uint8_t *buf          = (uint8_t *)kmalloc(cluster_size);
 
     if (buf == NULL) {
@@ -108,21 +99,13 @@ int __fat32_walk_dir_path(const char **path, uint8_t name83[11]) {
     segment[index] = '\0';
     *path          = p + index;
 
-    DEBUG("[FAT32][MKDIRP]: Formatting current segment %s\n", segment);
+    DEBUG_FAT32("[FAT32][MKDIRP]: Formatting current segment %s\n", segment);
     if (__fat32_format_83(segment, name83) == STATUS_ERROR) {
         ERROR("[FAT32][MKDIRP]: Could not format the name\n");
         return STATUS_ERROR;
     }
 
     return STATUS_OK;
-}
-/*
- * This function is useless might aswell just use kfree
- */
-void __fat32_free_buffer(uint8_t *buf) {
-    if (buf != NULL) {
-        kfree(buf);
-    }
 }
 
 /**
@@ -148,8 +131,8 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
     uint32_t lba        = __fat32_calculate_lba(cluster);
     uint32_t fat_offset = __fat32_calculate_offset(cluster);
 
-    // //DEBUG("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
-    // //DEBUG("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
+    DEBUG_FAT32("[FAT32][NEXT_CLUSTER]: finding next cluster with lba: %d\n", lba);
+    DEBUG_FAT32("[FAT32][NEXT_CLUSTER]: offset: %d\n", fat_offset);
 
     /*
      *   Read the target lba to buffer from the actual hard drive.
@@ -159,7 +142,7 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
     if (ata_read_sector(lba, buf) == STATUS_ERROR) {
         ERROR("[FAT32][NEXT_CLUSTER]: could not read sector with lba: %d\n",
             lba);
-        __fat32_free_buffer(buf);
+        kfree(buf);
         return INVALID_CLUSTER;
     }
 
@@ -172,7 +155,7 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
 
     const uint32_t *buf_ptr = (uint32_t *)buf;
     uint32_t entry          = buf_ptr[fat_offset / sizeof(uint32_t)];
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return (entry & FAT32_CLUSTER_MASK);
 }
 
@@ -251,7 +234,7 @@ uint32_t __fat32_alloc_cluster(void) {
         if (ata_read_sector((f32_fs.fat_start + i), buf) == -1) {
             ERROR("[FAT32][ALLOC_CLUSTER]: Could read sector. Stopping cluster "
                   "allocation\n");
-            __fat32_free_buffer(buf);
+            kfree(buf);
             return INVALID_CLUSTER;
         }
 
@@ -284,9 +267,9 @@ uint32_t __fat32_alloc_cluster(void) {
                 // filesystem
                 uint32_t cluster_index = (i * FAT32_ENTRIES_PER_SECTOR) + j;
 
-                // //DEBUG("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
-                //    "index: %d\n",
-                //     cluster_index);
+                DEBUG_FAT32("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
+                   "index: %d\n",
+                   cluster_index);
                 // mark index of current j as end of chain
                 fat_entries[j] = FAT32_CLUSTER_EOC;
 
@@ -305,14 +288,14 @@ uint32_t __fat32_alloc_cluster(void) {
                           "sector. "
                           "Stopping cluster allocation\n");
                     fat_entries[j] = FAT32_CLUSTER_FREE;
-                    __fat32_free_buffer(buf);
+                    kfree(buf);
                     return INVALID_CLUSTER;
                 }
 
                 // save index of last allocated cluster so that next
                 // allocation can continue from it.
                 f32_fs.last_allocated_cluster = cluster_index;
-                __fat32_free_buffer(buf);
+                kfree(buf);
                 return cluster_index;
             }
         }
@@ -320,7 +303,7 @@ uint32_t __fat32_alloc_cluster(void) {
 
     ERROR("[FAT32][ALLOC_CLUSTER]: Allocation failed. Could not find free "
           "spot\n");
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return INVALID_CLUSTER;
 }
 
@@ -394,7 +377,7 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
     if (ata_read_sector(lba, buf) == STATUS_ERROR) {
         ERROR("[FAT32][SET_CLUSTER]: Could not read sector with lba: %d\n",
             lba);
-        __fat32_free_buffer(buf);
+        kfree(buf);
         return STATUS_ERROR;
     }
 
@@ -414,11 +397,11 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
      */
     if (ata_write_sector(lba, buf) == -1 ||
         ata_write_sector(lba + f32_fs.sectors_per_fat, buf) == -1) {
-        __fat32_free_buffer(buf);
+        kfree(buf);
         return STATUS_ERROR;
     }
 
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return STATUS_OK;
 }
 
@@ -551,7 +534,7 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
     while (is_done != 1) {
         if (__fat32_read_cluster(current_cluster, buf) == STATUS_ERROR) {
             ERROR("[FAT32][SEARCH_DIR]: Could not read cluster\n");
-            __fat32_free_buffer(buf);
+            kfree(buf);
             return STATUS_ERROR;
         }
 
@@ -591,12 +574,12 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
                                dir_entry[i].cluster_low;
                 *out_size    = dir_entry[i].size;
                 *out_attr    = dir_entry[i].attributes;
-                // //DEBUG("[FAT32][SEARCH_DIR]: file name %s\n",
-                // dir_entry[i].name); //DEBUG("[FAT32][SEARCH_DIR]: file
-                // found!\n"); //DEBUG("[FAT32][SEARCH_DIR]: cluster: %d\n",
-                // *out_cluster); //DEBUG("[FAT32][SEARCH_DIR]: size: %d\n",
-                // *out_size);
-                __fat32_free_buffer(buf);
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: file name %s\n",
+                 dir_entry[i].name); 
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: filefound!\n"); 
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: cluster: %d\n",*out_cluster);
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: size: %d\n",*out_size);
+                kfree(buf);
                 return STATUS_OK;
             }
         }
@@ -610,18 +593,18 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
          * entries proceed to next cluster
          */
         uint32_t next_cluster = __fat32_next_cluster(current_cluster);
-        // //DEBUG("[FAT32][SEARCH_DIR]: Next cluster number: %d\n",
-        // next_cluster);
+        DEBUG_FAT32("[FAT32][SEARCH_DIR]: Next cluster number: %d\n",
+        next_cluster);
 
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            // //DEBUG("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
-            __fat32_free_buffer(buf);
+            DEBUG_FAT32("[FAT32][SEARCH_DIR]: End of the cluster chain\n");
+            kfree(buf);
             return STATUS_ERROR;
         }
         current_cluster = next_cluster;
     }
 
-    __fat32_free_buffer(buf);
+    kfree(buf);
     return STATUS_ERROR;
 }
 
@@ -643,20 +626,20 @@ int __fat32_link_cluster_chain(uint32_t cluster) {
         next_cluster = __fat32_alloc_cluster();
 
         if (next_cluster == INVALID_CLUSTER) {
-            DEBUG("[FAT32][MKDIRP]: failed to allocate newcluster\n");
+            DEBUG_FAT32("[FAT32][MKDIRP]: failed to allocate newcluster\n");
             return INVALID_CLUSTER;
         }
 
-        DEBUG("[FAT32][MKDIRP]: Chaining next cluster to current_directory_cluster\n");
+        DEBUG_FAT32("[FAT32][MKDIRP]: Chaining next cluster to current_directory_cluster\n");
         if (__fat32_set_cluster(cluster,
                 next_cluster) == STATUS_ERROR) {
-            DEBUG("[FAT32][MKDIRP]: Failed to chainclusters\n");
+            DEBUG_FAT32("[FAT32][MKDIRP]: Failed to chainclusters\n");
             return INVALID_CLUSTER;
         }
 
         if (__fat32_set_cluster(next_cluster, FAT32_CLUSTER_EOC) ==
             STATUS_ERROR) {
-            DEBUG("[FAT32][MKDIRP]: Failed to set new cluster as endofchain\n");
+            DEBUG_FAT32("[FAT32][MKDIRP]: Failed to set new cluster as endofchain\n");
             return INVALID_CLUSTER;
         }
 

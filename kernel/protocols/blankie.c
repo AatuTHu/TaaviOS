@@ -23,7 +23,7 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
         (blankie_registry_t *)kmalloc(sizeof(blankie_registry_t));
 
     if (blankie_req == NULL) {
-        // DEBUG("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
+        DEBUG("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
         return STATUS_ERROR;
     }
 
@@ -45,24 +45,19 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
 
 int blankie_activate(uint32_t pid) {
     __asm__ __volatile__("cli");
-    DEBUG("[BLANKIE][ACTIVATE]: %d came for reset \n", pid);
     task_t *task = task_get(pid);
 
     if (task == NULL) {
-        // DEBUG("[BLANKIE][ACTIVATE]: Task not found\n");
         return STATUS_ERROR;
     }
 
-    DEBUG("[BLANKIE][ACTIVATE]: Task found %s\n", task->name);
     task->context.eip = b_registry[pid - 1]->entry_point;
     task->context.esp = b_registry[pid - 1]->stack_top;
     task->context.ebp = b_registry[pid - 1]->stack_top;
     task->started     = 0;
     task->state       = TASK_SLEEPING;
 
-    // DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save us\n");
-    // DEBUG("[BLANKIE][ACTIVATE]: Current esp 0x%x\n", task->context.esp);
-    // DEBUG("[BLANKIE][ACTIVATE]: Current eip 0x%x\n", task->context.eip);
+    DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save us\n");
     while (1) { __asm__ __volatile__("sti; hlt"); }
 
     return STATUS_OK;

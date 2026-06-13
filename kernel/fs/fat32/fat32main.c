@@ -81,9 +81,9 @@ int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t
             *out_size         = found_size;
             *out_attr         = found_attr;
             *out_dir_cluster  = (current_directory_cluster == 0) ? f32_fs.root_cluster : current_directory_cluster;
-            // DEBUG("[FAT32][FIND_CLUSTER]: Directory cluster found: %d\n", *out_file_cluster);
-            // DEBUG("[FAT32][FIND_CLUSTER]: Size: %d\n", *out_size);
-            // DEBUG("[FAT32][FIND_CLUSTER]: last segment: %s\n", out_fname);
+            DEBUG_FAT32("[FAT32][FIND_CLUSTER]: Directory cluster found: %d\n", *out_file_cluster);
+            DEBUG_FAT32("[FAT32][FIND_CLUSTER]: Size: %d\n", *out_size);
+            DEBUG_FAT32("[FAT32][FIND_CLUSTER]: last segment: %s\n", out_fname);
             return STATUS_OK;
         }
         if (path[0] == '/')
@@ -102,26 +102,23 @@ int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t
 
 int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent) {
 
-    DEBUG("[FAT32][FIND_PARENT]: oprhan cluster: %d\n", oprhan_cluster);
-
     uint32_t current_directory_cluster = f32_fs.root_cluster;
-    uint8_t *buf                       = __fat32_allocate_buffer();
+    DEBUG_FAT32("[FAT32][FPC]: root_cluster : %d\n", f32_fs.root_cluster);
+    uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER) {
-        ERROR("[FAT32][FIND_PARENT_CLUSTER]: Buffer alloc failed\n");
+        ERROR("[FAT32][FPC]: Buffer alloc failed\n");
         return STATUS_ERROR;
     }
 
     while (1) {
         if (__fat32_read_cluster(current_directory_cluster, buf) == STATUS_ERROR) {
-            ERROR("[FAT32][FIND_PARENT_CLUSTER]: failed to read cluster\n");
+            ERROR("[FAT32][FPC]: failed to read cluster\n");
             return STATUS_ERROR;
         }
 
         if (current_directory_cluster == oprhan_cluster) {
-            DEBUG("[FAT32][FIND_PARENT]: oprhan cluster: %d\n", oprhan_cluster);
-            DEBUG("[FAT32][FIND_PARENT]: current cluster: %d\n", current_directory_cluster);
-            DEBUG("[FAT32][FIND_PARENT_CLUSTER]: Current cluster is the orphan cluster. Aborting\n");
-            return STATUS_ERROR;
+            DEBUG_FAT32("[FAT32][FPC]: Current clusters parent is the root cluster\n");
+            return STATUS_OK;
         }
 
         fat32_dirent_t *dir_ent   = (fat32_dirent_t *)buf;
@@ -133,18 +130,16 @@ int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent) {
             uint32_t orphan_high = (oprhan_cluster >> 16) & 0xFFFF;
 
             if (dir_ent[i].cluster_high == orphan_high && dir_ent[i].cluster_low == oprhan_low) {
-                DEBUG("[FAT32][FIND_PARENT_CLUSTER]: Found %d\n", current_directory_cluster);
+                DEBUG_FAT32("[FAT32][FPC]: Found %s\n", dir_ent[i].name);
                 *out_parent = current_directory_cluster;
                 return STATUS_OK;
-            } else {
-                DEBUG("[FAT32][FIND_PARENT_CLUSTER]: parent not found.\n");
             }
         }
 
         uint32_t next = __fat32_next_cluster(current_directory_cluster);
 
         if (next >= FAT32_CLUSTER_EOC_MIN) {
-            ERROR("[FAT32][FIND_PARENT_CLUSTER]: Cluster was end of the chain\n");
+            ERROR("[FAT32][FPC]: Cluster was end of the chain\n");
             return STATUS_ERROR;
         }
 
@@ -159,7 +154,7 @@ int fat32_init(uint32_t partition_lba) {
     const fat32_bpb_t *bpb = (fat32_bpb_t *)buf;
 
     if (bpb->bytes_per_sector != FAT32_SECTOR_SIZE) {
-        // DEBUG("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);
+        DEBUG_FAT32("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);
     }
 
     f32_fs.partition_lba = partition_lba;
@@ -177,15 +172,15 @@ int fat32_init(uint32_t partition_lba) {
     f32_fs.maximum_cluster_size   = (data_sectors / bpb->sectors_per_cluster) +
                                     2; // 2 for reserved clusters
 
-    // DEBUG("[FAT32][INIT]: partition_lba: %d\n", f32_fs.partition_lba);
-    // DEBUG("[FAT32][INIT]: fat_start: %d\n", f32_fs.fat_start);
-    // DEBUG("[FAT32][INIT]: data_start: %d\n", f32_fs.data_start);
-    // DEBUG("[FAT32][INIT]: root_cluster: %d\n", f32_fs.root_cluster);
-    // DEBUG("[FAT32][INIT]: sectors_per_cluster: %d\n", f32_fs.sectors_per_cluster);
-    // DEBUG("[FAT32][INIT]: bytes_per_sector: %d\n", f32_fs.bytes_per_sector);
-    // DEBUG("[FAT32][INIT]: fat_count: %d\n", f32_fs.fat_count);
-    // DEBUG("[FAT32][INIT]: sectors_per_fat %d\n", f32_fs.sectors_per_fat);
-    // DEBUG("[FAT32][INIT]: maximum cluster size: %d\n", f32_fs.maximum_cluster_size);
+    DEBUG_FAT32("[FAT32][INIT]: partition_lba: %d\n", f32_fs.partition_lba);
+    DEBUG_FAT32("[FAT32][INIT]: fat_start: %d\n", f32_fs.fat_start);
+    DEBUG_FAT32("[FAT32][INIT]: data_start: %d\n", f32_fs.data_start);
+    DEBUG_FAT32("[FAT32][INIT]: root_cluster: %d\n", f32_fs.root_cluster);
+    DEBUG_FAT32("[FAT32][INIT]: sectors_per_cluster: %d\n", f32_fs.sectors_per_cluster);
+    DEBUG_FAT32("[FAT32][INIT]: bytes_per_sector: %d\n", f32_fs.bytes_per_sector);
+    DEBUG_FAT32("[FAT32][INIT]: fat_count: %d\n", f32_fs.fat_count);
+    DEBUG_FAT32("[FAT32][INIT]: sectors_per_fat %d\n", f32_fs.sectors_per_fat);
+    DEBUG_FAT32("[FAT32][INIT]: maximum cluster size: %d\n", f32_fs.maximum_cluster_size);
 
     return STATUS_OK;
 } // init
