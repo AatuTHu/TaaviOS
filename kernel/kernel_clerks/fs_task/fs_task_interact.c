@@ -1,4 +1,4 @@
-#include "fs_task.h"
+// #include "fs_task.h"
 
 /**
  * Fs_task
@@ -24,6 +24,7 @@
  * is needed. Return: STATUS_OK on succesful entry added and STATUS_ERROR if
  * failed.
  */
+/*
 int fs_add_reqs(uint32_t caller_pid,
     operations_t type, uint32_t fd, const char *path,
     const char *buf, uint32_t buffer_size, uint32_t flags) {
@@ -84,24 +85,27 @@ case_error:
  * Context: It was made so that caller could do other things and be notified to
  * when to collect. Return: the type of request or STATUS_ERROR
  */
+
+/*
 int fs_collect_req(uint32_t caller_pid, char *out) {
 
-    for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
-        if (request_queue[i] != NULL &&
-            request_queue[i]->caller_pid == caller_pid &&
-            request_queue[i]->status == COMPLETE) {
+   for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+       if (request_queue[i] != NULL &&
+           request_queue[i]->caller_pid == caller_pid &&
+           request_queue[i]->status == COMPLETE) {
 
-            switch (request_queue[i]->request_type) {
-            case OPEN:
-                request_queue[i]->status = TERMINATED;
-                return request_queue[i]->fd;
-            case READ:
-                memcpy(out, request_queue[i]->buf,
-                    request_queue[i]->buffer_size);
-            }
-            request_queue[i]->status = TERMINATED;
-            return STATUS_OK;
-        }
-    }
-    return STATUS_ERROR;
+           switch (request_queue[i]->request_type) {
+           case OPEN:
+               request_queue[i]->status = TERMINATED;
+               return request_queue[i]->fd;
+           case READ:
+               memcpy(out, request_queue[i]->buf,
+                   request_queue[i]->buffer_size);
+           }
+           request_queue[i]->status = TERMINATED;
+           return STATUS_OK;
+       }
+   }
+   return STATUS_ERROR;
 }
+*/

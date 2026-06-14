@@ -1,7 +1,7 @@
 #include "fat32.h"
 #include "fs_task.h"
 
-static dir_traversal_t *dir_map[MAX_REQ_ENTRIES];
+static dir_traversal_t *dir_map[MAX_FS_REQ_ENTRIES];
 
 /*
  * Fs_task
@@ -11,7 +11,7 @@ static dir_traversal_t *dir_map[MAX_REQ_ENTRIES];
 static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, uint32_t prev_cluster) {
     int slot = -1;
 
-    for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+    for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
             DEBUG_FS_TASK("[FS_TASK][DIR_MAPPER]: entry found with slot: %d\n", i);
             kfree(dir_map[i]);
@@ -21,7 +21,7 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
     }
 
     if (slot == -1) {
-        for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+        for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
             if (dir_map[i] == NULL) {
                 slot = i;
                 break;
@@ -59,7 +59,7 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
 }
 
 static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
-    for (int i = 0; i < MAX_REQ_ENTRIES; i++) {
+    for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
             DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: directions found!\n");
             DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: Current cluster %d\n", dir_map[i]->current_cluster);

@@ -10,7 +10,6 @@
 
 int request_queue_count = 0;
 int current_req_index   = -1;
-request_table *request_queue[MAX_REQ_ENTRIES];
 fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
 
 // signal scheduler to wake the pid who made the request.
@@ -27,6 +26,7 @@ void fs_wake_task(uint32_t pid) {
  * array to left by one.
  *
  */
+/*
 static void fs_remove_from_queue(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][REMOVE]: Starting on removing\n");
     if (request_queue_count == 0 || current_req_index == -1) {
@@ -43,7 +43,7 @@ static void fs_remove_from_queue(request_table *req) {
     request_queue[request_queue_count - 1] = NULL;
     request_queue_count--;
     current_req_index = -1;
-}
+}*/
 
 /*
  * This functions was inspired from schedulers next task find function.
@@ -63,7 +63,7 @@ static void fs_remove_from_queue(request_table *req) {
  * Context: picks a request for fs_task at the start of loop iteration.
  * Return: Index of next request or INVALID_IDX on failure.
  */
-static int find_next_request() {
+/*static int find_next_request() {
     if (request_queue_count == 0)
         return STATUS_ERROR;
 
@@ -87,7 +87,7 @@ static int find_next_request() {
         }
     }
     return INVALID_IDX;
-}
+}*/
 
 /**
  * fs_task_loop - Entry point function used when clerk is created at boot.
@@ -102,24 +102,22 @@ static int find_next_request() {
 void fs_task_loop() {
     DEBUG_FS_TASK("[FS_TASK]: \n");
     while (1) {
-        int index = find_next_request();
-        if (request_queue_count > 0 && index != INVALID_IDX) {
-            request_table *request = request_queue[index];
-            if (request != NULL) {
-                if (request->status == PENDING ||
-                    request->status == IN_PROGRESS) {
-                    //__asm__ __volatile__("cli");
-                    fs_handle_request(request);
-                    //__asm__ __volatile__("sti");
-                }
+        request_table *req = fetch_next_task(fs_task_pid);
 
+        if (req != NULL) {
+            if (req->status == PENDING ||
+                req->status == IN_PROGRESS) {
                 //__asm__ __volatile__("cli");
-                if (request->status == TERMINATED) {                
-                    fs_remove_from_queue(request);
-                    request = NULL;
-                }
+                fs_handle_request(req);
                 //__asm__ __volatile__("sti");
             }
+
+            //__asm__ __volatile__("cli");
+            /* if (req->status == TERMINATED) {
+                 fs_remove_from_queue(req);
+                 req = NULL;
+             }*/
+            //__asm__ __volatile__("sti");
         }
 
         /*
@@ -128,9 +126,7 @@ void fs_task_loop() {
          * close / delete
          */
 
-        if (request_queue_count == 0) {
-            blankie_activate(fs_task_pid);
-        }
+        blankie_activate(fs_task_pid);
     }
 }
 
@@ -145,14 +141,14 @@ void fs_task_loop() {
  */
 void fs_recovery() {
     DEBUG_FS_TASK("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
-    if (current_req_index != -1) {
-        request_table *req = request_queue[current_req_index];
+    /*if (current_req_index != -1) {
+        //request_table *req = request_queue[current_req_index];
         DEBUG_FS_TASK("[FS_TASK][RECOVERY]: No freeing needed\n");
         if (req != NULL) {
             scheduler_wake_task(req->caller_pid);
             fs_remove_from_queue(req);
         }
-    }
+    }*/
     blankie_activate(fs_task_pid);
 }
 

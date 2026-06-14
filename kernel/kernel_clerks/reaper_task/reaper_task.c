@@ -21,9 +21,10 @@
 void reaper_task_loop() {
     while (1) {
         while (scheduler_get_dead_task_count() != 0) {
-            __asm__ __volatile__("cli");
             scheduler_remove_task();
-            __asm__ __volatile__("sti");
+        }
+
+        while (remove_request() != 0) {
         }
         blankie_activate(reaper_task_pid);
     }
