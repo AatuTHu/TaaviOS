@@ -9,6 +9,7 @@
 #include "keyboard.h"
 #include "klog.h"
 #include "kmalloc.h"
+#include "ledger.h"
 #include "mbr.h"
 #include "mm.h"
 #include "multiboot.h"
@@ -137,6 +138,8 @@ static void init_microlithic_mode() {
         reaper_init(kernel_task);
         scheduler_add(kernel_task);
     }
+
+    ledger_init();
 }
 
 void kernel_main(const uint32_t *mboot_info) {

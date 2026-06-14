@@ -24,7 +24,7 @@ void reaper_task_loop() {
             scheduler_remove_task();
         }
 
-        while (remove_request() != 0) {
+        while (ledger_remove_request() != 0) {
         }
         blankie_activate(reaper_task_pid);
     }

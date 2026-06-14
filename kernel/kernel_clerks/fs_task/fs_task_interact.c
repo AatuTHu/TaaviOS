@@ -75,7 +75,7 @@ int fs_add_reqs(uint32_t caller_pid,
 case_error:
     scheduler_wake_task(caller_pid);
     return STATUS_ERROR;
-}
+}*/
 
 /**
  * Collect request - Should a task want to collect results.

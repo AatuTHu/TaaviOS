@@ -14,25 +14,6 @@
 #define free_starting_slot 3
 #define backwards          0
 #define forwards           1
-/*
-typedef enum {
-    PENDING,
-    IN_PROGRESS,
-    COMPLETE,
-    TERMINATED,
-    FAILED,
-} reqistry_status;
-
-typedef struct request_table {
-    uint32_t caller_pid;
-    operations_t request_type;
-    char path[128];
-    char buf[512];
-    uint32_t buffer_size;
-    uint32_t fd;
-    uint32_t flags;
-    reqistry_status status;
-} request_table;*/
 
 typedef struct fd_entry_t {
     uint32_t owner_pid;
@@ -56,14 +37,7 @@ void fs_task_loop();
 void fs_recovery();
 void fs_wake_task(uint32_t pid);
 void fs_handle_request(request_table *req);
-/*
-int fs_add_reqs(uint32_t caller_pid,
-    operations_t type, uint32_t fd, const char *path,
-    const char *buf, uint32_t buffer_size, uint32_t flags);
-int fs_collect_req(uint32_t caller_pid, char *out);*/
 
 extern fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
-// extern request_table *request_queue[MAX_REQ_ENTRIES];
-// extern int request_queue_count;
 
 #endif

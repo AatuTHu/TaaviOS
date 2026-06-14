@@ -62,11 +62,11 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     }
 
-    add_request_to_ledger(current->pid, fs_task_pid, READ, fd, NULL, NULL, buff_size, O_RDONLY);
+    ledger_add_req(current->pid, fs_task_pid, READ, fd, NULL, NULL, buff_size, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    if (collect_request(current->pid, fs_task_pid, buf) == STATUS_ERROR)
+    if (ledger_collect(current->pid, fs_task_pid, buf) == STATUS_ERROR)
         return STATUS_ERROR;
 
     return STATUS_OK;
@@ -98,10 +98,10 @@ static int32_t sys_write(struct registers *r) {
         break;
     default:
         const task_t *current = scheduler_get_current_task();
-        add_request_to_ledger(current->pid, fs_task_pid, WRITE, fd, NULL, buf, len, O_WRONLY);
+        ledger_add_req(current->pid, fs_task_pid, WRITE, fd, NULL, buf, len, O_WRONLY);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
-        return collect_request(current->pid, fs_task_pid, NULL);
+        return ledger_collect(current->pid, fs_task_pid, NULL);
     }
 
     return STATUS_OK;
@@ -123,11 +123,11 @@ static int32_t sys_open(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    add_request_to_ledger(current->pid, fs_task_pid, OPEN, 0, path, NULL, 0, flags);
+    ledger_add_req(current->pid, fs_task_pid, OPEN, 0, path, NULL, 0, flags);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return collect_request(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
 /**
@@ -149,7 +149,7 @@ static int32_t sys_close(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    add_request_to_ledger(current->pid, fs_task_pid, CLOSE, fd, NULL, NULL, 0, 0);
+    ledger_add_req(current->pid, fs_task_pid, CLOSE, fd, NULL, NULL, 0, 0);
 
     return STATUS_OK;
 }
@@ -176,11 +176,11 @@ static int32_t sys_chdir(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    add_request_to_ledger(current->pid, fs_task_pid, FIND, 0, path, NULL, len, 0);
+    ledger_add_req(current->pid, fs_task_pid, FIND, 0, path, NULL, len, 0);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return collect_request(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
 /**
@@ -253,11 +253,11 @@ static int32_t sys_mkdir(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    add_request_to_ledger(current->pid, fs_task_pid, CREATE, 0, path, NULL, len, O_CREAT);
+    ledger_add_req(current->pid, fs_task_pid, CREATE, 0, path, NULL, len, O_CREAT);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return collect_request(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
 static int32_t sys_idle(struct registers *r) {

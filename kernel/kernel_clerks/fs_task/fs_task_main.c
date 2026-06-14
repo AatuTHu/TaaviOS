@@ -8,86 +8,7 @@
  * @author: A.H, 2026
  */
 
-int request_queue_count = 0;
-int current_req_index   = -1;
 fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
-
-// signal scheduler to wake the pid who made the request.
-void fs_wake_task(uint32_t pid) {
-    scheduler_wake_task(pid);
-}
-
-/**
- * fs_remove_from_queue - used main loop when picks a terminated requst.
- * @req: pointer to a terminated request
- *
- * Description:
- * frees the request from heap memory, then shifts there request_queue
- * array to left by one.
- *
- */
-/*
-static void fs_remove_from_queue(request_table *req) {
-    DEBUG_FS_TASK("[FS_TASK][REMOVE]: Starting on removing\n");
-    if (request_queue_count == 0 || current_req_index == -1) {
-        DEBUG_FS_TASK("[FS_TASK][REMOVE]: Req queue count is 0\n");
-        return;
-    }
-
-    request_queue[current_req_index] = NULL;
-    kfree(req);
-
-    for (int i = current_req_index; i < request_queue_count - 1; i++) {
-        request_queue[i] = request_queue[i + 1];
-    }
-    request_queue[request_queue_count - 1] = NULL;
-    request_queue_count--;
-    current_req_index = -1;
-}*/
-
-/*
- * This functions was inspired from schedulers next task find function.
- * It tries to find the index of the first in_progress request,
- * if none is found it tries to find pending. Lastly it tries to find a
- * terminated req it can be cleaned away. If it find any of these it returns
- * index of the selected request
- */
-
-/**
- * find_next_request - Simple round-robin picker.
- *
- * Description:
- * loops thru request_queue. Tries to find requests in order of
- * "IN_PROGRESS" -> "PENDIG" -> "TERMINATED"
- *
- * Context: picks a request for fs_task at the start of loop iteration.
- * Return: Index of next request or INVALID_IDX on failure.
- */
-/*static int find_next_request() {
-    if (request_queue_count == 0)
-        return STATUS_ERROR;
-
-    for (int i = 0; i < request_queue_count; i++) {
-        if (request_queue[i] != NULL &&
-            request_queue[i]->status == IN_PROGRESS) {
-            return current_req_index = i;
-        }
-    }
-
-    for (int i = 0; i < request_queue_count; i++) {
-        if (request_queue[i] != NULL && request_queue[i]->status == PENDING) {
-            return current_req_index = i;
-        }
-    }
-
-    for (int i = 0; i < request_queue_count; i++) {
-        if (request_queue[i] != NULL &&
-            request_queue[i]->status == TERMINATED) {
-            return current_req_index = i;
-        }
-    }
-    return INVALID_IDX;
-}*/
 
 /**
  * fs_task_loop - Entry point function used when clerk is created at boot.
@@ -102,7 +23,7 @@ static void fs_remove_from_queue(request_table *req) {
 void fs_task_loop() {
     DEBUG_FS_TASK("[FS_TASK]: \n");
     while (1) {
-        request_table *req = fetch_next_task(fs_task_pid);
+        request_table *req = ledger_fetch_next_req(fs_task_pid);
 
         if (req != NULL) {
             if (req->status == PENDING ||
@@ -111,13 +32,6 @@ void fs_task_loop() {
                 fs_handle_request(req);
                 //__asm__ __volatile__("sti");
             }
-
-            //__asm__ __volatile__("cli");
-            /* if (req->status == TERMINATED) {
-                 fs_remove_from_queue(req);
-                 req = NULL;
-             }*/
-            //__asm__ __volatile__("sti");
         }
 
         /*
@@ -141,14 +55,7 @@ void fs_task_loop() {
  */
 void fs_recovery() {
     DEBUG_FS_TASK("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
-    /*if (current_req_index != -1) {
-        //request_table *req = request_queue[current_req_index];
-        DEBUG_FS_TASK("[FS_TASK][RECOVERY]: No freeing needed\n");
-        if (req != NULL) {
-            scheduler_wake_task(req->caller_pid);
-            fs_remove_from_queue(req);
-        }
-    }*/
+    ledger_check_request(fs_task_pid);
     blankie_activate(fs_task_pid);
 }
 

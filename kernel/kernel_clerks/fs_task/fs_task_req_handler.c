@@ -181,8 +181,13 @@ static int open(request_table *req) {
 
 static int create(const request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
-
     uint32_t base_directory = f32_fs.root_cluster;
+    dir_traversal_t *map    = dir_get_direction(req->caller_pid);
+
+    if (map != NULL) {
+        DEBUG_FS_TASK("[FS_TASK][CREATE]: Using base_directory_cluster: %d\n", map->current_cluster);
+        base_directory = map->current_cluster;
+    }
 
     if (req->buffer_size > 8) {
         if (fat32_mkdirp(base_directory, req->path) == STATUS_ERROR) {
@@ -255,7 +260,7 @@ static int find(const request_table *req) {
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     const char *path          = (char *)req->path;
-    char *filename[9];
+    char filename[9];
 
     if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
         direction = backwards;
@@ -305,35 +310,35 @@ void fs_handle_request(request_table *req) {
     case OPEN:
         req->status       = (open(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
-        fs_wake_task(req->caller_pid);
+        scheduler_wake_task(req->caller_pid);
         return;
     case READ:
         req->status       = (read(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
-        fs_wake_task(req->caller_pid);
+        scheduler_wake_task(req->caller_pid);
         return;
     case WRITE:
         req->status       = (write(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
-        fs_wake_task(req->caller_pid);
+        scheduler_wake_task(req->caller_pid);
         return;
     case CLOSE:
         req->status = (close(req) == STATUS_ERROR) ? FAILED : TERMINATED;
         return;
     case CREATE:
-        req->status       = (create(req) == STATUS_ERROR) ? FAILED : TERMINATED;
+        req->status       = (create(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
-        fs_wake_task(req->caller_pid);
+        scheduler_wake_task(req->caller_pid);
         return;
     case FIND:
         req->status       = (find(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
-        fs_wake_task(req->caller_pid);
+        scheduler_wake_task(req->caller_pid);
         return;
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
         req->status = TERMINATED;
-        fs_wake_task(req->caller_pid);
+        scheduler_wake_task(req->caller_pid);
         return;
     }
 }
