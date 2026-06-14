@@ -14,9 +14,7 @@ void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
         return;
     }
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
-    DEBUG_PAGING("[PAGING] Mapping to page directory index: %d\n", pd_index);
     uint32_t pt_index = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
-    DEBUG_PAGING("[PAGING] Page Table index: %d\n", pt_index);
 
     uint32_t pd_flags = PAGE_PRESENT | PAGE_RW;
     if (flags & PAGE_USER) {

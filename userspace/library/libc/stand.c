@@ -42,6 +42,10 @@ static int parse_segment_from_path(const char *path, char *dir_name, int max_dir
 
 int change_directory(const char *path, char *directory_name) {
     int direction = forward;
+    int len       = strlen(path);
+    if (sys_chdir(path, len) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
     if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
         direction = backward;

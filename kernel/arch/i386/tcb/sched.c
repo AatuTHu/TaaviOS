@@ -67,7 +67,6 @@ static void scheduler_check_clerks() {
 }
 
 static int scheduler_find_next_task() {
-    DEBUG_SCHED("[SCHEDULER][NEXT_TASK]: Searching\n");
     for (int i = 1; i <= task_count; i++) {
         int next_idx = (current_idx + i) % task_count;
         if (tasks[next_idx]->priority == PRIORITY_HIGH &&
@@ -120,17 +119,17 @@ static void scheduler_switch(struct registers *r) {
     task_t *current = scheduler_get_current_task();
 
     if (current != NULL && current->started && current->state != TASK_DEAD && current->state != TASK_SLEEPING) {
-        DEBUG_SCHED("[SCHEDULER][SWITCH]: Saving: %s with state: %d\n", current->name, current->state);
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Saving: %s with state: %d\n", current->name, current->state);
         memcpy(&current->context, r, sizeof(struct registers));
 
         if (current->state == TASK_RUNNING) {
-            DEBUG_SCHED("[SCHEDULER][SWITCH]: setting: %s ready\n", current->name);
+            // DEBUG_SCHED("[SCHEDULER][SWITCH]: setting: %s ready\n", current->name);
             current->state = TASK_READY;
         }
     }
 
     if (scheduler_has_runnable_task() == 0 || dead_task_count > 0) {
-        DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
         scheduler_check_clerks();
     }
 
@@ -149,7 +148,7 @@ static void scheduler_switch(struct registers *r) {
     next->started = 1;
 
     if (next_idx != current_idx) {
-        DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
 
         if (next->task_mode == USER_TASK) {

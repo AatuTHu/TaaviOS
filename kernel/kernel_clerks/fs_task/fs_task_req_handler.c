@@ -153,7 +153,7 @@ static int open(request_table *req) {
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
-    uint8_t filename[9];
+    char filename[9];
     const char *path = (char *)req->path;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
@@ -255,7 +255,7 @@ static int find(const request_table *req) {
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     const char *path          = (char *)req->path;
-    uint8_t *filename[9];
+    char *filename[9];
 
     if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
         direction = backwards;
@@ -275,12 +275,10 @@ static int find(const request_table *req) {
             return STATUS_ERROR;
         }
     } else if (direction == backwards && map != NULL) {
-        DEBUG_FS_TASK("\n");
         DEBUG_FS_TASK("[FS_TASK][FIND]: Going backwards\n");
         current_cluster = map->prev_cluster;
 
         DEBUG_FS_TASK("[FS_TASK][FIND]: current_cluster: %d\n", current_cluster);
-        DEBUG_FS_TASK("\n");
 
         if (fat32_find_parent_cluster(current_cluster, &prev_cluster) == STATUS_ERROR) {
             ERROR("[FS_TASK][FIND]: Couldnt find parent\n");

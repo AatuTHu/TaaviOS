@@ -1,6 +1,8 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <stdint.h>
+
 #define LOG_NONE       0
 #define LOG_ERROR      (1 << 0) // 1
 #define LOG_ALL_DEBUGS (1 << 1) // 2
@@ -15,6 +17,11 @@
 #define LOG_FS_ALL (LOG_FAT32 | LOG_FS_TASK | LOG_LEDGER)
 #define LOG_MM_ALL (LOG_KMALLOC | LOG_PAGING)
 #define LOG_ALL    (0xFFFFFFFF)
+
+void set_print_level(uint8_t level);
+void klog(const char *fmt, ...);
+void klog_debug(const char *fmt, ...);
+void klog_error(const char *fmt, ...);
 
 #ifndef LOG_LEVEL
 #define LOG_LEVEL LOG_ERROR

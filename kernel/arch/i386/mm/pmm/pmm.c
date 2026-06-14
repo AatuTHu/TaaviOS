@@ -9,6 +9,16 @@ static uint32_t used_pages = 0;
 static uint32_t free_pages = 0;
 static uint32_t last_found = 0;
 
+/**
+ * __pmm_set_bit - Sets a bit on a slot as used.
+ * @param page: the 32bit slot where the bit recides
+ *
+ * Description:
+ * By dividing the page with 32 we get the index on the bitmap. For example
+ * 34/32 = 1 on bitmap, 25/32 = 0
+ * After that by modulo operating the page with %32 we get the right bit that we want to put on.
+ *
+ */
 void __pmm_set_bit(uint32_t page) {
     uint32_t ind = page / 32;
     bitmap[ind]  = bitmap[ind] | (1U << (page % 32));
@@ -24,61 +34,94 @@ static int __pmm_test_bit(uint32_t page) {
     return bitmap[ind] & (1U << (page % 32));
 }
 
+/**
+ * pmm_int - Initialize physical memory manager.
+ * @param mboot: multiboot info structure that hold info of the system memory
+ *
+ * Description:
+ * Calculates total memory in kb and total page count. After that it
+ * converts mmap_addr in to virtual address (vaddr) and calcualtes virtual address end by
+ * adding to vaddr the mmap_length. Then for all vaddr entries it casts them as mmap_entry
+ * and marks available slots of the bitmap as free to use. Leaving reserved spaces such as bios as used.
+ *
+ * And finally it reserves slots for kernel
+ *
+ *
+ */
 void pmm_init(const struct multiboot_info *mboot) {
+    DEBUG("[PMM] mem_upper: 0x%x\n", mboot->mem_upper);
     uint32_t total_memory_kb = mboot->mem_upper + CONVENTIONAL_MEMORY_KB;
     uint32_t total_pages     = (total_memory_kb * 1024) / PAGE_SIZE;
-    klog("[PMM] INITIALIZING PHYSICAL MEMORY TO: %d kb\n", total_memory_kb);
-    klog("[PMM] Total pages: %d\n", total_pages);
+    DEBUG("[PMM] Total memory: %d kb\n", total_memory_kb);
+    DEBUG("[PMM] Total pages: %d\n", total_pages);
 
-    memset(bitmap, 0, (total_pages / 8));
+    // 0xFF same as used
+    uint32_t bitmap_size = (total_pages + 7) / 8;
+    memset(bitmap, 0xFF, bitmap_size);
 
     uint32_t vaddr = phys_to_virt(mboot->mmap_addr);
     uint32_t vend  = vaddr + mboot->mmap_length;
-    klog("[PMM] Memory map entries:\n");
+
+    DEBUG("[PMM] virtual address start: 0x%x\n", vaddr);
+    DEBUG("[PMM] virtual address end: 0x%x\n", vend);
+
+    DEBUG("[PMM] Memory map entries:\n");
     while (vaddr < vend) {
         const struct mmap_entry *entry = (struct mmap_entry *)vaddr;
-        klog("[PMM] [%s] base=0x%x length=0x%x\n",
-            entry->type == 1 ? "AVAILABLE" : "RESERVED ", entry->base_low,
-            entry->length_low);
+        DEBUG("[PMM] [%s] base=0x%x length=0x%x\n", entry->type == 1 ? "AVAILABLE" : "RESERVED ", entry->base_low, entry->length_low);
+
         if (entry->type == 1) {
             uint32_t start_page = entry->base_low / PAGE_SIZE;
             uint32_t num_pages  = entry->length_low / PAGE_SIZE;
             for (uint32_t i = 0; i < num_pages; i++) {
-                __pmm_clear_bit(start_page + i);
+                if ((start_page + i) < total_pages) {
+                    __pmm_clear_bit(start_page + i);
+                }
             }
         }
+
         vaddr = vaddr + entry->size + 4;
     }
 
-    klog("[PMM] Reserving low memory (pages 0-%d)\n", RESERVED_LOW_PAGES - 1);
-    for (uint32_t i = 0; i < RESERVED_LOW_PAGES; i++) { __pmm_set_bit(i); }
+    DEBUG("[PMM] Reserving low memory (pages 0-%d)\n", RESERVED_LOW_PAGES - 1);
+    for (uint32_t i = 0; i < RESERVED_LOW_PAGES; i++) {
+        __pmm_set_bit(i);
+        last_found = i;
+    }
+
+    DEBUG("[PMM]: Marking last found slot to be: %d\n", last_found);
 
     extern uint32_t _kernel_start;
     extern uint32_t _kernel_end;
     uint32_t kernel_start_page = (uint32_t)&_kernel_start / PAGE_SIZE;
     uint32_t kernel_end_page   = (uint32_t)&_kernel_end / PAGE_SIZE;
-    klog("[PMM] Kernel pages: %d-%d (0x%x-0x%x)\n", kernel_start_page,
+    DEBUG("[PMM] Kernel pages: %d-%d (0x%x-0x%x)\n", kernel_start_page,
         kernel_end_page, kernel_start_page * PAGE_SIZE,
         kernel_end_page * PAGE_SIZE);
     for (uint32_t i = kernel_start_page; i < kernel_end_page; i++) {
         __pmm_set_bit(i);
     }
 
-    uint32_t bitmap_phys  = (uint32_t)bitmap - KERNEL_VIRTUAL_BASE;
-    uint32_t bitmap_size  = (MAX_PAGES / 32) * sizeof(uint32_t);
-    uint32_t bitmap_start = bitmap_phys / PAGE_SIZE;
-    uint32_t bitmap_end   = (bitmap_phys + bitmap_size) / PAGE_SIZE;
-    klog("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n", bitmap_start,
-        bitmap_end, bitmap_phys, bitmap_size);
-    for (uint32_t i = bitmap_start; i < bitmap_end; i++) { __pmm_set_bit(i); }
+    uint32_t bitmap_phys       = (uint32_t)bitmap - KERNEL_VIRTUAL_BASE;
+    uint32_t bitmap_size_bytes = (total_pages + 31) / 32 * sizeof(uint32_t);
+    uint32_t bitmap_start      = bitmap_phys / PAGE_SIZE;
+    uint32_t bitmap_end        = (bitmap_phys + bitmap_size_bytes - 1) / PAGE_SIZE;
+    DEBUG("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n", bitmap_start,
+        bitmap_end, bitmap_phys, bitmap_size_bytes);
 
-    for (uint32_t i = 0; i < MAX_PAGES; i++) {
+    // Left out for now as bitmap fits inside kernel slots.
+    //  for (uint32_t i = bitmap_start; i <= bitmap_end; i++) { __pmm_set_bit(i); }
+
+    free_pages = 0;
+    used_pages = 0;
+    for (uint32_t i = 0; i < total_pages; i++) {
         if (__pmm_test_bit(i))
             used_pages++;
         else
             free_pages++;
     }
-    klog("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
+
+    DEBUG("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
         free_pages, (free_pages * PAGE_SIZE) / 1024, used_pages,
         (used_pages * PAGE_SIZE) / 1024);
 }
