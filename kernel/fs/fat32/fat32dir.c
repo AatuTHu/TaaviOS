@@ -10,28 +10,24 @@
 directly to screen
 *
 */
-void fat32_list_dir(uint32_t cluster) {
-    uint8_t *buf = __fat32_allocate_buffer();
+void fat32_list_dir(uint32_t cluster, uint8_t *out_buf, uint32_t *out_size) {
+    uint32_t current_cluster = cluster;
+    uint8_t *buf             = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
         return;
 
-    if (__fat32_read_cluster(cluster, buf) == STATUS_ERROR) {
+    if (__fat32_read_cluster(current_cluster, buf) == STATUS_ERROR) {
         ERROR("[FAT32][LIST_DIR]: Could not read cluster. Aborting\n");
         kfree(buf);
         return;
     }
 
-    // convert the read buffer to an directory entry
     const fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
     uint32_t max_entries            = __fat32_calculate_max_dir_entries();
 
-    /*
-     * loop thru the directory entry
-     * if dir name is equals to free then stop and go to next dir_entry
-     * if it is deleted or a long filename advance to next iteration
-     * otherwise print the name and size to serial. this is not a proper but
-     * will do for now
-     */
+    *out_size  = 0;
+    out_buf[0] = '\0';
+
     for (uint32_t i = 0; i < max_entries; i++) {
         if (dir_entry[i].name[0] == FAT32_DIRENT_FREE)
             break;
@@ -40,23 +36,28 @@ void fat32_list_dir(uint32_t cluster) {
         if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) ==
             FAT32_LONG_FILE_NAME)
             continue;
-        DEBUG_FAT32("[FAT32][LIST_DIR]: name: %s\n", dir_entry[i].name);
-        //  DEBUG_FAT32("[FAT32][LIST_DIR]: dir size: %d\n", dir_entry[i].size);
+        if (memcmp(dir_entry[i].name, ".          ", 11) == 0 ||
+            memcmp(dir_entry[i].name, "..         ", 11) == 0)
+            continue;
+
+        char name_buf[12];
+        memcpy(name_buf, dir_entry[i].name, 11);
+        name_buf[11] = '\0';
+
+        uint32_t name_len = strlen(name_buf);
+        memcpy(&out_buf[*out_size], name_buf, name_len);
+
+        *out_size += name_len;
+        out_buf[*out_size] = '\n';
+        *out_size += 1;
+        out_buf[*out_size] = '\0';
+
+        DEBUG_FAT32("[FAT32][LIST_DIR]: name: %s\n", name_buf);
+        DEBUG_FAT32("[FAT32][LIST_DIR]: out_size: %d\n", *out_size);
     }
 
-    DEBUG_FAT32("[FAT32][LIST_DIR]: searching for more clusters\n");
-    // Usual cluster hopping
-    uint32_t next_cluster = __fat32_next_cluster(cluster);
-
-    if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-        //   DEBUG_FAT32("[FAT32][LIST_DIR]: End of the chain reached\n");
-        kfree(buf);
-        return;
-    }
-
-    DEBUG_FAT32("[FAT32][LIST_DIR]: More clusters found at %d\n", next_cluster);
     kfree(buf);
-    fat32_list_dir(next_cluster);
+    return;
 } // list_dir
 
 /**

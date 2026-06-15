@@ -101,6 +101,13 @@ void command_cd(const char *path) {
     change_directory(path, dir_name);
 }
 
+void command_ls() {
+    char buf[512] = {0};
+    list_dirents(buf, sizeof(buf));
+
+    print(buf);
+}
+
 void exec_cmd(char *buf) {
     print("\n");
     if (str_eq(buf, "clear") == 1)
@@ -117,6 +124,8 @@ void exec_cmd(char *buf) {
         command_close();
     if (str_eq(buf, "read") == 1)
         command_read();
+    if (str_eq(buf, "ls") == 1)
+        command_ls();
     if (str_starts_with(buf, "write ") == 1)
         command_write(buf + 6);
     if (str_starts_with(buf, "open ") == 1)
@@ -127,6 +136,7 @@ void exec_cmd(char *buf) {
         command_mkdir(buf + 6);
     if (str_starts_with(buf, "cd ") == 1)
         command_cd(buf + 3);
+
     print("\n");
 }
 

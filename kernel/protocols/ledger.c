@@ -113,7 +113,7 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
         goto case_error;
     }
 
-    if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type != OPEN && type != CREATE && type != FIND)) {
+    if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type != OPEN && type != CREATE && type != FIND && type != LIST)) {
         ERROR("[LEDGER][ADD_REQUEST]: Invalid fd number. Aborting\n");
         kfree(new_request);
         goto case_error;
@@ -204,8 +204,12 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                 req->status = TERMINATED;
                 wake_clerk(reaper_task_pid);
                 return req->fd;
+            case LIST:
             case READ:
-                memcpy(out, req->buf, req->buffer_size);
+                if (out != NULL) {
+                    memcpy(out, req->buf, req->buffer_size);
+                    out[req->buffer_size] = '\0';
+                }
                 break;
             default:
                 break;

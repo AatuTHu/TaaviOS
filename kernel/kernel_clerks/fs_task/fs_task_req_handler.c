@@ -201,7 +201,6 @@ static int create(const request_table *req) {
         }
     }
 
-    fat32_list_dir(base_directory);
     return STATUS_OK;
 }
 
@@ -299,6 +298,36 @@ static int find(const request_table *req) {
     return STATUS_OK;
 }
 
+static int list(request_table *req) {
+    uint32_t base_cluster = f32_fs.root_cluster;
+    uint32_t dir_size     = 0;
+    uint32_t read_size    = 0;
+    dir_traversal_t *map  = dir_get_direction(req->caller_pid);
+
+    if (map != NULL) {
+        DEBUG_FS_TASK("[FS_TASK][LIST]: directions found. starting cluster %d\n", map->current_cluster);
+        base_cluster = map->current_cluster;
+    }
+
+    uint8_t *names_buffer = (uint8_t *)kmalloc(req->buffer_size);
+
+    if (names_buffer == NULL) {
+        ERROR("[FS_TASK][LIST]: Could not allocate a buffer at this time.\n");
+        return STATUS_ERROR;
+    }
+
+    fat32_list_dir(base_cluster, names_buffer, &read_size);
+
+    if (read_size > 0) {
+        memcpy(req->buf, names_buffer, read_size);
+    }
+
+    req->buffer_size = read_size;
+    kfree(names_buffer);
+
+    return (read_size > 0) ? STATUS_OK : STATUS_ERROR;
+}
+
 void fs_handle_request(request_table *req) {
     task_t *fs_task = task_get(fs_task_pid);
 
@@ -332,6 +361,11 @@ void fs_handle_request(request_table *req) {
         return;
     case FIND:
         req->status       = (find(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case LIST:
+        req->status       = (list(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         return;

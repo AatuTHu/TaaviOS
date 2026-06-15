@@ -73,6 +73,10 @@ int change_directory(const char *path, char *directory_name) {
     return parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN, direction);
 }
 
+int list_dirents(const char *buf, int buffer_size) {
+    sys_getdirents(buf, buffer_size);
+}
+
 void print(const char *msg) {
     sys_write(1, msg, strlen(msg));
 }

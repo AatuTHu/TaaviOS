@@ -62,6 +62,10 @@ int sys_exec(const char *filename) {
     return result;
 }
 
+int sys_getdirents(const char *buf, uint32_t len) {
+    __asm__ __volatile__("int $0x80" : : "a"(141), "b"(buf), "c"(len));
+}
+
 void sys_idle(void) {
     __asm__ __volatile__("int $0x80" : : "a"(112));
 }

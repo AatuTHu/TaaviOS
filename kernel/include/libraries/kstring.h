@@ -11,5 +11,6 @@ void strncpy(char *dest, const char *src, uint32_t size);
 int strlen(const char *s);
 int strcmp(const char *a, const char *b);
 void itoa(int n, char *buf);
+char *strcat(char *dst, const char *src);
 
 #endif

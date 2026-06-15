@@ -25,4 +25,6 @@ int sys_chdir(const char *path, uint32_t len);
 
 int sys_exec(const char *filename);
 
+int sys_getdirents(const char *buf, uint32_t len);
+
 #endif

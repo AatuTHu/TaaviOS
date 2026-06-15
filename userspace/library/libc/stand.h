@@ -22,6 +22,7 @@ void write(int fd, const char *msg);
 void close(uint32_t fd);
 int mkdir(const char *path);
 int change_directory(const char *path, char *directory_name);
+int list_dirents(const char *buf, int buffer_size);
 
 int exec(const char *filename);
 void idle(void);

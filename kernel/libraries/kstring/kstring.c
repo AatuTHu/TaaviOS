@@ -49,6 +49,24 @@ int strcmp(const char *a, const char *b) {
     return *a - *b;
 }
 
+char *strcat(char *dest, const char *src) {
+    char *ptr = dest;
+
+    while (*ptr != '\0') {
+        ptr++;
+    }
+
+    while (*src != '\0') {
+        *ptr = *src;
+        ptr++;
+        src++;
+    }
+
+    *ptr = '\0';
+
+    return dest;
+}
+
 int memcmp(const void *ptr1, const void *ptr2, size_t n) {
     const unsigned char *s1 = ptr1;
     const unsigned char *s2 = ptr2;

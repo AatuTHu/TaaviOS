@@ -260,6 +260,24 @@ static int32_t sys_mkdir(struct registers *r) {
     return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
+static int32_t sys_getdents(struct registers *r) {
+    DEBUG("[SYSCALL][SYS_GETDENTS]\n");
+    const char *buffer = (char *)r->ebx;
+    uint32_t len       = r->ecx;
+
+    task_t *current = scheduler_get_current_task();
+    if (current == NULL) {
+        DEBUG("[SYSCALL][SYS_GETDENTS]: no current task found\n");
+        return STATUS_ERROR;
+    }
+
+    ledger_add_req(current->pid, fs_task_pid, LIST, 0, NULL, buffer, len, O_RDONLY);
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_yield(r);
+
+    return ledger_collect(current->pid, fs_task_pid, buffer);
+}
+
 static int32_t sys_idle(struct registers *r) {
     (void)r;
     while (1) __asm__ __volatile__("sti; hlt");
@@ -282,15 +300,16 @@ void syscall_dispatch(struct registers *r) {
 
 void syscall_init() {
     for (uint32_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
-    syscall_table[SYS_EXIT]   = sys_exit;
-    syscall_table[SYS_WRITE]  = sys_write;
-    syscall_table[SYS_GETPID] = sys_getpid;
-    syscall_table[SYS_EXEC]   = sys_exec;
-    syscall_table[SYS_READ]   = sys_read;
-    syscall_table[SYS_IDLE]   = sys_idle;
-    syscall_table[SYS_YIELD]  = sys_yield;
-    syscall_table[SYS_OPEN]   = sys_open;
-    syscall_table[SYS_CLOSE]  = sys_close;
-    syscall_table[SYS_MKDIR]  = sys_mkdir;
-    syscall_table[SYS_CHDIR]  = sys_chdir;
+    syscall_table[SYS_EXIT]     = sys_exit;
+    syscall_table[SYS_WRITE]    = sys_write;
+    syscall_table[SYS_GETPID]   = sys_getpid;
+    syscall_table[SYS_EXEC]     = sys_exec;
+    syscall_table[SYS_READ]     = sys_read;
+    syscall_table[SYS_IDLE]     = sys_idle;
+    syscall_table[SYS_YIELD]    = sys_yield;
+    syscall_table[SYS_OPEN]     = sys_open;
+    syscall_table[SYS_CLOSE]    = sys_close;
+    syscall_table[SYS_MKDIR]    = sys_mkdir;
+    syscall_table[SYS_CHDIR]    = sys_chdir;
+    syscall_table[SYS_GETDENTS] = sys_getdents;
 }
