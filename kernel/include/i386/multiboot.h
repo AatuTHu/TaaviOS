@@ -4,17 +4,40 @@
 #include <stdint.h>
 
 struct multiboot_info {
-    uint32_t flags;       // 0x00 0
-    uint32_t mem_lower;   // 0x04 4
-    uint32_t mem_upper;   // 0x08 8
-    uint32_t boot_device; // 0x0C 12
-    uint32_t cmdline;     // 0x10 16
-    uint32_t mods_count;  // 0x14 20
-    uint32_t mods_addr;   // 0x18 24
-    uint32_t syms[4];     // 0x1C - 0x28 28, 32, 36, 40
-    uint32_t mmap_length; // 0x2C 44
-    uint32_t mmap_addr;   // 0x30 48
-};
+    uint32_t flags;
+    uint32_t mem_lower;
+    uint32_t mem_upper;
+    uint32_t boot_device;
+    uint32_t cmdline;
+    uint32_t mods_count;
+    uint32_t mods_addr;
+    uint32_t syms[4];
+    uint32_t mmap_length;
+    uint32_t mmap_addr;
+    uint32_t drives_length;
+    uint32_t drives_addr;
+    uint32_t config_table;
+    uint32_t boot_loader_name;
+    uint32_t apm_table;
+    uint32_t vbe_control_info;
+    uint32_t vbe_mode_info;
+    uint16_t vbe_mode;
+    uint16_t vbe_interface_seg;
+    uint16_t vbe_interface_off;
+    uint16_t vbe_interface_len;
+    uint64_t framebuffer_addr;
+    uint32_t framebuffer_pitch;
+    uint32_t framebuffer_width;
+    uint32_t framebuffer_height;
+    uint8_t framebuffer_bpp;  // 108
+    uint8_t framebuffer_type; // 109
+    uint8_t framebuffer_blue_field_position;
+    uint8_t framebuffer_blue_mask_size;
+    uint8_t framebuffer_red_field_position;
+    uint8_t framebuffer_red_mask_size;
+    uint8_t framebuffer_green_field_position;
+    uint8_t framebuffer_green_mask_size;
+} __attribute__((packed));
 
 struct multiboot_mod {
     uint32_t mod_start;

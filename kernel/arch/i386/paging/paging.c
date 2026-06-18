@@ -1,5 +1,6 @@
 #include "paging.h"
 #include "config.h"
+#include "fb.h"
 #include "klog.h"
 #include "kstring.h"
 #include "mm.h"
@@ -80,6 +81,8 @@ void paging_init() {
 
     paging_map(&kernel_page_dir, VGA_MEMORY_ADDRESS, VGA_PHYSICAL_ADDRESS,
         PAGE_PRESENT | PAGE_RW);
+
+    __fb_map_page();
     DEBUG("[PAGING] VGA page created\n");
     DEBUG("[PAGING] SWITCHING TO KERNEL PAGE DIRECTORY\n");
     paging_switch(&kernel_page_dir);

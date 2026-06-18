@@ -182,11 +182,13 @@ int scheduler_get_dead_task_count() {
 }
 
 void scheduler_remove_task() {
+    __asm__ __volatile__("cli");
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
     int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
 
     if (delete_candidate == -1) {
         DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
+        __asm__ __volatile__("sti");
         return;
     }
 
@@ -206,6 +208,7 @@ void scheduler_remove_task() {
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
+    __asm__ __volatile__("sti");
 }
 
 int scheduler_set_current_task(uint32_t pid) {

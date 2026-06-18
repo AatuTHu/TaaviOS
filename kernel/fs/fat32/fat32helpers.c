@@ -5,7 +5,7 @@
  * that contains the allocation entry for the given cluster.
  */
 inline uint32_t __fat32_calculate_lba(uint32_t cluster) {
-    DEBUG_FAT32("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n",cluster);
+    DEBUG_FAT32("[FAT32][CALCULATE_LBA]: calculating LBA for cluster %d\n", cluster);
     if (cluster >= f32_fs.maximum_cluster_size) {
         ERROR("[FAT32][CALCULATE_LBA]: Cluster number too high: %d\n", cluster);
         return INVALID_LBA;
@@ -268,8 +268,8 @@ uint32_t __fat32_alloc_cluster(void) {
                 uint32_t cluster_index = (i * FAT32_ENTRIES_PER_SECTOR) + j;
 
                 DEBUG_FAT32("[FAT32][ALLOC_CLUSTER]: Free cluster found. Cluster "
-                   "index: %d\n",
-                   cluster_index);
+                            "index: %d\n",
+                    cluster_index);
                 // mark index of current j as end of chain
                 fat_entries[j] = FAT32_CLUSTER_EOC;
 
@@ -574,11 +574,11 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
                                dir_entry[i].cluster_low;
                 *out_size    = dir_entry[i].size;
                 *out_attr    = dir_entry[i].attributes;
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: Directory found!\n");
                 DEBUG_FAT32("[FAT32][SEARCH_DIR]: file name %s\n",
-                 dir_entry[i].name); 
-                DEBUG_FAT32("[FAT32][SEARCH_DIR]: filefound!\n"); 
-                DEBUG_FAT32("[FAT32][SEARCH_DIR]: cluster: %d\n",*out_cluster);
-                DEBUG_FAT32("[FAT32][SEARCH_DIR]: size: %d\n",*out_size);
+                    dir_entry[i].name);
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: cluster: %d\n", *out_cluster);
+                DEBUG_FAT32("[FAT32][SEARCH_DIR]: size: %d\n", *out_size);
                 kfree(buf);
                 return STATUS_OK;
             }
@@ -594,7 +594,7 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
          */
         uint32_t next_cluster = __fat32_next_cluster(current_cluster);
         DEBUG_FAT32("[FAT32][SEARCH_DIR]: Next cluster number: %d\n",
-        next_cluster);
+            next_cluster);
 
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
             DEBUG_FAT32("[FAT32][SEARCH_DIR]: End of the cluster chain\n");

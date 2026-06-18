@@ -1,6 +1,7 @@
 #include "ata.h"
 #include "elf.h"
 #include "fat32.h"
+#include "fb.h"
 #include "fs_task.h"
 #include "gdt.h"
 #include "idle_task.h"
@@ -27,6 +28,7 @@
 
 extern void jump_to_usermode(uint32_t entry, uint32_t user_stack, uint32_t kernel_stack);
 #define MAX_MODS 10
+
 uint32_t module_starts[MAX_MODS];
 uint32_t module_ends[MAX_MODS];
 uint32_t total_mods = 0;
@@ -136,8 +138,14 @@ void kernel_main(const uint32_t *mboot_info) {
 
     init_mm(mboot_info);
     check_for_modules(mboot_info);
+    const struct multiboot_info *mboot =
+        (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
+    fb_init(mboot);
 
     init_arch();
+
+    // fb_clear(fb_pack_color(255, 0, 0));
+    fb_draw_string(1, 1, "hello!", fb_pack_color(255, 255, 255), fb_pack_color(0, 0, 0));
     kmalloc_init((void *)HEAP_START, HEAP_PAGES * PAGE_SIZE);
 
     init_drivers();

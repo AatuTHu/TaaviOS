@@ -219,6 +219,7 @@ static int32_t sys_exec(struct registers *r) {
     uint8_t *binary_buffer = (uint8_t *)kmalloc(file_size);
     if (fat32_read_file(file_cluster, file_size, binary_buffer) == STATUS_ERROR) {
         ERROR("[SYS_EXEC]: Could not read the file\n");
+        kfree(binary_buffer);
         return STATUS_ERROR;
     }
 
