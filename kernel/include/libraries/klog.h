@@ -13,10 +13,12 @@
 #define LOG_LEDGER     (1 << 6) // 64
 #define LOG_PAGING     (1 << 7) // 128
 #define LOG_TASK       (1 << 8) // 256
+#define LOG_GUI_TASK   (1 << 9) // 512
 
-#define LOG_FS_ALL (LOG_FAT32 | LOG_FS_TASK | LOG_LEDGER)
-#define LOG_MM_ALL (LOG_KMALLOC | LOG_PAGING)
-#define LOG_ALL    (0xFFFFFFFF)
+#define LOG_FS_ALL        (LOG_FAT32 | LOG_FS_TASK | LOG_LEDGER)
+#define LOG_LEDGER_CLERKS (LOG_FS_TASK | LOG_GUI_TASK | LOG_LEDGER)
+#define LOG_MM_ALL        (LOG_KMALLOC | LOG_PAGING)
+#define LOG_ALL           (0xFFFFFFFF)
 
 void set_print_level(uint8_t level);
 void klog(const char *fmt, ...);
@@ -73,6 +75,12 @@ void klog_error(const char *fmt, ...);
 #define DEBUG_PAGING(fmt, ...) klog_debug(fmt, ##__VA_ARGS__)
 #else
 #define DEBUG_PAGING(fmt, ...) ((void)0)
+#endif
+
+#if (LOG_LEVEL & LOG_GUI_TASK) || (LOG_LEVEL & LOG_ALL_DEBUGS)
+#define DEBUG_GUI_TASK(fmt, ...) klog_debug(fmt, ##__VA_ARGS__)
+#else
+#define DEBUG_GUI_TASK(fmt, ...) ((void)0)
 #endif
 
 #if (LOG_LEVEL & LOG_TASK) || (LOG_LEVEL & LOG_ALL_DEBUGS)

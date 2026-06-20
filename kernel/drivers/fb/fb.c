@@ -42,24 +42,59 @@ void fb_clear(uint32_t color) {
     fb_fill_rect(0, 0, fb.width, fb.height, color);
 }
 
-static void fb_draw_char(uint32_t x, uint32_t y, unsigned char c, uint32_t fg_color, uint32_t bg_color) {
+// y font height
+// x space between chars?
+static void fb_draw_char(uint32_t **x, uint32_t **y, unsigned char c, uint32_t fg_color, uint32_t bg_color) {
     uint8_t *glyph = PC_FACE_MODERNDOS_8x16[c];
+
+    switch (c) {
+    case '\0':
+        return;
+    case '\n':
+        **y += 16;
+        **x = 0;
+        return;
+    case '\b':
+        if (**x >= 8) {
+            **x -= 8;
+        } else if (**y >= 16) {
+            **y -= 16;
+            **x = fb.width - 8;
+        } else if (**x == 0 && **y == 0) {
+            return;
+        }
+        glyph = PC_FACE_MODERNDOS_8x16[0];
+        for (int row = 0; row < 16; row++) {
+            uint8_t byte = glyph[row];
+            for (int col = 0; col < 8; col++) {
+                uint8_t bit    = byte & (0x80 >> col);
+                uint32_t color = bit != 0 ? fg_color : bg_color;
+                fb_put_pixel(**x + col, **y + row, color);
+            }
+        }
+        return;
+    }
 
     for (int row = 0; row < 16; row++) {
         uint8_t byte = glyph[row];
         for (int col = 0; col < 8; col++) {
             uint8_t bit    = byte & (0x80 >> col);
             uint32_t color = bit != 0 ? fg_color : bg_color;
-            fb_put_pixel(x + col, y + row, color);
+            fb_put_pixel(**x + col, **y + row, color);
         }
+    }
+
+    **x += 8;
+    if (**x >= fb.width) {
+        **y += 16;
+        **x = 0;
     }
 }
 
-void fb_draw_string(uint32_t x, uint32_t y, const char *str, uint32_t fg_color, uint32_t bg_color) {
+void fb_draw_string(uint32_t *x, uint32_t *y, const char *str, uint32_t fg_color, uint32_t bg_color) {
     while (*str != '\0') {
-        fb_draw_char(x, y, *str, fg_color, bg_color);
+        fb_draw_char(&x, &y, *str, fg_color, bg_color);
         str++;
-        x += 8;
     }
 }
 

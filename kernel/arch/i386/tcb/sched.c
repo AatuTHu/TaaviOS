@@ -182,13 +182,12 @@ int scheduler_get_dead_task_count() {
 }
 
 void scheduler_remove_task() {
-    __asm__ __volatile__("cli");
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
     int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
 
     if (delete_candidate == -1) {
         DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
-        __asm__ __volatile__("sti");
+
         return;
     }
 
@@ -208,7 +207,6 @@ void scheduler_remove_task() {
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
-    __asm__ __volatile__("sti");
 }
 
 int scheduler_set_current_task(uint32_t pid) {
@@ -243,14 +241,14 @@ void scheduler_set_task_state(task_state_t state) {
         current->state = TASK_SLEEPING;
         break;
     case TASK_READY:
-        DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: Setting task %s ready\n", current->name);
+        // DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: Setting task %s ready\n", current->name);
         if (current->state == TASK_DEAD && dead_task_count > 0) {
             dead_task_count--;
         }
         current->state = TASK_READY;
         break;
     case TASK_BLOCKED:
-        DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: Blocking task: %s\n", current->name);
+        //   DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: Blocking task: %s\n", current->name);
         if (current->state != TASK_DEAD) {
             current->state = TASK_BLOCKED;
         }
@@ -271,10 +269,10 @@ int scheduler_get_task_count() {
 }
 
 void scheduler_wake_task(uint32_t pid) {
-    DEBUG_SCHED("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
+    // DEBUG_SCHED("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for (int i = 0; i < task_count; i++) {
         if (tasks[i] != NULL && tasks[i]->pid == pid) {
-            DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
+            //       DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
             tasks[i]->state = TASK_READY;
             return;
         }

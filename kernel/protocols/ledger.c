@@ -9,12 +9,16 @@
 request_table *fs_table[MAX_FS_REQ_ENTRIES];
 int last_fs_req_idx = -1;
 
+request_table *gui_table[MAX_GUI_REQ_ENTRIES];
+int last_gui_req_idx = -1;
+
 clerk_queue clerk_queues[CLERK_COUNT] = {
-    [fs_task_pid] = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
+    [fs_task_pid]  = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
+    [gui_task_pid] = {gui_table, MAX_GUI_REQ_ENTRIES, &last_gui_req_idx},
 };
 
 static void wake_clerk(uint32_t clerk_pid) {
-    task_t *clerk   = scheduler_get_current_task();
+    task_t *clerk   = task_get(clerk_pid);
     clerk->priority = PRIORITY_HIGH;
     scheduler_wake_task(clerk_pid);
 }
@@ -43,6 +47,15 @@ static clerk_queue *ledger_get_queue(uint32_t clerk_pid) {
     return q;
 }
 
+/**
+ * ledger_check_request - Marks the last request as terminated.
+ * @clerk_pid: pid of the clerk
+ *
+ * Description:
+ * In case of fault this function is called clerks recovery function. It marks
+ * the faulty request as termianted and wakes the caller.
+ *
+ */
 void ledger_check_request(uint32_t clerk_pid) {
     clerk_queue *q = ledger_get_queue(clerk_pid);
     if (q == NULL || *q->last_idx == -1) {
@@ -107,16 +120,21 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
         goto case_error;
     }
 
+    if (clerk_pid == gui_task_pid && buf != NULL && type == WRITE) {
+    }
+
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {
         ERROR("[LEDGER][ADD_REQUEST]: could not allocate new request. Aborting\n");
         goto case_error;
     }
 
-    if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type != OPEN && type != CREATE && type != FIND && type != LIST)) {
-        ERROR("[LEDGER][ADD_REQUEST]: Invalid fd number. Aborting\n");
-        kfree(new_request);
-        goto case_error;
+    if (clerk_pid == fs_task_pid) {
+        if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type != OPEN && type != CREATE && type != FIND && type != LIST)) {
+            ERROR("[LEDGER][ADD_REQUEST]: Invalid fd number. Aborting\n");
+            kfree(new_request);
+            goto case_error;
+        }
     }
 
     new_request->caller_pid   = caller_pid;
@@ -187,6 +205,7 @@ case_error:
  */
 int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
     clerk_queue *q = ledger_get_queue(clerk_pid);
+    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting %d request\n", caller_pid, clerk_pid);
     if (q == NULL) {
         ERROR("[LEDGER][COLLECT]: clerk pid is invalid\n");
         return STATUS_ERROR;
@@ -260,10 +279,12 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
         if (q->table[i] != NULL && q->table[i]->status == PENDING) {
             *q->last_idx = i;
             DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND\n");
+            q->table[i]->status = IN_PROGRESS;
             return q->table[i];
         }
     }
 
+    DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: No tasks found for :%d\n", clerk_pid);
     return NULL;
 }
 
@@ -271,5 +292,9 @@ void ledger_init() {
     for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
         fs_table[i] = NULL;
     }
-    last_fs_req_idx = -1;
+    for (int i = 0; i < MAX_GUI_REQ_ENTRIES; i++) {
+        gui_table[i] = NULL;
+    }
+    last_gui_req_idx = -1;
+    last_fs_req_idx  = -1;
 }

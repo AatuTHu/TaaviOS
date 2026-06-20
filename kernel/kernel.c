@@ -4,6 +4,7 @@
 #include "fb.h"
 #include "fs_task.h"
 #include "gdt.h"
+#include "gui_task.h"
 #include "idle_task.h"
 #include "idt.h"
 #include "io.h"
@@ -99,7 +100,7 @@ static void init_filesystems() {
     fat32_init(fat32_lba);
 }
 
-static void init_microlithic_mode() {
+static void init_microlithic() {
     klog("[KERNEL]: --INIT KERNEL TASKS--\n");
     klog("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, "idle",
@@ -127,6 +128,15 @@ static void init_microlithic_mode() {
         scheduler_add(kernel_task);
     }
 
+    klog("[KERNEL]: Creating an graphical user interface kernel task\n");
+    kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop,
+        "gui_task", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        gui_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
+
     ledger_init();
 }
 
@@ -144,8 +154,6 @@ void kernel_main(const uint32_t *mboot_info) {
 
     init_arch();
 
-    // fb_clear(fb_pack_color(255, 0, 0));
-    fb_draw_string(1, 1, "hello!", fb_pack_color(255, 255, 255), fb_pack_color(0, 0, 0));
     kmalloc_init((void *)HEAP_START, HEAP_PAGES * PAGE_SIZE);
 
     init_drivers();
@@ -153,7 +161,7 @@ void kernel_main(const uint32_t *mboot_info) {
 
     scheduler_init();
     syscall_init();
-    init_microlithic_mode();
+    init_microlithic();
 
     task_t *first_task = NULL;
 

@@ -22,7 +22,7 @@
 
 #define VGA_MEMORY_ADDRESS   0xC00B8000
 #define VGA_PHYSICAL_ADDRESS 0x000B8000
-#define FB_VIRTUAL_BASE 0xE0000000
+#define FB_VIRTUAL_BASE      0xE0000000
 
 #define KERNEL_VIRTUAL_BASE     0xC0000000
 #define KERNEL_PHYSICAL_ADDRESS 0x00100000
@@ -57,13 +57,14 @@ typedef enum {
 #define O_RDWR   0x04
 #define O_CREAT  0x08
 
-#define CLERK_COUNT    3 // amount of clerks. Very important. hardcoded for now
-#define MAX_FD_ENTRIES 256
+#define MAX_FD_ENTRIES      256
+#define MAX_FS_REQ_ENTRIES  50
+#define MAX_GUI_REQ_ENTRIES 500
 
+#define CLERK_COUNT     4 // amount of clerks. Very important. hardcoded for now
 #define idle_task_pid   0
 #define fs_task_pid     1
 #define reaper_task_pid 2
-
-#define MAX_FS_REQ_ENTRIES 50
+#define gui_task_pid    3
 
 #endif

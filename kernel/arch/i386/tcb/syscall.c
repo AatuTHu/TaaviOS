@@ -2,6 +2,7 @@
 #include "config.h"
 #include "elf.h"
 #include "fat32.h"
+#include "gui_task.h"
 #include "keyboard.h"
 #include "klog.h"
 #include "ledger.h"
@@ -81,23 +82,29 @@ static int32_t sys_read(struct registers *r) {
  * Return: STAUS_ERROR || STATUS_OK.
  */
 static int32_t sys_write(struct registers *r) {
-    int fd          = r->ebx;
-    const char *buf = (char *)r->ecx;
-    uint32_t len    = r->edx;
+    int fd                = r->ebx;
+    const char *buf       = (char *)r->ecx;
+    uint32_t len          = r->edx;
+    const task_t *current = scheduler_get_current_task();
 
     switch (fd) {
     case 1:
-        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-        vga_write(buf);
+
+        // vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+        ledger_add_req(current->pid, gui_task_pid, WRITE, 1, NULL, buf, len, 0);
+        scheduler_set_task_state(TASK_BLOCKED);
+        scheduler_yield(r);
+
         r->eax = STATUS_OK;
+        ledger_collect(current->pid, gui_task_pid, NULL);
         break;
     case 2:
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         ERROR(buf);
         r->eax = STATUS_OK;
         break;
+
     default:
-        const task_t *current = scheduler_get_current_task();
         ledger_add_req(current->pid, fs_task_pid, WRITE, fd, NULL, buf, len, O_WRONLY);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
@@ -263,8 +270,8 @@ static int32_t sys_mkdir(struct registers *r) {
 
 static int32_t sys_getdents(struct registers *r) {
     DEBUG("[SYSCALL][SYS_GETDENTS]\n");
-    const char *buffer = (char *)r->ebx;
-    uint32_t len       = r->ecx;
+    char *buffer = (char *)r->ebx;
+    uint32_t len = r->ecx;
 
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {
