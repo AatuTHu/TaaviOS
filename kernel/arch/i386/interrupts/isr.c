@@ -27,7 +27,7 @@ void isr_handler(struct registers *r) {
     task_t *current = scheduler_get_current_task();
 
     if (current->task_mode == KERNEL_TASK) {
-        DEBUG("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
+        ERROR("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
         current->state = TASK_SLEEPING;
         activate_hail_mary(current->pid);
         return;

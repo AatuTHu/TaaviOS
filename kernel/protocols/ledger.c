@@ -18,8 +18,10 @@ clerk_queue clerk_queues[CLERK_COUNT] = {
 };
 
 static void wake_clerk(uint32_t clerk_pid) {
-    task_t *clerk   = task_get(clerk_pid);
-    clerk->priority = PRIORITY_HIGH;
+    task_t *clerk = task_get(clerk_pid);
+    if (clerk_pid != reaper_task_pid) {
+        clerk->priority = PRIORITY_HIGH;
+    }
     scheduler_wake_task(clerk_pid);
 }
 
@@ -35,9 +37,6 @@ static void wake_clerk(uint32_t clerk_pid) {
  * Return: pointer to the clerk's queue, or NULL if invalid.
  */
 static clerk_queue *ledger_get_queue(uint32_t clerk_pid) {
-    if (clerk_pid >= CLERK_COUNT) {
-        return NULL;
-    }
 
     clerk_queue *q = &clerk_queues[clerk_pid];
     if (q->table == NULL) {
@@ -70,8 +69,8 @@ void ledger_check_request(uint32_t clerk_pid) {
 }
 
 int ledger_remove_request() {
-    int kill_count = 0;
     DEBUG_LEDGER("[LEDGER][REMOVE]: Dont fear the reaper\n");
+    int kill_count = 0;
 
     for (int c = 0; c < CLERK_COUNT; c++) {
         clerk_queue *q = ledger_get_queue(c);
@@ -90,6 +89,7 @@ int ledger_remove_request() {
     }
 
     DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper exiting with kill count of %d\n", kill_count);
+
     return kill_count;
 }
 
@@ -120,9 +120,6 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
         goto case_error;
     }
 
-    if (clerk_pid == gui_task_pid && buf != NULL && type == WRITE) {
-    }
-
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {
         ERROR("[LEDGER][ADD_REQUEST]: could not allocate new request. Aborting\n");
@@ -147,21 +144,21 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
 
     if (type == WRITE) {
         strncpy(new_request->buf, buf, sizeof(new_request->buf));
-        DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: buf: %s and buf length: %d\n",
-            new_request->buf, buffer_size);
+        // DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: buf: %s and buf length: %d\n",
+        //     new_request->buf, buffer_size);
     }
 
-    if (type == OPEN || type == FIND || type == CREATE) {
+    if ((type == OPEN || type == FIND || type == CREATE) && clerk_pid == fs_task_pid) {
         strncpy(new_request->path, path, sizeof(new_request->path));
-        DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: path: %s and buf length: %d\n",
-            new_request->path, buffer_size);
+        // DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: path: %s and buf length: %d\n",
+        //     new_request->path, buffer_size);
     }
 
     int found = -1;
     for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] == NULL) {
             q->table[i] = new_request;
-            found       = 0;
+            found       = i;
             break;
         }
     }
@@ -172,7 +169,7 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
         goto case_error;
     }
 
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: request added\n");
+    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: caller pid: %d\n", new_request->caller_pid);
     DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: clerkpid: %d\n", clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
@@ -278,7 +275,7 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
     for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] != NULL && q->table[i]->status == PENDING) {
             *q->last_idx = i;
-            DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND\n");
+            DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND AT %d\n", i);
             q->table[i]->status = IN_PROGRESS;
             return q->table[i];
         }

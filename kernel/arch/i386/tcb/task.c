@@ -3,9 +3,15 @@
 #include "klog.h"
 #include "kmalloc.h"
 #include "kstring.h"
+#include "ledger.h"
 #include "mm.h"
 #include "pmm.h"
 #include "vmm.h"
+
+/*
+ * Task
+ * Design & Implementation: A.H, 2026
+ */
 
 static task_t *task_table[MAX_TASKS];
 
@@ -77,9 +83,13 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
                                // plate you know
     task->context.esp    = task->context.useresp;
     task->context.eflags = EFLAGS_DEFAULT;
-    task->task_mode      = task_mode; // can be usefull later?
+    task->task_mode      = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
 
     task_table[slot] = task;
+
+    if (task_mode == USER_TASK) {
+        ledger_add_req(slot, gui_task_pid, CREATE, 1, NULL, NULL, 0, O_CREAT);
+    }
 
     return task;
 }
@@ -100,6 +110,11 @@ void task_destroy(task_t *task, uint8_t task_mode) {
 
     DEBUG_TASK("[TASK]: Freeing physical page directory\n");
     pmm_free(virt_to_phys((uint32_t)task->page_dir));
+
+    // DEBUG_TASK("[TASK]: Requestin\n");
+    // ledger_add_req(task->pid, fs_task_pid, DELETE, 0, NULL, NULL, 0, 0);
+    DEBUG_TASK("[TASK]: Requesting window deletion\n");
+    ledger_add_req(task->pid, gui_task_pid, DELETE, 0, NULL, NULL, 0, 0);
 
     DEBUG_TASK("[TASK]: Freeing task\n");
     kfree(task);

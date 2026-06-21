@@ -21,12 +21,13 @@
 
 void reaper_task_loop() {
     while (1) {
-        while (scheduler_get_dead_task_count() != 0) {
-            __asm__ __volatile__("cli");
-            scheduler_remove_task();
-            __asm__ __volatile__("sti");
-        }
-        while (ledger_remove_request() != 0) {}
+        __asm__ __volatile__("cli");
+        scheduler_remove_task();
+        __asm__ __volatile__("sti");
+
+        __asm__ __volatile__("cli");
+        ledger_remove_request();
+        __asm__ __volatile__("sti");
 
         blankie_activate(reaper_task_pid);
     }

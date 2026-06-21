@@ -143,10 +143,11 @@ void klog_error(const char *fmt, ...) {
     va_list args;        // not important
     va_start(args, fmt); // not important
     vga_set_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
-    kputs("[ERROR] ");
+    kputs("\n[ERROR] ");
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt, args); // main writer function call ->
-    va_end(args);      // not important
+    kputs("\n");
+    va_end(args); // not important
     set_print_level(last_level);
 }
 

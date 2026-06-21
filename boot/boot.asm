@@ -11,8 +11,8 @@ MULTIBOOT_MAGIC     equ 0x1BADB002
 MULTIBOOT_FLAGS     equ 0x07
 MULTIBOOT_CHECKSUM  equ -(MULTIBOOT_MAGIC + MULTIBOOT_FLAGS)
 mode_type           equ 0
-width               equ 800
-height              equ 600
+width               equ 1280
+height              equ 1024
 depth               equ 32
 
 dd MULTIBOOT_MAGIC

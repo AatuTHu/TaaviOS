@@ -242,10 +242,9 @@ void scheduler_set_task_state(task_state_t state) {
         break;
     case TASK_READY:
         // DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: Setting task %s ready\n", current->name);
-        if (current->state == TASK_DEAD && dead_task_count > 0) {
-            dead_task_count--;
+        if (current->state != TASK_DEAD) {
+            current->state = TASK_READY;
         }
-        current->state = TASK_READY;
         break;
     case TASK_BLOCKED:
         //   DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: Blocking task: %s\n", current->name);
