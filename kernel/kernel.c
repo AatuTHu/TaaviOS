@@ -37,30 +37,30 @@ uint32_t total_mods = 0;
 static void init_serial_and_vga() {
     vga_init();
     serial_init();
-    klog("[KERNEL]: --INIT SERIAL & VGA--\n");
+    DEBUG("[KERNEL]: --INIT SERIAL & VGA--\n");
 }
 
 static void init_arch() {
-    klog("[KERNEL]: --INIT ARCH--\n");
+    DEBUG("[KERNEL]: --INIT ARCH--\n");
     gdt_init();
     tss_init();
     idt_init();
     paging_init();
 
-    klog("[KERNEL]: Allocating kernel page directory\n");
+    DEBUG("[KERNEL]: Allocating kernel page directory\n");
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE,
         PAGE_PRESENT | PAGE_RW);
 }
 
 static void init_mm(const uint32_t *mboot_info) {
-    klog("[KERNEL]: --INIT MEMORY MANAGEMENT--\n");
+    DEBUG("[KERNEL]: --INIT MEMORY MANAGEMENT--\n");
     const struct multiboot_info *mboot =
         (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
 }
 
 static void check_for_modules(const uint32_t *mboot_info) {
-    klog("[KERNEL]: --CHECKING FOR MODULES--\n");
+    DEBUG("[KERNEL]: --CHECKING FOR MODULES--\n");
     const struct multiboot_info *mbi =
         (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
 
@@ -101,8 +101,8 @@ static void init_filesystems() {
 }
 
 static void init_microlithic() {
-    klog("[KERNEL]: --INIT KERNEL TASKS--\n");
-    klog("[KERNEL]: Creating an idle kernel task\n");
+    DEBUG("[KERNEL]: --INIT KERNEL TASKS--\n");
+    DEBUG("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, "idle",
         &kernel_page_dir, KERNEL_TASK);
 
@@ -110,7 +110,7 @@ static void init_microlithic() {
         scheduler_add(kernel_task);
     }
 
-    klog("[KERNEL]: Creating an filesystem kernel task\n");
+    DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
     kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, "fs_task",
         &kernel_page_dir, KERNEL_TASK);
 
@@ -119,7 +119,7 @@ static void init_microlithic() {
         scheduler_add(kernel_task);
     }
 
-    klog("[KERNEL]: Creating an reaper kernel task\n");
+    DEBUG("[KERNEL]: Creating an reaper kernel task\n");
     kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop,
         "reaper", &kernel_page_dir, KERNEL_TASK);
 
@@ -128,7 +128,7 @@ static void init_microlithic() {
         scheduler_add(kernel_task);
     }
 
-    klog("[KERNEL]: Creating an graphical user interface kernel task\n");
+    DEBUG("[KERNEL]: Creating an graphical user interface kernel task\n");
     kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop,
         "gui_task", &kernel_page_dir, KERNEL_TASK);
 
@@ -170,13 +170,13 @@ void kernel_main(const uint32_t *mboot_info) {
         uint32_t init_phys        = module_starts[0];
         uint32_t entry            = elf_load((void *)phys_to_virt(init_phys), init_pd);
         if (entry != ET_NONE) {
-            klog("[KERNEL]: ELF loaded.\n");
-            klog("[KERNEL]: Creating init task\n");
+            DEBUG("[KERNEL]: ELF loaded.\n");
+            DEBUG("[KERNEL]: Creating init task\n");
             first_task = task_create(-1, entry, "init", init_pd, USER_TASK);
             // first_task->priority = PRIORITY_HIGH;
             scheduler_add(first_task);
         } else {
-            klog("[KERNEL]: ELF load failed!\n");
+            DEBUG("[KERNEL]: ELF load failed!\n");
         }
     }
 
@@ -185,11 +185,11 @@ void kernel_main(const uint32_t *mboot_info) {
 
     pit_sleep_ms(500);
     if (first_task != NULL) {
-        klog("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
+        DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         scheduler_set_current_task(first_task->pid);
         _set_scheduler_on();
         vmm_switch(first_task->page_dir);
-        klog("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n",
+        DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n",
             first_task->context.eip, first_task->context.useresp,
             first_task->name);
         clear_terminal();

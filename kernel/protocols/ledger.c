@@ -69,7 +69,7 @@ void ledger_check_request(uint32_t clerk_pid) {
 }
 
 int ledger_remove_request() {
-    DEBUG_LEDGER("[LEDGER][REMOVE]: Dont fear the reaper\n");
+    // DEBUG_LEDGER("[LEDGER][REMOVE]: Dont fear the reaper\n");
     int kill_count = 0;
 
     for (int c = 0; c < CLERK_COUNT; c++) {
@@ -89,7 +89,6 @@ int ledger_remove_request() {
     }
 
     DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper exiting with kill count of %d\n", kill_count);
-
     return kill_count;
 }
 
@@ -127,7 +126,7 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
     }
 
     if (clerk_pid == fs_task_pid) {
-        if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type != OPEN && type != CREATE && type != FIND && type != LIST)) {
+        if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type == READ || type == WRITE)) {
             ERROR("[LEDGER][ADD_REQUEST]: Invalid fd number. Aborting\n");
             kfree(new_request);
             goto case_error;

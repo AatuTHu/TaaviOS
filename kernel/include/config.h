@@ -12,13 +12,15 @@
 #define USER_TASK     1
 #define KERNEL_TASK   0
 
-#define HEAP_PAGES 256
-#define HEAP_START 0xD0000000
-
 #define PAGE_SIZE              4096
 #define MAX_PAGES              (1024 * 1024)
 #define CONVENTIONAL_MEMORY_KB 1024
 #define RESERVED_LOW_PAGES     256
+
+#define HEAP_PAGES    256
+#define HEAP_MAX_SIZE 4096
+#define HEAP_START    0xD0000000
+#define HEAP_CEIL     0xD8000000
 
 #define VGA_MEMORY_ADDRESS   0xC00B8000
 #define VGA_PHYSICAL_ADDRESS 0x000B8000
@@ -44,6 +46,7 @@ typedef enum {
     READ,
     UPDATE, // write at offset?
     DELETE,
+    FREE,
     OPEN,
     CLOSE,
     CREATE,

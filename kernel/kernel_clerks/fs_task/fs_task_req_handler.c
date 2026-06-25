@@ -1,7 +1,7 @@
 #include "fat32.h"
 #include "fs_task.h"
 
-static dir_traversal_t *dir_map[MAX_FS_REQ_ENTRIES];
+static dir_traversal_t *dir_map[MAX_TASKS];
 
 /*
  * Fs_task
@@ -11,7 +11,7 @@ static dir_traversal_t *dir_map[MAX_FS_REQ_ENTRIES];
 static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, uint32_t prev_cluster) {
     int slot = -1;
 
-    for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
+    for (int i = 0; i < MAX_TASKS; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
             DEBUG_FS_TASK("[FS_TASK][DIR_MAPPER]: entry found with slot: %d\n", i);
             kfree(dir_map[i]);
@@ -21,7 +21,7 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
     }
 
     if (slot == -1) {
-        for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
+        for (int i = 0; i < MAX_TASKS; i++) {
             if (dir_map[i] == NULL) {
                 slot = i;
                 break;
@@ -59,7 +59,7 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
 }
 
 static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
-    for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
+    for (int i = 0; i < MAX_TASKS; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
             DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: directions found!\n");
             DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: Current cluster %d\n", dir_map[i]->current_cluster);
@@ -328,6 +328,30 @@ static int list(request_table *req) {
     return (read_size > 0) ? STATUS_OK : STATUS_ERROR;
 }
 
+static int free(request_table *req) {
+    DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->caller_pid);
+
+    for (int i = 0; i < MAX_FD_ENTRIES; i++) {
+        if (fd_entry_table[i] != NULL && fd_entry_table[i]->owner_pid == req->caller_pid) {
+            DEBUG_FS_TASK("[FS_TASK][FREE]: FD entry found, freeing\n");
+            kfree(fd_entry_table[i]);
+            fd_entry_table[i] = NULL;
+        }
+    }
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (dir_map[i] != NULL && dir_map[i]->owner_pid == req->caller_pid) {
+            DEBUG_FS_TASK("[FS_TASK][FREE]: directory map entry found, freeing\n");
+            kfree(dir_map[i]);
+            dir_map[i] = NULL;
+            break;
+        }
+    }
+
+    DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing succesfull\n");
+    return STATUS_OK;
+}
+
 void fs_handle_request(request_table *req) {
     task_t *fs_task = task_get(fs_task_pid);
 
@@ -368,6 +392,10 @@ void fs_handle_request(request_table *req) {
         req->status       = (list(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
+        return;
+    case FREE:
+        req->status       = (free(req) == STATUS_ERROR) ? TERMINATED : FAILED;
+        fs_task->priority = PRIORITY_NORMAL;
         return;
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");

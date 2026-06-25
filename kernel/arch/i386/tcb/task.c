@@ -111,8 +111,8 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     DEBUG_TASK("[TASK]: Freeing physical page directory\n");
     pmm_free(virt_to_phys((uint32_t)task->page_dir));
 
-    // DEBUG_TASK("[TASK]: Requestin\n");
-    // ledger_add_req(task->pid, fs_task_pid, DELETE, 0, NULL, NULL, 0, 0);
+    DEBUG_TASK("[TASK]: Requesting fs_task to release allocated memory\n");
+    ledger_add_req(task->pid, fs_task_pid, FREE, 0, NULL, NULL, 0, 0);
     DEBUG_TASK("[TASK]: Requesting window deletion\n");
     ledger_add_req(task->pid, gui_task_pid, DELETE, 0, NULL, NULL, 0, 0);
 

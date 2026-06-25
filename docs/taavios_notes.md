@@ -11,6 +11,8 @@
 - [ ] a way of switching active tasks. For example from one shell to another
 - [x] Shell -> ring 0 -> sys_read -> fs_task -> fat32 -> save result -> wake shell -> shell collects -> prints to screen in ring 3
 - [x] test functions? (cppcheck for now).
-- [ ] GUI
+- [x] GUI
 - [x] Draw "vuokaavio" to your own notepad
 - [ ] fs_task loop can fall to an infinite loop if request is complite but never collected. I need to think of an solution.
+- [ ] Gui master window management table.
+- [ ] Something might be silently causing faults.  

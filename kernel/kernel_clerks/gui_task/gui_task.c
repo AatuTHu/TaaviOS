@@ -5,7 +5,14 @@
 #include "hail_mary.h"
 #include "klog.h"
 #include "kmalloc.h"
+#include "kstring.h"
 #include "ledger.h"
+
+/**
+ * Gui_task
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
 
 static window_t *program_windows[MAX_TASKS];
 
@@ -59,6 +66,7 @@ static int gui_set_active_window(uint32_t wid) {
 }
 
 static int gui_create_window(uint32_t owner_pid, uint32_t width, uint32_t height) {
+
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Trying to initialize a window\n");
     int slot = -1;
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -70,6 +78,7 @@ static int gui_create_window(uint32_t owner_pid, uint32_t width, uint32_t height
 
     if (slot == -1) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: There was no space on the window table\n");
+
         return STATUS_ERROR;
     }
 
@@ -77,6 +86,7 @@ static int gui_create_window(uint32_t owner_pid, uint32_t width, uint32_t height
 
     if (entry == NULL) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: Reserving memory for the window table failed. Aborting\n");
+
         return STATUS_ERROR;
     }
 
@@ -91,6 +101,16 @@ static int gui_create_window(uint32_t owner_pid, uint32_t width, uint32_t height
     entry->fg_color  = fb_pack_color(255, 255, 255);
     entry->bg_color  = fb_pack_color(23, 29, 184);
 
+    uint32_t pixels_size  = width * height * 4;
+    uint32_t *temp_pixels = (uint32_t *)kmalloc(pixels_size);
+
+    if (temp_pixels == NULL) {
+        DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Unable to allocate memory for the pixel snapshot\n");
+        return STATUS_ERROR;
+    }
+
+    entry->pixels = temp_pixels;
+    memset(entry->pixels, 0, pixels_size);
     fb_fill_rect(entry->x_offset, entry->y_offset, entry->width, entry->height, entry->bg_color);
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
@@ -105,6 +125,10 @@ static int gui_delete_window(uint32_t owner_pid) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
+            if (program_windows[i]->pixels != NULL) {
+                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
+                kfree(program_windows[i]->pixels);
+            }
             kfree(program_windows[i]);
             program_windows[i] = NULL;
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: deletion succesfull\n");
@@ -171,13 +195,8 @@ void gui_init(task_t *gui_task) {
     uint32_t bg_color = fb_pack_color(70, 50, 100);   // black background
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
-    gui_create_window(gui_task_pid, fb.width, fb.height);
-    gui_change_fg_color(gui_task_pid, fg_color);
-    gui_change_bg_color(gui_task_pid, bg_color);
 
-    window_t *entry = program_windows[0];
-
-    fb_fill_rect(entry->x_offset, entry->y_offset, entry->width, entry->height, fg_color);
+    fb_fill_rect(0, 0, 1280, 1024, fg_color);
 
     // fb_clear(fg_color);
 

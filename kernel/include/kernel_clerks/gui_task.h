@@ -14,6 +14,7 @@ typedef struct window {
     uint32_t y_offset;
     uint32_t fg_color;
     uint32_t bg_color;
+    uint32_t *pixels;
 } window_t;
 
 void gui_task_loop();
