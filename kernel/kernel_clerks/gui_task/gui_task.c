@@ -63,6 +63,7 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
 }
 
 static int gui_set_active_window(uint32_t wid) {
+    return STATUS_OK;
 }
 
 static int gui_create_window(uint32_t owner_pid, uint32_t width, uint32_t height) {
@@ -182,7 +183,7 @@ void gui_task_loop() {
     }
 }
 
-void gui_recovery() {
+static void gui_recovery() {
     DEBUG_GUI_TASK("[GUI_TASK][RECOVERY]:\n");
     blankie_activate(gui_task_pid);
 }

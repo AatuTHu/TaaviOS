@@ -27,7 +27,7 @@ void kmalloc_init(void *heap_start, uint32_t heap_size) {
     free_list->size      = (heap_size - sizeof(block_header_t));
     free_list->magic     = HEAP_MAGIC;
     free_list->next      = NULL;
-    current_heap_ceiling = heap_start + heap_size;
+    current_heap_ceiling = (uint32_t)heap_start + heap_size;
     DEBUG_KMALLOC("[KMALLOC]: current heap ceiling: 0x%x\n", current_heap_ceiling);
     update_remaining_heap_size();
 }

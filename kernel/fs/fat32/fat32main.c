@@ -124,7 +124,7 @@ int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent) {
         fat32_dirent_t *dir_ent   = (fat32_dirent_t *)buf;
         uint32_t max_entry_length = __fat32_calculate_max_dir_entries();
 
-        for (int i = 0; i < max_entry_length; i++) {
+        for (uint32_t i = 0; i < max_entry_length; i++) {
 
             uint32_t oprhan_low  = oprhan_cluster & 0xFFFF;
             uint32_t orphan_high = (oprhan_cluster >> 16) & 0xFFFF;

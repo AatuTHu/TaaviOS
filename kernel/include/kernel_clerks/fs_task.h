@@ -34,8 +34,8 @@ typedef struct dir_traversal_t {
 
 void fs_init(const task_t *fs_task);
 void fs_task_loop();
-void fs_recovery();
-void fs_wake_task(uint32_t pid);
+// void fs_recovery();
+// void fs_wake_task(uint32_t pid);
 void fs_handle_request(request_table *req);
 
 extern fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];

@@ -300,7 +300,6 @@ static int find(const request_table *req) {
 
 static int list(request_table *req) {
     uint32_t base_cluster = f32_fs.root_cluster;
-    uint32_t dir_size     = 0;
     uint32_t read_size    = 0;
     dir_traversal_t *map  = dir_get_direction(req->caller_pid);
 

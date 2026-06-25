@@ -35,7 +35,7 @@ void reaper_task_loop() {
     }
 }
 
-void reaper_recovery() {
+static void reaper_recovery() {
     DEBUG("[REAPER][RECOVERY]:\n");
     blankie_activate(reaper_task_pid);
 }

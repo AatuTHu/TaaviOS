@@ -7,7 +7,7 @@
 #define MAX_PATH_LEN 128
 static char save_path[MAX_PATH_LEN];
 
-static int parse_segment_from_path(const char *path, char *dir_name, int max_dir_len, int direction) {
+static int parse_segment_from_path(const char *path, char *dir_name, int max_dir_len) {
     int len = strlen(path);
 
     if (len == 0) {
@@ -41,14 +41,12 @@ static int parse_segment_from_path(const char *path, char *dir_name, int max_dir
 }
 
 int change_directory(const char *path, char *directory_name) {
-    int direction = forward;
-    int len       = strlen(path);
+    int len = strlen(path);
     if (sys_chdir(path, len) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
     if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
-        direction = backward;
 
         int len = strlen(save_path);
         if (len > 0) {
@@ -70,11 +68,12 @@ int change_directory(const char *path, char *directory_name) {
         strcat(save_path, path, MAX_PATH_LEN);
     }
 
-    return parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN, direction);
+    return parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN);
 }
 
 int list_dirents(const char *buf, int buffer_size) {
     sys_getdirents(buf, buffer_size);
+    return 0;
 }
 
 void print(const char *msg) {

@@ -56,7 +56,7 @@ void fb_clear(uint32_t color) {
 // y font height
 // x space between chars?
 static void fb_draw_char(uint32_t **x, uint32_t **y, uint32_t width, uint32_t height, char c, uint32_t fg_color, uint32_t bg_color) {
-    uint8_t *glyph = PC_FACE_MODERNDOS_8x16[c];
+    const uint8_t *glyph = PC_FACE_MODERNDOS_8x16[(uint8_t)c];
 
     switch (c) {
     case '\0':
@@ -74,9 +74,9 @@ static void fb_draw_char(uint32_t **x, uint32_t **y, uint32_t width, uint32_t he
         } else if (**x == 0 && **y == 0) {
             return;
         }
-        glyph = PC_FACE_MODERNDOS_8x16[0];
+        const uint8_t *empty = PC_FACE_MODERNDOS_8x16[0];
         for (int row = 0; row < 16; row++) {
-            uint8_t byte = glyph[row];
+            uint8_t byte = empty[row];
             for (int col = 0; col < 8; col++) {
                 uint8_t bit    = byte & (0x80 >> col);
                 uint32_t color = bit != 0 ? fg_color : bg_color;
