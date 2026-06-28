@@ -15,6 +15,7 @@
  */
 
 static window_t *program_windows[MAX_TASKS];
+static blueprint_t compositor[MAX_TASKS];
 
 static int gui_draw_string(const char *str, uint32_t caller_pid) {
     __asm__ __volatile__("cli");
@@ -24,16 +25,29 @@ static int gui_draw_string(const char *str, uint32_t caller_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d at table index %d\n", caller_pid, i);
             // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s for %d\n", str, caller_pid);
             window_t *entry = program_windows[i];
-            uint32_t x_pos  = entry->x_offset;
-            uint32_t y_pos  = entry->y_offset;
 
-            fb_draw_string(&x_pos, &y_pos, entry->width, entry->height, str, entry->fg_color, entry->bg_color);
+            if (entry->pixels == NULL) {
+                DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Pixel buffer was null, cant draw\n");
+                return STATUS_ERROR;
+            }
+
+            uint32_t x_pos = entry->x_offset;
+            uint32_t y_pos = entry->y_offset;
+
+            fb_draw_string(entry->pixels, &x_pos, &y_pos, entry->width, entry->height, str, entry->fg_color, entry->bg_color);
 
             DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New x position %d\n", x_pos);
             DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", y_pos);
 
             entry->x_offset = x_pos;
             entry->y_offset = y_pos;
+
+            for (int row = 0; row < entry->height; row++) {
+                memcpy(
+                    (uint32_t *)fb.virt_addr + (compositor[entry->wid].screen_y + row) * (fb.pitch / 4) + compositor[entry->wid].screen_x, // dst
+                    entry->pixels + row * entry->width,                                                                                    // src
+                    entry->width * 4);                                                                                                     // len
+            }
             break;
         }
     }
@@ -101,7 +115,10 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     entry->pixels    = NULL;
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
-    program_windows[slot] = entry;
+    program_windows[slot]     = entry;
+    compositor[slot].entry    = program_windows[slot];
+    compositor[slot].screen_x = 0;
+    compositor[slot].screen_y = 0;
     return STATUS_OK;
 }
 
@@ -112,7 +129,7 @@ static int gui_paint_window_to_screen(uint32_t owner_pid) {
             window_t *entry = program_windows[i];
 
             if (entry->pixels != NULL) {
-                fb_fill_rect(0, 0, entry->width, entry->height, entry->bg_color);
+                fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
                 return STATUS_OK;
             }
 
@@ -217,7 +234,9 @@ void gui_init(task_t *gui_task) {
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
 
-    fb_fill_rect(0, 0, 1280, 1024, fg_color);
+    fb_fill_rect(fb.virt_addr, 0, 0, 1280, 1024, fg_color);
+
+    memset(compositor, 0, sizeof(compositor));
 
     // fb_clear(fg_color);
 

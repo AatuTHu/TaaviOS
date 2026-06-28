@@ -2,6 +2,7 @@
 #include "config.h"
 #include "font.h"
 #include "klog.h"
+#include "kstring.h"
 #include "mm.h"
 #include "paging.h"
 #include "vmm.h"
@@ -10,18 +11,19 @@ fb_t fb;
 static uint32_t fb_size    = 0;
 static uint32_t page_count = 0;
 
-static void fb_put_pixel(uint32_t x, uint32_t y, uint32_t color) {
-    uint32_t *position = (uint32_t *)(fb.virt_addr + y * fb.pitch + x * (fb.bpp / 8));
-    *position          = color;
+static void fb_put_pixel(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t color) {
+    uint32_t *position = (uint32_t *)(pixel_buffer + y * width + x);
     // DEBUG_FB("[FB][PUT_PIXEL]: position: %d\n", *position);
+    *position = color;
 }
 
 uint32_t fb_pack_color(uint8_t r, uint8_t g, uint8_t b) {
     return (r << fb.red_pos) | (g << fb.green_pos) | (b << fb.blue_pos);
 }
 
-void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
+void fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
 
+    DEBUG_FB("[FB][FILL_REXT]: given buffer: 0x%x\n", pixel_buffer);
     DEBUG_FB("[FB][FILL_RECT]: given x %d\n", x);
     DEBUG_FB("[FB][FILL_RECT]: given y %d\n", y);
     DEBUG_FB("[FB][FILL_RECT]: given w %d\n", w);
@@ -44,18 +46,18 @@ void fb_fill_rect(uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color
         for (uint32_t j = 0; j < h; j++) {
             if (y + j >= fb.height)
                 break;
-            fb_put_pixel(x + i, y + j, color);
+            fb_put_pixel(pixel_buffer, x + i, y + j, w, color);
         }
     }
 }
 
-void fb_clear(uint32_t color) {
-    fb_fill_rect(0, 0, fb.width, fb.height, color);
+void fb_clear(uint32_t *pixel_buffer, uint32_t color) {
+    fb_fill_rect(pixel_buffer, 0, 0, fb.width, fb.height, color);
 }
 
 // y font height
 // x space between chars?
-static void fb_draw_char(uint32_t **x, uint32_t **y, uint32_t width, uint32_t height, char c, uint32_t fg_color, uint32_t bg_color) {
+static void fb_draw_char(uint32_t *pixel_buffer, uint32_t **x, uint32_t **y, uint32_t width, uint32_t height, char c, uint32_t fg_color, uint32_t bg_color) {
     const uint8_t *glyph = PC_FACE_MODERNDOS_8x16[(uint8_t)c];
 
     switch (c) {
@@ -80,7 +82,7 @@ static void fb_draw_char(uint32_t **x, uint32_t **y, uint32_t width, uint32_t he
             for (int col = 0; col < 8; col++) {
                 uint8_t bit    = byte & (0x80 >> col);
                 uint32_t color = bit != 0 ? fg_color : bg_color;
-                fb_put_pixel(**x + col, **y + row, color);
+                fb_put_pixel(pixel_buffer, **x + col, **y + row, width, color);
             }
         }
         return;
@@ -91,7 +93,7 @@ static void fb_draw_char(uint32_t **x, uint32_t **y, uint32_t width, uint32_t he
         for (int col = 0; col < 8; col++) {
             uint8_t bit    = byte & (0x80 >> col);
             uint32_t color = bit != 0 ? fg_color : bg_color;
-            fb_put_pixel(**x + col, **y + row, color);
+            fb_put_pixel(pixel_buffer, **x + col, **y + row, width, color);
         }
     }
 
@@ -102,9 +104,9 @@ static void fb_draw_char(uint32_t **x, uint32_t **y, uint32_t width, uint32_t he
     }
 }
 
-void fb_draw_string(uint32_t *x, uint32_t *y, uint32_t width, uint32_t height, const char *str, uint32_t fg_color, uint32_t bg_color) {
+void fb_draw_string(uint32_t *pixel_buffer, uint32_t *x, uint32_t *y, uint32_t width, uint32_t height, const char *str, uint32_t fg_color, uint32_t bg_color) {
     while (*str != '\0') {
-        fb_draw_char(&x, &y, width, height, *str, fg_color, bg_color);
+        fb_draw_char(pixel_buffer, &x, &y, width, height, *str, fg_color, bg_color);
         str++;
     }
 }
