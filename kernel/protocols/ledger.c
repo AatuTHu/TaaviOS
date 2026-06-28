@@ -113,6 +113,7 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
     operations_t type, uint32_t fd, const char *path,
     const char *buf, uint32_t buffer_size, uint32_t flags) {
 
+    __asm__ __volatile__("cli");
     clerk_queue *q = ledger_get_queue(clerk_pid);
     if (q == NULL) {
         ERROR("[LEDGER][ADD_REQUEST]: clerk pid is invalid\n");
@@ -177,10 +178,12 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
     DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: flags: %d\n", new_request->flags);
 
     wake_clerk(clerk_pid);
+    __asm__ __volatile__("sti");
     return STATUS_OK;
 
 case_error:
     scheduler_wake_task(caller_pid);
+    __asm__ __volatile__("sti");
     return STATUS_ERROR;
 }
 

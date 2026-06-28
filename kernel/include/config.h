@@ -53,6 +53,7 @@ typedef enum {
     FIND,
     LIST,
     O_R, // Open and read
+    PAINT_WINDOW,
 } operations_t;
 
 #define O_RDONLY 0x01

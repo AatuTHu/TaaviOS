@@ -34,6 +34,14 @@ int sys_chdir(const char *path, uint32_t len) {
     return result;
 }
 
+int sys_conwi() {
+    int result = -1;
+    __asm__ __volatile__("int $0x80"
+        : "=a"(result)
+        : "a"(250));
+    return result;
+}
+
 int sys_mkdir(const char *path, uint32_t len) {
     int result = -1;
     __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(39), "b"(path), "c"(len));

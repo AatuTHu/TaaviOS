@@ -17,6 +17,7 @@
 #define SYS_IDLE     112
 #define SYS_GETDENTS 141
 #define SYS_YIELD    158
+#define SYS_CONWI    250
 
 typedef int32_t (*syscall_fn_t)(struct registers *r);
 void syscall_init();

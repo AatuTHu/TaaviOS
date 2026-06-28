@@ -141,6 +141,10 @@ void exec_cmd(char *buf) {
 }
 
 void main(void) {
+
+    if (configurate_task_window() == -1) {
+        return;
+    }
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     print("--------------------------------------------------------------------"
