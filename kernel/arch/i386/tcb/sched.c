@@ -2,6 +2,7 @@
 #include "config.h"
 #include "klog.h"
 #include "kstring.h"
+#include "ledger.h"
 #include "task.h"
 #include "tss.h"
 #include "vmm.h"
@@ -42,8 +43,33 @@ static int scheduler_has_runnable_task() {
 
 static void scheduler_check_clerks() {
 
-    DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
+    // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
+
+    if (ledger_count_clerk_reqs(gui_task_pid) != 0) {
+        clerk = tasks[gui_task_pid];
+        if (clerk == NULL || clerk->task_mode == USER_TASK) {
+            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
+            return;
+        }
+        DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
+        clerk->state    = TASK_READY;
+        clerk->priority = PRIORITY_NORMAL;
+        return;
+    }
+
+    if (ledger_count_clerk_reqs(fs_task_pid) != 0) {
+        clerk = tasks[fs_task_pid];
+        if (clerk == NULL || clerk->task_mode == USER_TASK) {
+            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
+            return;
+        }
+        DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
+        clerk->state    = TASK_READY;
+        clerk->priority = PRIORITY_NORMAL;
+        return;
+    }
+
     if (dead_task_count > 0) {
         clerk = tasks[reaper_task_pid];
         if (clerk == NULL || clerk->task_mode == USER_TASK) {
@@ -52,9 +78,8 @@ static void scheduler_check_clerks() {
         }
         DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
         clerk->state = TASK_READY;
+        return;
     }
-
-    // if() something to activate fs_task  or gui_task
 
     if (dead_task_count == 0 && scheduler_has_runnable_task() == 0) {
         clerk = tasks[idle_task_pid];
@@ -63,6 +88,7 @@ static void scheduler_check_clerks() {
             return;
         }
         clerk->state = TASK_READY;
+        return;
     }
 }
 

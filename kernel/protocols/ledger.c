@@ -353,6 +353,29 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
     return NULL;
 }
 
+int ledger_count_clerk_reqs(uint32_t clerk_pid) {
+
+    if (clerk_pid < 0 || clerk_pid > CLERK_COUNT) {
+        return STATUS_ERROR;
+    }
+
+    clerk_queue *q = ledger_get_queue(clerk_pid);
+    if (q == NULL) {
+        ERROR("[LEDGER][CONUT CLERKS]: clerk pid is invalid\n");
+        return NULL;
+    }
+
+    int req_count = 0;
+
+    for (int i = 0; i < q->max_entries; i++) {
+        if (q->table[i] != NULL && (q->table[i]->status == PENDING || q->table[i]->status == IN_PROGRESS)) {
+            req_count++;
+        }
+    }
+
+    return req_count;
+}
+
 void ledger_init() {
     for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
         fs_table[i] = NULL;

@@ -48,6 +48,7 @@ static int gui_draw_string(const char *str, uint32_t caller_pid) {
                     entry->pixels + row * entry->width,                                                                                    // src
                     entry->width * 4);                                                                                                     // len
             }
+
             break;
         }
     }
@@ -117,8 +118,8 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
     program_windows[slot]     = entry;
     compositor[slot].entry    = program_windows[slot];
-    compositor[slot].screen_x = 0;
-    compositor[slot].screen_y = 0;
+    compositor[slot].screen_x = 20;
+    compositor[slot].screen_y = 40;
     return STATUS_OK;
 }
 
@@ -129,6 +130,7 @@ static int gui_paint_window_to_screen(uint32_t owner_pid) {
             window_t *entry = program_windows[i];
 
             if (entry->pixels != NULL) {
+                fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
                 fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
                 return STATUS_OK;
             }
