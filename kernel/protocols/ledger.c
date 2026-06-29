@@ -93,9 +93,80 @@ int ledger_remove_request() {
 }
 
 /**
- * ledger_add_req - makes a new entry req.
+ * ledger_add_gui_req - makes a new entry req.
  * @caller_pid:  pid of the task making the request
- * @clerk_pid:   pid of the clerk that should service the request
+ * @type:        operation type (WRITE)
+ * @buf:         data buffer, used for WRITE
+ * @buffer_size: size of buf / requested size
+ *
+ * Description:
+ * Validates params, allocates a new request_table entry, places it in
+ * the correct clerk's queue and wakes that clerk.
+ *
+ * Return: STATUS_OK on success, STATUS_ERROR on failure.
+ */
+int ledger_add_gui_req(uint32_t caller_pid, operations_t type, const char *buf, uint32_t buffer_size) {
+    __asm__ __volatile__("cli");
+    clerk_queue *q = ledger_get_queue(gui_task_pid);
+    if (q == NULL) {
+        ERROR("[LEDGER][ADD_GUI_REQUEST]: clerk pid is invalid\n");
+        goto case_error;
+    }
+
+    request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
+    if (new_request == NULL) {
+        ERROR("[LEDGER][ADD_GUI_REQUEST]: could not allocate new request. Aborting\n");
+        goto case_error;
+    }
+
+    new_request->caller_pid   = caller_pid;
+    new_request->clerk_pid    = gui_task_pid;
+    new_request->request_type = type;
+    new_request->flags        = 0;
+    new_request->status       = PENDING;
+    new_request->fd           = 0;
+    new_request->buffer_size  = buffer_size;
+
+    if (type == WRITE) {
+        strncpy(new_request->buf, buf, sizeof(new_request->buf));
+        // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buf: %s and buf length: %d\n",
+        //     new_request->buf, buffer_size);
+    }
+
+    int found = -1;
+    for (int i = 0; i < q->max_entries; i++) {
+        if (q->table[i] == NULL) {
+            q->table[i] = new_request;
+            found       = i;
+            break;
+        }
+    }
+
+    if (found == -1) {
+        ERROR("[LEDGER][ADD_GUI_REQUEST]: No free spots in the table\n");
+        kfree(new_request);
+        goto case_error;
+    }
+
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added to index %d\n", found);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+
+    wake_clerk(new_request->clerk_pid);
+    __asm__ __volatile__("sti");
+    return STATUS_OK;
+
+case_error:
+    scheduler_wake_task(caller_pid);
+    __asm__ __volatile__("sti");
+    return STATUS_ERROR;
+}
+
+/**
+ * ledger_add_fs_req - makes a new entry req.
+ * @caller_pid:  pid of the task making the request
  * @type:        operation type (READ, WRITE, OPEN, ...)
  * @fd:          file descriptor (ignored for OPEN/CREATE/FIND)
  * @path:        path string, used for OPEN/CREATE/FIND
@@ -109,33 +180,28 @@ int ledger_remove_request() {
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
-    operations_t type, uint32_t fd, const char *path,
-    const char *buf, uint32_t buffer_size, uint32_t flags) {
-
+int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const char *path, const char *buf, uint32_t buffer_size, uint32_t flags) {
     __asm__ __volatile__("cli");
-    clerk_queue *q = ledger_get_queue(clerk_pid);
+    clerk_queue *q = ledger_get_queue(fs_task_pid);
     if (q == NULL) {
-        ERROR("[LEDGER][ADD_REQUEST]: clerk pid is invalid\n");
+        ERROR("[LEDGER][ADD_FS_REQUEST]: clerk pid is invalid\n");
         goto case_error;
     }
 
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {
-        ERROR("[LEDGER][ADD_REQUEST]: could not allocate new request. Aborting\n");
+        ERROR("[LEDGER][ADD_FS_REQUEST]: could not allocate new request. Aborting\n");
         goto case_error;
     }
 
-    if (clerk_pid == fs_task_pid) {
-        if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type == READ || type == WRITE)) {
-            ERROR("[LEDGER][ADD_REQUEST]: Invalid fd number. Aborting\n");
-            kfree(new_request);
-            goto case_error;
-        }
+    if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type == READ || type == WRITE)) {
+        ERROR("[LEDGER][ADD_FS_REQUEST]: Invalid fd number. Aborting\n");
+        kfree(new_request);
+        goto case_error;
     }
 
     new_request->caller_pid   = caller_pid;
-    new_request->clerk_pid    = clerk_pid;
+    new_request->clerk_pid    = fs_task_pid;
     new_request->request_type = type;
     new_request->flags        = flags;
     new_request->status       = PENDING;
@@ -144,13 +210,13 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
 
     if (type == WRITE) {
         strncpy(new_request->buf, buf, sizeof(new_request->buf));
-        // DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: buf: %s and buf length: %d\n",
+        // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buf: %s and buf length: %d\n",
         //     new_request->buf, buffer_size);
     }
 
-    if ((type == OPEN || type == FIND || type == CREATE) && clerk_pid == fs_task_pid) {
+    if (type == OPEN || type == FIND || type == CREATE) {
         strncpy(new_request->path, path, sizeof(new_request->path));
-        // DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: path: %s and buf length: %d\n",
+        // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: path: %s and buf length: %d\n",
         //     new_request->path, buffer_size);
     }
 
@@ -164,20 +230,20 @@ int ledger_add_req(uint32_t caller_pid, uint32_t clerk_pid,
     }
 
     if (found == -1) {
-        ERROR("[LEDGER][ADD_REQUEST]: No free spots in the table\n");
+        ERROR("[LEDGER][ADD_FS_REQUEST]: No free spots in the table\n");
         kfree(new_request);
         goto case_error;
     }
 
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: request added to index %d\n", found);
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: clerkpid: %d\n", clerk_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: fd: %d\n", new_request->fd);
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    DEBUG_LEDGER("[LEDGER][ADD_REQUEST]: flags: %d\n", new_request->flags);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request added to index %d\n", found);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 
-    wake_clerk(clerk_pid);
+    wake_clerk(new_request->clerk_pid);
     __asm__ __volatile__("sti");
     return STATUS_OK;
 

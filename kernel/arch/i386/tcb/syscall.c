@@ -63,7 +63,7 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     }
 
-    ledger_add_req(current->pid, fs_task_pid, READ, fd, NULL, NULL, buff_size, O_RDONLY);
+    ledger_add_fs_req(current->pid, READ, fd, NULL, NULL, buff_size, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -91,7 +91,7 @@ static int32_t sys_write(struct registers *r) {
     case 1:
 
         // vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-        ledger_add_req(current->pid, gui_task_pid, WRITE, 1, NULL, buf, len, 0);
+        ledger_add_gui_req(current->pid, WRITE, buf, len);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
 
@@ -105,7 +105,7 @@ static int32_t sys_write(struct registers *r) {
         break;
 
     default:
-        ledger_add_req(current->pid, fs_task_pid, WRITE, fd, NULL, buf, len, O_WRONLY);
+        ledger_add_fs_req(current->pid, WRITE, fd, NULL, buf, len, O_WRONLY);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
         return ledger_collect(current->pid, fs_task_pid, NULL);
@@ -130,7 +130,7 @@ static int32_t sys_open(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    ledger_add_req(current->pid, fs_task_pid, OPEN, 0, path, NULL, 0, flags);
+    ledger_add_fs_req(current->pid, OPEN, 0, path, NULL, 0, flags);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -156,7 +156,7 @@ static int32_t sys_close(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    ledger_add_req(current->pid, fs_task_pid, CLOSE, fd, NULL, NULL, 0, 0);
+    ledger_add_fs_req(current->pid, CLOSE, fd, NULL, NULL, 0, 0);
 
     return STATUS_OK;
 }
@@ -183,7 +183,7 @@ static int32_t sys_chdir(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    ledger_add_req(current->pid, fs_task_pid, FIND, 0, path, NULL, len, 0);
+    ledger_add_fs_req(current->pid, FIND, 0, path, NULL, len, 0);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -261,7 +261,7 @@ static int32_t sys_mkdir(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_req(current->pid, fs_task_pid, CREATE, 0, path, NULL, len, O_CREAT);
+    ledger_add_fs_req(current->pid, CREATE, 0, path, NULL, len, O_CREAT);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -279,7 +279,7 @@ static int32_t sys_getdents(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_req(current->pid, fs_task_pid, LIST, 0, NULL, buffer, len, O_RDONLY);
+    ledger_add_fs_req(current->pid, LIST, 0, NULL, buffer, len, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -301,7 +301,7 @@ static int32_t sys_yield(struct registers *r) {
 static int32_t sys_configure_window(struct reqisters *r) {
     DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
     task_t *current = scheduler_get_current_task();
-    ledger_add_req(current->pid, gui_task_pid, PAINT_WINDOW, 0, NULL, NULL, 0, 0);
+    ledger_add_gui_req(current->pid, PAINT_WINDOW, NULL, 0);
     current->state = TASK_BLOCKED;
     scheduler_yield(r);
     return ledger_collect(current->pid, gui_task_pid, NULL);
