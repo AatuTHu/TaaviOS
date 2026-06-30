@@ -91,7 +91,7 @@ static int32_t sys_write(struct registers *r) {
     case 1:
 
         // vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-        ledger_add_gui_req(current->pid, WRITE, buf, len);
+        ledger_add_gui_req(current->pid, WRITE, 0, 0, buf, len);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
 
@@ -298,10 +298,12 @@ static int32_t sys_yield(struct registers *r) {
     return STATUS_OK;
 }
 
-static int32_t sys_configure_window(struct reqisters *r) {
+static int32_t sys_configure_window(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
+    uint32_t width  = r->ebx;
+    uint32_t height = r->ecx;
     task_t *current = scheduler_get_current_task();
-    ledger_add_gui_req(current->pid, PAINT_WINDOW, NULL, 0);
+    ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, NULL, 0);
     current->state = TASK_BLOCKED;
     scheduler_yield(r);
     return ledger_collect(current->pid, gui_task_pid, NULL);

@@ -142,27 +142,27 @@ void exec_cmd(char *buf) {
 
 void main(void) {
 
-    if (configurate_task_window() == -1) {
+    if (configurate_task_window(400, 200) == -1) {
         return;
     }
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
-    print("--------------------------------------------------------------------"
-          "--------\n");
-    // vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-    print("|=======|  |====|    |====|   |=|     |=|  |=======|        |====|  "
-          "  |====|  \n");
-    print("   |=|    |=|  |=|  |=|  |=|  |=|     |=|     |=|          |=|  |=| "
-          " |=|  |=| \n");
-    print("   |=|    |=----=|  |=----=|  |=|     |=|     |=|          |=|  |=| "
-          "  |____   \n");
-    print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=| "
-          "       |=|\n");
-    print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=| "
-          " |=|  |=| \n");
-    print("   |=|    |=|  |=|  |_|  |_|     |===|     |=======|        |====|  "
-          "  |====|  \n");
-    print("\n");
+    /* print("--------------------------------------------------------------------"
+           "--------\n");
+     // vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
+     print("|=======|  |====|    |====|   |=|     |=|  |=======|        |====|  "
+           "  |====|  \n");
+     print("   |=|    |=|  |=|  |=|  |=|  |=|     |=|     |=|          |=|  |=| "
+           " |=|  |=| \n");
+     print("   |=|    |=----=|  |=----=|  |=|     |=|     |=|          |=|  |=| "
+           "  |____   \n");
+     print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=| "
+           "       |=|\n");
+     print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=| "
+           " |=|  |=| \n");
+     print("   |=|    |=|  |=|  |_|  |_|     |===|     |=======|        |====|  "
+           "  |====|  \n");
+     print("\n");*/
     // vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
     /*print("                                               |====|     |====|
     \n"); print("                                              |=|  |=|   |=|
@@ -172,10 +172,10 @@ void main(void) {
     \n"); print("                                               |====| |====|
     \n");*/
     // vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
-    print("--------------------------------------------------------------------"
-          "-------\n");
+    // print("--------------------------------------------------------------------"
+    //      "-------\n");
     // vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    print("TaaviOS Shell\n");
+    print("SUPOS - Master shell\n");
     print("Type 'help' to see all commands\n");
 
     char buf[256];

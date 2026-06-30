@@ -81,7 +81,7 @@ static int gui_set_active_window(uint32_t wid) {
     return STATUS_OK;
 }
 
-static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t height) {
+static int gui_create_window_entry(uint32_t owner_pid) {
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Trying to initialize a window\n");
     int slot = -1;
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -106,8 +106,8 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
     entry->wid       = slot;
     entry->owner_pid = owner_pid;
-    entry->width     = width;
-    entry->height    = height;
+    entry->width     = 0;
+    entry->height    = 0;
     entry->x_offset  = 0;
     entry->y_offset  = 0;
     entry->z_index   = 1;
@@ -116,22 +116,27 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     entry->pixels    = NULL;
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
+    DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Filling compositor info\n");
     program_windows[slot]     = entry;
     compositor[slot].entry    = program_windows[slot];
-    compositor[slot].screen_x = 20;
-    compositor[slot].screen_y = 40;
+    compositor[slot].screen_x = 0;
+    compositor[slot].screen_y = 0;
+    DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created\n");
     return STATUS_OK;
 }
 
-static int gui_paint_window_to_screen(uint32_t owner_pid) {
+static int gui_paint_window_to_screen(uint32_t owner_pid, uint32_t width, uint32_t height) {
     DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window to screen!\n");
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
             window_t *entry = program_windows[i];
 
+            entry->width = width;
+
+            entry->height = height;
+
             if (entry->pixels != NULL) {
-                fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
-                fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
+                fb_fill_rect(entry->pixels, entry->width, entry->height, entry->width, entry->height, entry->bg_color);
                 return STATUS_OK;
             }
 
@@ -146,7 +151,7 @@ static int gui_paint_window_to_screen(uint32_t owner_pid) {
             entry->pixels = temp_pixels;
             memset(entry->pixels, 0, pixels_size);
 
-            gui_paint_window_to_screen(entry->owner_pid);
+            gui_paint_window_to_screen(entry->owner_pid, width, height);
             return STATUS_OK;
         }
     }
@@ -187,7 +192,7 @@ static int gui_handle_request(request_table *req) {
         return STATUS_OK;
 
     case CREATE:
-        req->status = (gui_create_window_entry(req->caller_pid, 800, 600) == STATUS_OK) ? COMPLETE : FAILED;
+        req->status = (gui_create_window_entry(req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
 
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
@@ -196,7 +201,7 @@ static int gui_handle_request(request_table *req) {
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
-        req->status        = (gui_paint_window_to_screen(req->caller_pid) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status        = (gui_paint_window_to_screen(req->caller_pid, req->width, req->height) == STATUS_OK) ? COMPLETE : TERMINATED;
         gui_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         return STATUS_OK;

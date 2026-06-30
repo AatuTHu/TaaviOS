@@ -122,8 +122,8 @@ void idle(void) {
     sys_idle();
 }
 
-int configurate_task_window() {
-    return sys_conwi();
+int configurate_task_window(int width, int height) {
+    return sys_conwi(width, height);
 }
 
 int get_pid() {

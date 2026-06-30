@@ -105,7 +105,7 @@ int ledger_remove_request() {
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_gui_req(uint32_t caller_pid, operations_t type, const char *buf, uint32_t buffer_size) {
+int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height, const char *buf, uint32_t buffer_size) {
     __asm__ __volatile__("cli");
     clerk_queue *q = ledger_get_queue(gui_task_pid);
     if (q == NULL) {
@@ -125,6 +125,8 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, const char *buf, 
     new_request->flags        = 0;
     new_request->status       = PENDING;
     new_request->fd           = 0;
+    new_request->width        = width;
+    new_request->height       = height;
     new_request->buffer_size  = buffer_size;
 
     if (type == WRITE) {
@@ -152,6 +154,8 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, const char *buf, 
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     wake_clerk(new_request->clerk_pid);
@@ -388,7 +392,6 @@ int ledger_count_active_reqs() {
         }
         for (int i = 0; i < q->max_entries; i++) {
             if (q->table[i] != NULL && (q->table[i]->status == PENDING || q->table[i]->status == IN_PROGRESS)) {
-                DEBUG_LEDGER("[LEDGER][COUNT_ACTIVE_REQS]: found!\n");
                 req_count++;
             }
         }

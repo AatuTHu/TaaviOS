@@ -27,6 +27,6 @@ int sys_exec(const char *filename);
 
 int sys_getdirents(const char *buf, uint32_t len);
 
-int sys_conwi();
+int sys_conwi(int width, int height);
 
 #endif
