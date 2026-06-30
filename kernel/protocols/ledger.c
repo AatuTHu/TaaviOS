@@ -324,7 +324,10 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
  * Return: pointer to the next request, or NULL if none available.
  */
 request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
-    DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: %d came to look for a request!\n", clerk_pid);
+    if (clerk_pid < 0 || clerk_pid > CLERK_COUNT) {
+        DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: Invalid clerk pid!\n");
+        return;
+    }
 
     clerk_queue *q = ledger_get_queue(clerk_pid);
     if (q == NULL) {
@@ -370,6 +373,24 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
     for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] != NULL && (q->table[i]->status == PENDING || q->table[i]->status == IN_PROGRESS)) {
             req_count++;
+        }
+    }
+
+    return req_count;
+}
+
+int ledger_count_active_reqs() {
+    int req_count = 0;
+    for (uint32_t clerk_pid = 0; clerk_pid < CLERK_COUNT; clerk_pid++) {
+        clerk_queue *q = ledger_get_queue(clerk_pid);
+        if (q == NULL) {
+            continue;
+        }
+        for (int i = 0; i < q->max_entries; i++) {
+            if (q->table[i] != NULL && (q->table[i]->status == PENDING || q->table[i]->status == IN_PROGRESS)) {
+                DEBUG_LEDGER("[LEDGER][COUNT_ACTIVE_REQS]: found!\n");
+                req_count++;
+            }
         }
     }
 
