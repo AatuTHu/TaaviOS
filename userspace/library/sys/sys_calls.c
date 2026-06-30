@@ -34,9 +34,9 @@ int sys_chdir(const char *path, uint32_t len) {
     return result;
 }
 
-int sys_conwi(int width, int height) {
+int sys_conwi(int operation, int width, int height) {
     int result = -1;
-    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(250), "b"(width), "c"(height));
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(250), "b"(operation), "c"(width), "d"(height));
     return result;
 }
 

@@ -141,8 +141,10 @@ void exec_cmd(char *buf) {
 }
 
 void main(void) {
-
-    if (configurate_task_window(400, 200) == -1) {
+    if (create_task_window(600, 200) == -1) {
+        return;
+    }
+    if (configurate_task_window() == -1) {
         return;
     }
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
@@ -175,7 +177,7 @@ void main(void) {
     // print("--------------------------------------------------------------------"
     //      "-------\n");
     // vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
-    print("SUPOS - Master shell\n");
+    print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
     char buf[256];
@@ -202,7 +204,7 @@ void main(void) {
     while (1) {
         print("\n");
         print(dir_name);
-        print(" >> ");
+        print(">> ");
         pos = 0;
         while (1) {
             int n = scan(&c);

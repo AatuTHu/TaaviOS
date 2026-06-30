@@ -38,6 +38,10 @@ static void wake_clerk(uint32_t clerk_pid) {
  */
 static clerk_queue *ledger_get_queue(uint32_t clerk_pid) {
 
+    if (clerk_pid >= CLERK_COUNT) {
+        return NULL;
+    }
+
     clerk_queue *q = &clerk_queues[clerk_pid];
     if (q->table == NULL) {
         return NULL;
@@ -328,9 +332,9 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
  * Return: pointer to the next request, or NULL if none available.
  */
 request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
-    if (clerk_pid < 0 || clerk_pid > CLERK_COUNT) {
+    if (clerk_pid >= CLERK_COUNT) {
         DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: Invalid clerk pid!\n");
-        return;
+        return NULL;
     }
 
     clerk_queue *q = ledger_get_queue(clerk_pid);
@@ -369,7 +373,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
     clerk_queue *q = ledger_get_queue(clerk_pid);
     if (q == NULL) {
         ERROR("[LEDGER][CONUT CLERKS]: clerk pid is invalid\n");
-        return NULL;
+        return 0;
     }
 
     int req_count = 0;

@@ -34,6 +34,11 @@ static int32_t sys_exit(struct registers *r) {
     if (keyboard_get_foreground_pid() == (int)current->pid)
         keyboard_set_foreground_pid(-1);
 
+    DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting fs_task release allocated memory\n");
+    ledger_add_fs_req(current->pid, FREE, 0, NULL, NULL, 0, 0);
+    DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting gui_task to release allocated memory\n");
+    ledger_add_gui_req(current->pid, DELETE, 0, 0, NULL, 0);
+
     scheduler_set_task_state(TASK_DEAD);
     scheduler_yield(r);
 
@@ -300,10 +305,22 @@ static int32_t sys_yield(struct registers *r) {
 
 static int32_t sys_configure_window(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
-    uint32_t width  = r->ebx;
-    uint32_t height = r->ecx;
-    task_t *current = scheduler_get_current_task();
-    ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, NULL, 0);
+    uint32_t operation = r->ebx;
+    uint32_t width     = r->ecx;
+    uint32_t height    = r->edx;
+    task_t *current    = scheduler_get_current_task();
+
+    switch (operation) {
+    case 0:
+        ledger_add_gui_req(current->pid, CREATE, width, height, NULL, 0);
+        break;
+    case 1:
+        ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, NULL, 0);
+        break;
+    default:
+        break;
+    }
+
     current->state = TASK_BLOCKED;
     scheduler_yield(r);
     return ledger_collect(current->pid, gui_task_pid, NULL);

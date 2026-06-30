@@ -184,7 +184,7 @@ static void scheduler_switch(struct registers *r) {
     next->started = 1;
 
     if (next_idx != current_idx) {
-        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
+        DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
 
         if (next->task_mode == USER_TASK) {
