@@ -33,7 +33,7 @@ void kmalloc_init(void *heap_start, uint32_t heap_size) {
 }
 
 void *kmalloc(uint32_t size) {
-    __asm__ __volatile__("cli");
+
     DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
     block_header_t *current = free_list;
     block_header_t *prev    = NULL;
@@ -61,7 +61,7 @@ void *kmalloc(uint32_t size) {
                 }
                 update_remaining_heap_size();
                 DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocated at 0x%x\n", (uint8_t *)current + sizeof(block_header_t));
-                __asm__ __volatile__("sti");
+
                 return (void *)((uint8_t *)current + sizeof(block_header_t));
             }
             prev    = current;
@@ -102,7 +102,7 @@ void *kmalloc(uint32_t size) {
     }
 
     ERROR("[KMALLOC][ALLOC]: Out of heap memory!\n");
-    __asm__ __volatile__("sti");
+
     return NULL;
 }
 

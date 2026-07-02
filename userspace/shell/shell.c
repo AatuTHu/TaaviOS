@@ -141,10 +141,10 @@ void exec_cmd(char *buf) {
 }
 
 void main(void) {
-    if (create_task_window(600, 200) == -1) {
+    if (create_task_window(600, 200, 20, 20) == -1) {
         return;
     }
-    if (configurate_task_window() == -1) {
+    if (configurate_task_window(0, 0, 0, 0) == -1) {
         return;
     }
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);

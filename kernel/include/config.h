@@ -54,6 +54,7 @@ typedef enum {
     LIST,
     O_R, // Open and read
     PAINT_WINDOW,
+    MOVE,
 } operations_t;
 
 #define O_RDONLY 0x01

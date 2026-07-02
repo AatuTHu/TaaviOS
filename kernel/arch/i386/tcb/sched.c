@@ -59,7 +59,6 @@ static void scheduler_check_clerks() {
         }
         return;
     }
-
     if (ledger_count_clerk_reqs(fs_task_pid) > 0) {
         clerk = tasks[fs_task_pid];
         if (clerk == NULL || clerk->task_mode == USER_TASK) {
@@ -83,8 +82,8 @@ static void scheduler_check_clerks() {
         }
         if (clerk->state == TASK_SLEEPING) {
             DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
-            clerk->state = TASK_READY;
-            clerk->state = PRIORITY_NORMAL;
+            clerk->state    = TASK_READY;
+            clerk->priority = PRIORITY_LOW;
         }
         return;
     }
@@ -95,9 +94,10 @@ static void scheduler_check_clerks() {
             DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
             return;
         }
-        if (clerk->state == TASK_SLEEPING) {
-            clerk->state = TASK_READY;
-        }
+
+        clerk->state    = TASK_READY;
+        clerk->priority = PRIORITY_LOW;
+
         return;
     }
 }
@@ -307,7 +307,7 @@ void scheduler_wake_task(uint32_t pid) {
     // DEBUG_SCHED("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for (int i = 0; i < task_count; i++) {
         if (tasks[i] != NULL && tasks[i]->pid == pid) {
-            //       DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
+            DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
             tasks[i]->state = TASK_READY;
             return;
         }

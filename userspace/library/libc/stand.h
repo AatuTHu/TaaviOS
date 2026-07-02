@@ -29,7 +29,8 @@ void idle(void);
 int get_pid();
 void terminate_program();
 
-int configurate_task_window();
-int create_task_window(int width, int height);
+int configurate_task_window(int width, int height, int x, int y);
+int create_task_window(int width, int height, int x, int y);
+int move_task_window(int x, int y);
 int memcmp(const void *s1, const void *s2, size_t n);
 #endif

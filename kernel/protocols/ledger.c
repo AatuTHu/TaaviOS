@@ -109,8 +109,7 @@ int ledger_remove_request() {
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height, const char *buf, uint32_t buffer_size) {
-    __asm__ __volatile__("cli");
+int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *buf, uint32_t buffer_size) {
     clerk_queue *q = ledger_get_queue(gui_task_pid);
     if (q == NULL) {
         ERROR("[LEDGER][ADD_GUI_REQUEST]: clerk pid is invalid\n");
@@ -131,6 +130,8 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     new_request->fd           = 0;
     new_request->width        = width;
     new_request->height       = height;
+    new_request->x            = x;
+    new_request->y            = y;
     new_request->buffer_size  = buffer_size;
 
     if (type == WRITE) {
@@ -160,15 +161,15 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     wake_clerk(new_request->clerk_pid);
-    __asm__ __volatile__("sti");
     return STATUS_OK;
 
 case_error:
     scheduler_wake_task(caller_pid);
-    __asm__ __volatile__("sti");
     return STATUS_ERROR;
 }
 
@@ -309,6 +310,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
 
             req->status = TERMINATED;
             wake_clerk(reaper_task_pid);
+            DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %d\n", caller_pid);
             return STATUS_OK;
         }
 
@@ -317,6 +319,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
         }
     }
 
+    DEBUG_LEDGER("[LEDGER][COLLECT]: Could not find any collectable requests for %d\n", caller_pid);
     return STATUS_ERROR;
 }
 
@@ -366,6 +369,8 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
 
 int ledger_count_clerk_reqs(uint32_t clerk_pid) {
 
+    DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Counting for %d\n", clerk_pid);
+
     if (clerk_pid < 0 || clerk_pid > CLERK_COUNT) {
         return STATUS_ERROR;
     }
@@ -383,7 +388,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
             req_count++;
         }
     }
-
+    DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Found %d re\n", req_count);
     return req_count;
 }
 
