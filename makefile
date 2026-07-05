@@ -57,6 +57,7 @@ disk:
 	mmd -i fat.img ::test/tust
 	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::test/hello.txt
 	mcopy -i fat.img ./isodir/boot/shell.elf ::sysbin/shell
+	mcopy -i fat.img ./isodir/boot/fs_int.elf ::sysbin/fs_int
 
 check:
 	cppcheck \
