@@ -198,7 +198,7 @@ static void scheduler_switch(struct registers *r) {
 
 void scheduler_yield(struct registers *r) {
     (void)r;
-    DEBUG_SCHED("[SCHEDULER][YIELD]: %s yielding\n", scheduler_get_current_task()->name);
+    //  DEBUG_SCHED("[SCHEDULER][YIELD]: %s yielding\n", scheduler_get_current_task()->name);
     __asm__ __volatile__("int $0x81");
 }
 
@@ -218,21 +218,19 @@ int scheduler_get_dead_task_count() {
 }
 
 void scheduler_remove_task() {
-    DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
+    //  DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
     int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
 
     if (delete_candidate == -1) {
-        DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
+        //    DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
 
         return;
     }
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Deleting task %s\n", tasks[delete_candidate]->name);
 
-    uint8_t delete_mode = tasks[delete_candidate]->task_mode;
-
     vmm_switch(&kernel_page_dir);
-    task_destroy(tasks[delete_candidate], delete_mode);
+    task_destroy(tasks[delete_candidate], tasks[delete_candidate]->task_mode);
     tasks[delete_candidate] = NULL;
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
@@ -307,7 +305,7 @@ void scheduler_wake_task(uint32_t pid) {
     // DEBUG_SCHED("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
     for (int i = 0; i < task_count; i++) {
         if (tasks[i] != NULL && tasks[i]->pid == pid) {
-            DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
+            //    DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
             tasks[i]->state = TASK_READY;
             return;
         }

@@ -238,7 +238,20 @@ static int32_t sys_exec(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: creating the task\n");
 
     page_directory_t *pd = vmm_create_directory();
-    uint32_t entry       = elf_load(binary_buffer, pd);
+
+    if (pd == NULL) {
+        ERROR("[SYSCALL][SYS_EXEC]: Invalid page directory. Aborting\n");
+        return STATUS_ERROR;
+    }
+
+    uint32_t entry = elf_load(binary_buffer, pd);
+
+    if (entry == STATUS_ERROR) {
+        ERROR("[SYSCALL][SYS_EXEC]: elf load failed aborting.\n");
+        vmm_free_user_space(pd);
+        return STATUS_ERROR;
+    }
+
     kfree(binary_buffer);
     task_t *task = task_create(-1, entry, task_name, pd, USER_TASK);
     scheduler_add(task);

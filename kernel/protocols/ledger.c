@@ -369,7 +369,7 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
 
 int ledger_count_clerk_reqs(uint32_t clerk_pid) {
 
-    DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Counting for %d\n", clerk_pid);
+    // DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Counting for %d\n", clerk_pid);
 
     if (clerk_pid < 0 || clerk_pid > CLERK_COUNT) {
         return STATUS_ERROR;
@@ -388,7 +388,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
             req_count++;
         }
     }
-    DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Found %d re\n", req_count);
+    // DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Found %d re\n", req_count);
     return req_count;
 }
 

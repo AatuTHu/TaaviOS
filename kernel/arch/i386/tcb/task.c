@@ -97,7 +97,10 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     task_table[task->pid] = NULL;
 
     DEBUG_TASK("[TASK]: Freeing virtual memory \n");
-    task_mode == USER_TASK ? vmm_free_user_space(task->page_dir) : NULL;
+    if (task_mode == USER_TASK)
+        if (vmm_free_user_space(task->page_dir) == STATUS_ERROR) {
+            ERROR("[TASK]: Failed to free pagedirectory");
+        }
 
     DEBUG_TASK("[TASK]: Freeing kernel_stack\n");
     uint32_t phys = virt_to_phys(task->kernel_stack - KERNEL_STACK_SIZE);
