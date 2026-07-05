@@ -8,11 +8,11 @@
 
 page_directory_t kernel_page_dir __attribute__((aligned(PAGE_SIZE_BYTES)));
 
-void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
+int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
     uint32_t flags) {
     if (!dir) {
         ERROR("[PAGING] No directory given for page mapping\n");
-        return;
+        return STATUS_ERROR;
     }
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
     uint32_t pt_index = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
@@ -24,7 +24,13 @@ void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
 
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {
         uint32_t phys_addr = pmm_alloc();
-        uint32_t vaddr     = phys_to_virt(phys_addr);
+
+        if (phys_addr == 0) {
+            ERROR("[PAGING][ALLOC]: Out of physical memory\n");
+            return STATUS_ERROR;
+        }
+
+        uint32_t vaddr = phys_to_virt(phys_addr);
         memset((void *)vaddr, 0, PAGE_SIZE);
 
         (*dir)[pd_index] = phys_addr | pd_flags;
@@ -33,6 +39,7 @@ void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
     uint32_t pt_phys     = (*dir)[pd_index] & ~PAGE_FLAGS_MASK;
     uint32_t *page_table = (uint32_t *)(phys_to_virt(pt_phys));
     page_table[pt_index] = phys | flags | PAGE_PRESENT;
+    return STATUS_OK;
 }
 
 void paging_unmap(page_directory_t *dir, uint32_t virt) {
@@ -49,10 +56,13 @@ void paging_unmap(page_directory_t *dir, uint32_t virt) {
 
 page_directory_t *paging_create_directory() {
     DEBUG("[PAGING][pcd]: Creating virtual page directory\n");
-    page_directory_t *phys_addr = (page_directory_t *)
-        pmm_alloc(); // ask pmm to allocate a physical page dir
-    uint32_t vaddr =
-        phys_to_virt((uint32_t)phys_addr); // elevate it to virtual addr
+    uint32_t phys_page = pmm_alloc(); // ask pmm to allocate a physical page dir
+    if (phys_page == 0) {
+        ERROR("[PAGING][pcd]: pmm allocated invalid address\n");
+        return NULL;
+    }
+    page_directory_t *phys_addr = (page_directory_t *)phys_page;
+    uint32_t vaddr              = phys_to_virt((uint32_t)phys_addr); // elevate it to virtual addr
     memset((void *)vaddr, 0, PAGE_SIZE);
 
     page_directory_t *virt_dir = (page_directory_t *)vaddr;

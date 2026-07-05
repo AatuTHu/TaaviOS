@@ -18,8 +18,6 @@ static window_t *program_windows[MAX_TASKS];
 static blueprint_t compositor[MAX_TASKS];
 
 static int gui_draw_string(const char *str, uint32_t caller_pid) {
-    __asm__ __volatile__("cli");
-
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == caller_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d at table index %d\n", caller_pid, i);
@@ -52,8 +50,6 @@ static int gui_draw_string(const char *str, uint32_t caller_pid) {
             break;
         }
     }
-
-    __asm__ __volatile__("sti");
     return STATUS_OK;
 }
 
@@ -81,7 +77,7 @@ static int gui_set_active_window(uint32_t wid) {
     return STATUS_OK;
 }
 
-static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t height) {
+static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t height, uint32_t x, uint32_t y) {
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Trying to initialize a window\n");
     int slot = -1;
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -112,44 +108,44 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     entry->y_offset  = 0;
     entry->z_index   = 1;
     entry->fg_color  = fb_pack_color(255, 255, 255);
-    entry->bg_color  = fb_pack_color(23, 29, 184);
+    entry->bg_color  = fb_pack_color(0, 0, 0);
     entry->pixels    = NULL;
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
+    DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Filling compositor info\n");
     program_windows[slot]     = entry;
     compositor[slot].entry    = program_windows[slot];
-    compositor[slot].screen_x = 20;
-    compositor[slot].screen_y = 40;
+    compositor[slot].screen_x = x;
+    compositor[slot].screen_y = y;
+    DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created\n");
     return STATUS_OK;
 }
 
 static int gui_paint_window_to_screen(uint32_t owner_pid) {
-    DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window to screen!\n");
+    DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window for %d to screen!\n", owner_pid);
+
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
             window_t *entry = program_windows[i];
 
-            if (entry->pixels != NULL) {
-                fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
-                fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
-                return STATUS_OK;
+            if (entry->pixels == NULL) {
+                uint32_t pixels_size = entry->width * entry->height * 4;
+                entry->pixels        = (uint32_t *)kmalloc(pixels_size);
+
+                if (entry->pixels == NULL) {
+                    DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Unable to allocate memory for pixels\n");
+                    return STATUS_ERROR;
+                }
+                memset(entry->pixels, 0, pixels_size);
             }
 
-            uint32_t pixels_size  = entry->width * entry->height * 4;
-            uint32_t *temp_pixels = (uint32_t *)kmalloc(pixels_size);
+            fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
 
-            if (temp_pixels == NULL) {
-                DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Unable to allocate memory for the pixel snapshot\n");
-                return STATUS_ERROR;
-            }
-
-            entry->pixels = temp_pixels;
-            memset(entry->pixels, 0, pixels_size);
-
-            gui_paint_window_to_screen(entry->owner_pid);
+            DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Window painted successfully to screen!\n");
             return STATUS_OK;
         }
     }
+
     return STATUS_ERROR;
 }
 
@@ -177,7 +173,8 @@ static int gui_delete_window(uint32_t owner_pid) {
 static int gui_handle_request(request_table *req) {
     task_t *gui_task = task_get(gui_task_pid);
 
-    DEBUG_GUI_TASK("[GUI_TASK][HANDLE_REQUEST]: handling request %d with type : %d\n", req->caller_pid, req->request_type);
+    if (gui_task == NULL || req == NULL)
+        return STATUS_ERROR;
 
     switch (req->request_type) {
     case WRITE:
@@ -187,12 +184,12 @@ static int gui_handle_request(request_table *req) {
         return STATUS_OK;
 
     case CREATE:
-        req->status = (gui_create_window_entry(req->caller_pid, 800, 600) == STATUS_OK) ? COMPLETE : FAILED;
-
+        req->status        = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : TERMINATED;
         gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         return STATUS_OK;
     case DELETE:
-        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : FAILED;
+        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : TERMINATED;
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
@@ -217,7 +214,6 @@ void gui_task_loop() {
                 gui_handle_request(req);
             }
         }
-
         blankie_activate(gui_task_pid);
     }
 }

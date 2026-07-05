@@ -23,7 +23,7 @@ extern page_directory_t kernel_page_dir;
 
 extern int switch_page_dir(uint32_t addr);
 void paging_init(void);
-void paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
+int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
     uint32_t flags);
 void paging_unmap(page_directory_t *dir, uint32_t virt);
 void paging_switch(page_directory_t *dir);

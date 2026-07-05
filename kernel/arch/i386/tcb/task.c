@@ -3,7 +3,6 @@
 #include "klog.h"
 #include "kmalloc.h"
 #include "kstring.h"
-#include "ledger.h"
 #include "mm.h"
 #include "pmm.h"
 #include "vmm.h"
@@ -87,10 +86,6 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
 
     task_table[slot] = task;
 
-    if (task_mode == USER_TASK) {
-        ledger_add_gui_req(slot, CREATE, NULL, 0);
-    }
-
     return task;
 }
 
@@ -102,7 +97,10 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     task_table[task->pid] = NULL;
 
     DEBUG_TASK("[TASK]: Freeing virtual memory \n");
-    task_mode == USER_TASK ? vmm_free_user_space(task->page_dir) : NULL;
+    if (task_mode == USER_TASK)
+        if (vmm_free_user_space(task->page_dir) == STATUS_ERROR) {
+            ERROR("[TASK]: Failed to free pagedirectory");
+        }
 
     DEBUG_TASK("[TASK]: Freeing kernel_stack\n");
     uint32_t phys = virt_to_phys(task->kernel_stack - KERNEL_STACK_SIZE);
@@ -110,11 +108,6 @@ void task_destroy(task_t *task, uint8_t task_mode) {
 
     DEBUG_TASK("[TASK]: Freeing physical page directory\n");
     pmm_free(virt_to_phys((uint32_t)task->page_dir));
-
-    DEBUG_TASK("[TASK]: Requesting fs_task to release allocated memory\n");
-    ledger_add_fs_req(task->pid, FREE, 0, NULL, NULL, 0, 0);
-    DEBUG_TASK("[TASK]: Requesting window deletion\n");
-    ledger_add_gui_req(task->pid, DELETE, NULL, 0);
 
     DEBUG_TASK("[TASK]: Freeing task\n");
     kfree(task);
