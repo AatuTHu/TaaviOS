@@ -18,7 +18,7 @@ void pmm_init(const struct multiboot_info *mboot);
 uint32_t pmm_alloc(void);
 uint32_t pmm_get_used_pages(void);
 uint32_t pmm_get_free_pages(void);
-void pmm_free(uint32_t addr);
+int pmm_free(uint32_t addr);
 void __pmm_set_bit(uint32_t page);
 // int pmm_test_bit(uint32_t page);
 

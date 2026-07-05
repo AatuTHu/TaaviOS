@@ -55,7 +55,7 @@ void paging_unmap(page_directory_t *dir, uint32_t virt) {
 }
 
 page_directory_t *paging_create_directory() {
-    DEBUG("[PAGING][pcd]: Creating virtual page directory\n");
+    DEBUG_CORE_MM("[PAGING][pcd]: Creating virtual page directory\n");
     uint32_t phys_page = pmm_alloc(); // ask pmm to allocate a physical page dir
     if (phys_page == 0) {
         ERROR("[PAGING][pcd]: pmm allocated invalid address\n");
@@ -70,7 +70,7 @@ page_directory_t *paging_create_directory() {
     memcpy(&(*virt_dir)[KERNEL_PD_INDEX_START],
         &kernel_page_dir[KERNEL_PD_INDEX_START],
         KERNEL_PD_ENTRIES * sizeof(uint32_t));
-    DEBUG("[PAGING][pcd]: Page created\n");
+    DEBUG_CORE_MM("[PAGING][pcd]: Page created\n");
     return (page_directory_t *)(vaddr);
 }
 
@@ -79,9 +79,9 @@ void paging_switch(page_directory_t *dir) {
 }
 
 void paging_init() {
-    DEBUG("[PAGING] Starting to initialize PAGING\n");
+    DEBUG_CORE_MM("[PAGING] Starting to initialize PAGING\n");
     for (int i = 0; i < ENTRIES_PER_TABLE; i++) { kernel_page_dir[i] = 0; }
-    DEBUG("[PAGING] PAGE DIRECTORY INITIALIZED\n");
+    DEBUG_CORE_MM("[PAGING] PAGE DIRECTORY INITIALIZED\n");
 
     for (uint32_t i = 0; i < ENTRIES_PER_TABLE; i++) {
         paging_map(&kernel_page_dir, KERNEL_VIRTUAL_START + i * PAGE_SIZE,
@@ -93,10 +93,10 @@ void paging_init() {
         PAGE_PRESENT | PAGE_RW);
 
     __fb_map_page();
-    DEBUG("[PAGING] VGA page created\n");
-    DEBUG("[PAGING] SWITCHING TO KERNEL PAGE DIRECTORY\n");
+    DEBUG_CORE_MM("[PAGING] VGA page created\n");
+    DEBUG_CORE_MM("[PAGING] SWITCHING TO KERNEL PAGE DIRECTORY\n");
     paging_switch(&kernel_page_dir);
-    DEBUG("[PAGING] PAGING INITIALIZED SUCCESFULLY\n");
+    DEBUG_CORE_MM("[PAGING] PAGING INITIALIZED SUCCESFULLY\n");
 }
 
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
@@ -106,20 +106,20 @@ uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
                                       // directory missing we cant give a valid
                                       // page? I think this is right.
     }
-    DEBUG("[PAGING]: getting physical location for page directory: %x, with "
-          "virt: %d\n",
+    DEBUG_CORE_MM("[PAGING]: getting physical location for page directory: %x, with "
+                  "virt: %d\n",
         (uint32_t)dir, virt);
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
-    DEBUG("[PAGING]: page directory index: %d\n", pd_index);
+    DEBUG_CORE_MM("[PAGING]: page directory index: %d\n", pd_index);
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {
-        DEBUG("[PAGING] page not found\n");
+        DEBUG_CORE_MM("[PAGING] page not found\n");
         return INVALID_PHYSICAL_PAGE;
     }
 
     uint32_t pt_index = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
-    DEBUG("[PAGING]: page table index: %d\n", pt_index);
+    DEBUG_CORE_MM("[PAGING]: page table index: %d\n", pt_index);
     uint32_t pt_virt = phys_to_virt(((*dir)[pd_index] & PAGE_FRAME_MASK));
-    DEBUG("[PAGING]: virtual page table: %x\n", pt_virt);
+    DEBUG_CORE_MM("[PAGING]: virtual page table: %x\n", pt_virt);
     page_table_t *pt = (page_table_t *)pt_virt;
 
     return (*pt)[pt_index] & PAGE_FRAME_MASK;

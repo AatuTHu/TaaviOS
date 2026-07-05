@@ -254,8 +254,12 @@ static int32_t sys_exec(struct registers *r) {
 
     kfree(binary_buffer);
     task_t *task = task_create(-1, entry, task_name, pd, USER_TASK);
-    scheduler_add(task);
+    if (scheduler_add(task) == STATUS_ERROR) {
+        ERROR("[SYSCALL][SYS_EXEC]: Failed to add task to scheduler\n");
+        return STATUS_ERROR;
+    }
 
+    DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Task created\n");
     return STATUS_OK;
 }
 

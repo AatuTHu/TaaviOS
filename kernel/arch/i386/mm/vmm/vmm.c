@@ -11,13 +11,13 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
         return STATUS_ERROR;
     }
 
-    // DEBUG("[VMM]: ALLOCATING VIRTUAL MEMORY\n");
-    // DEBUG("[VMM]: Virtual address: %x\n", virt);
-    // DEBUG("[VMM]: Size: %d\n", size);
-    // DEBUG("[VMM]: Flags: %d\n", flags);
+    // DEBUG_CORE_MM("[VMM]: ALLOCATING VIRTUAL MEMORY\n");
+    // DEBUG_CORE_MM("[VMM]: Virtual address: %x\n", virt);
+    // DEBUG_CORE_MM("[VMM]: Size: %d\n", size);
+    // DEBUG_CORE_MM("[VMM]: Flags: %d\n", flags);
 
     uint32_t n_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
-    // DEBUG("[VMM]: Number of pages to be allocated: %d\n", n_pages);
+    // DEBUG_CORE_MM("[VMM]: Number of pages to be allocated: %d\n", n_pages);
     uint32_t virt_start = virt;
     for (uint32_t i = 0; i < n_pages; i++) {
         uint32_t addr = pmm_alloc();
@@ -42,7 +42,7 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
         }
         virt += PAGE_SIZE;
     }
-    // DEBUG("[VMM]: ALLOCATION SUCCESSFULL\n");
+    // DEBUG_CORE_MM("[VMM]: ALLOCATION SUCCESSFULL\n");
     return STATUS_OK;
 }
 
@@ -53,19 +53,19 @@ void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
     }
 
     uint32_t n_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
-    // DEBUG("[VMM]: Number of pages to be freed: %d\n", n_pages);
+    // DEBUG_CORE_MM("[VMM]: Number of pages to be freed: %d\n", n_pages);
     for (uint32_t i = 0; i < n_pages; i++) {
         uint32_t phys_addr = paging_get_phys(dir, virt);
         pmm_free(phys_addr);
         paging_unmap(dir, virt);
         virt += PAGE_SIZE;
     }
-    // DEBUG("[VMM]: Pages freed\n");
+    // DEBUG_CORE_MM("[VMM]: Pages freed\n");
 }
 
 int vmm_free_user_space(page_directory_t *dir) {
 
-    DEBUG("[VMM]: Freeing userspace directory. \n");
+    DEBUG_CORE_MM("[VMM]: Freeing userspace directory. \n");
 
     if (!dir) {
         ERROR("[VMM]: DIRECTORY NOT GIVEN ABORTING\n");
@@ -75,15 +75,15 @@ int vmm_free_user_space(page_directory_t *dir) {
     uint32_t size             = KERNEL_VIRTUAL_BASE >> 22; // 768
     uint32_t entries_per_page = PAGE_SIZE / 4;
 
-    DEBUG("[VMM]: size: %d. \n", size);
-    DEBUG("[VMM]: entries per page: %d. \n", entries_per_page);
+    DEBUG_CORE_MM("[VMM]: size: %d. \n", size);
+    DEBUG_CORE_MM("[VMM]: entries per page: %d. \n", entries_per_page);
 
     for (uint32_t i = 0; i < size; i++) {
         if (!((*dir)[i] & PAGE_PRESENT)) {
             continue;
         }
         uint32_t pt_phys = (*dir)[i] & ~PAGE_FLAGS_MASK;
-        DEBUG("[VMM]: pt_phys: %d. \n", pt_phys);
+        DEBUG_CORE_MM("[VMM]: pt_phys: %d. \n", pt_phys);
         const uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
         for (uint32_t j = 0; j < entries_per_page; j++) {
             if (pt[j] & PAGE_PRESENT) {
@@ -94,7 +94,7 @@ int vmm_free_user_space(page_directory_t *dir) {
         (*dir)[i] = 0;
     }
 
-    DEBUG("[VMM]: Userspace directory freed\n");
+    DEBUG_CORE_MM("[VMM]: Userspace directory freed\n");
     return STATUS_OK;
 }
 

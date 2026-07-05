@@ -184,7 +184,7 @@ static void scheduler_switch(struct registers *r) {
     next->started = 1;
 
     if (next_idx != current_idx) {
-        DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_idx = next_idx;
 
         if (next->task_mode == USER_TASK) {
@@ -241,6 +241,7 @@ void scheduler_remove_task() {
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
+    DEBUG_SCHED("[SCHEDULER][REMOVE]: Remove complite\n");
 }
 
 int scheduler_set_current_task(uint32_t pid) {
@@ -312,17 +313,17 @@ void scheduler_wake_task(uint32_t pid) {
     }
 }
 
-void scheduler_add(task_t *task) {
+int scheduler_add(task_t *task) {
 
     if (task_count >= MAX_TASKS) {
         ERROR("[SCHEDULER][ADD]: Too many tasks added to scheduler\n");
-        return;
+        return STATUS_ERROR;
     }
 
     for (int i = 0; i < task_count; i++) {
         if (tasks[i]->pid == task->pid) {
             DEBUG_SCHED("[SCHEDULER][ADD]: Task exists\n");
-            return;
+            return STATUS_ERROR;
         }
     }
 
@@ -332,6 +333,8 @@ void scheduler_add(task_t *task) {
     if (current_idx == -1) {
         current_idx = 0;
     }
+
+    return STATUS_OK;
 }
 
 int scheduler_get_idx_off_pid(uint32_t pid) {

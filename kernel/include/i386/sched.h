@@ -7,7 +7,7 @@
 
 void scheduler_tick(struct registers *r);
 void scheduler_init(void);
-void scheduler_add(task_t *task);
+int scheduler_add(task_t *task);
 void scheduler_remove_task();
 int scheduler_get_dead_task_count();
 void _set_scheduler_on();
