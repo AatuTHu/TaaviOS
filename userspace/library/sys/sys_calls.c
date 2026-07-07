@@ -40,6 +40,12 @@ int sys_conwi(int operation, int width, int height, int x, int y) {
     return result;
 }
 
+int sys_caw(int target_pid) {
+    int result = -1;
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(251), "b"(target_pid));
+    return result;
+}
+
 int sys_mkdir(const char *path, uint32_t len) {
     int result = -1;
     __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(39), "b"(path), "c"(len));

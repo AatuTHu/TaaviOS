@@ -259,7 +259,7 @@ static int32_t sys_exec(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Task created\n");
+    DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Task created %d\n", task->pid);
     return STATUS_OK;
 }
 
@@ -352,11 +352,37 @@ static int32_t sys_configure_window(struct registers *r) {
         ledger_add_gui_req(current->pid, MOVE, 0, 0, x, y, NULL, 0);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
+    case 3:
+        DEBUG_SYSCALL("[SYSCALL][CONWI]: Setting operator\n");
+        return keyboard_set_operator_pid(current->pid);
     default:
         current->state = TASK_RUNNING;
         break;
     }
     return STATUS_ERROR;
+}
+
+static int32_t sys_change_active_window(struct registers *r) {
+    DEBUG_SYSCALL("[SYSCALL][SYS_CAW]\n");
+    int target_pid  = r->ebx;
+    task_t *current = scheduler_get_current_task();
+
+    if (target_pid < CLERK_COUNT || target_pid >= MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+
+    if (current == NULL) {
+        return STATUS_ERROR;
+    }
+
+    if (keyboard_replace_cur_foreground_pid(target_pid) == STATUS_ERROR) {
+        DEBUG_SYSCALL("[SYS_CAW]: Could not replace current foreground pid. Aborting.\n");
+        return STATUS_ERROR;
+    }
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_wake_task(target_pid);
+
+    return STATUS_OK;
 }
 
 void syscall_dispatch(struct registers *r) {
@@ -382,4 +408,5 @@ void syscall_init() {
     syscall_table[SYS_CHDIR]    = sys_chdir;
     syscall_table[SYS_GETDENTS] = sys_getdents;
     syscall_table[SYS_CONWI]    = sys_configure_window;
+    syscall_table[SYS_CAW]      = sys_change_active_window;
 }

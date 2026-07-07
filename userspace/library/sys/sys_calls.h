@@ -29,4 +29,6 @@ int sys_getdirents(const char *buf, uint32_t len);
 
 int sys_conwi(int operation, int width, int height, int x, int y);
 
+int sys_caw(int target_pid);
+
 #endif

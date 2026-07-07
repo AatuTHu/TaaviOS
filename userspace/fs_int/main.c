@@ -6,6 +6,20 @@
 static int fd = -1;
 static char dir_name[8];
 
+void command_help() {
+    print("\n------------------------------------------\n");
+    print("Available commands\n");
+    print("- help               'Prints this list'          \n");
+    print("- open  [path]       'Open a file'               \n");
+    print("- write [text]       'Writes to opened file'     \n");
+    print("- mkdir [text]       'Creates a directory'       \n");
+    print("- cd    [text]       'Changes working directory' \n");
+    print("- read               'Reads the opened file'     \n");
+    print("- close              'close opened file'         \n");
+    print("- exit               'Exits and kills shell'     \n");
+    print("\n");
+}
+
 void command_write(const char *buf) {
     print("\n");
     write(fd, buf);
@@ -62,33 +76,50 @@ void command_ls() {
 }
 
 void exec_cmd(char *buf) {
-    print("\n");
-    if (str_eq(buf, "close") == 1)
+    if (str_eq(buf, "help") == 1) {
+        command_help();
+        return;
+    }
+    if (str_eq(buf, "close") == 1) {
         command_close();
-    if (str_eq(buf, "read") == 1)
+        return;
+    }
+    if (str_eq(buf, "read") == 1) {
         command_read();
-    if (str_eq(buf, "ls") == 1)
+        return;
+    }
+    if (str_eq(buf, "ls") == 1) {
         command_ls();
-    if (str_starts_with(buf, "write ") == 1)
+        return;
+    }
+    if (str_starts_with(buf, "write ") == 1) {
         command_write(buf + 6);
-    if (str_starts_with(buf, "open ") == 1)
+        return;
+    }
+    if (str_starts_with(buf, "open ") == 1) {
         command_open(buf + 5);
-    if (str_starts_with(buf, "mkdir ") == 1)
+        return;
+    }
+    if (str_starts_with(buf, "mkdir ") == 1) {
         command_mkdir(buf + 6);
-    if (str_starts_with(buf, "cd ") == 1)
+        return;
+    }
+    if (str_starts_with(buf, "cd ") == 1) {
         command_cd(buf + 3);
-    print("\n");
+        return;
+    }
+    print("Invalid command\n");
 }
 
 void main(void) {
-    if (create_task_window(600, 200, 20, 20) == -1) {
+    if (create_task_window(800, 600, 20, 20) == -1) {
         return;
     }
     if (configurate_task_window(0, 0, 0, 0) == -1) {
         return;
     }
 
-    print("fs_interface\n");
+    print("filesystem interface\n");
     char buf[256];
     int pos = 0;
     char c;

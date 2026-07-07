@@ -1,3 +1,4 @@
+#include "op_sy.h"
 #include "stand.h"
 #include "string.h"
 #include <stddef.h>
@@ -7,26 +8,20 @@ static int fd = -1;
 static char dir_name[8];
 
 void command_help() {
-    print("\n------------------------------------------------------------------"
-          "-------------\n");
-    print("Available commands\n");
-    print("- help               'Prints this list'          \n");
-    print("- about              'Useless function'          \n");
-    print("- get my pid         'Shells pid'                \n");
-    print("- exec  [task]       'Executes a task'           \n");
-    print("- open  [path]       'Open a file'               \n");
-    print("- write [text]       'Writes to opened file'     \n");
-    print("- mkdir [text]       'Creates a directory'       \n");
-    print("- cd    [text]       'Changes working directory' \n");
-    print("- read               'Reads the opened file'     \n");
-    print("- close              'close opened file'         \n");
-    print("- exit               'Exits and kills shell'     \n");
+    print("\n----------------------------------------------------------\n");
+    print("Available commands                                          \n");
+    print("- help               'Prints this list'                     \n");
+    print("- about              'Useless function'                     \n");
+    print("- get my pid         'Shells pid'                           \n");
+    print("- exec  [task]       'Executes a task'                      \n");
+    print("- caw [pid]          'Changes active window to provided pit'\n");
+    print("- exit               'Exits and kills shell'                \n");
     print("\n");
 }
 
 void command_about() {
-    print("\n---------------------------------------------------------------\n");
-    print("TaaviOS v0.6.0 - Author: Aatu H\n");
+    print("\n-------------------------------------------------------\n");
+    print("TaaviOS v0.0.0 - Author: Aatu H\n");
 }
 
 void command_get_pid() {
@@ -34,7 +29,7 @@ void command_get_pid() {
     char msg[10];
     itoa(pid, msg);
     print("\n");
-    print("current task pid: ");
+    print("Shells pid is: ");
     print(msg);
     print("\n");
 }
@@ -53,8 +48,14 @@ void command_clear() {
     }
 }
 
+void command_caw(const char *target) {
+    int target_pid = atoi(target);
+    if (target_pid == 0 || ch_act_window(target_pid) == -1) {
+        print("\nWindow change did not succeed\n");
+    }
+}
+
 void exec_cmd(char *buf) {
-    print("\n");
     if (str_eq(buf, "clear") == 1) {
         command_clear();
         print("\n");
@@ -85,10 +86,20 @@ void exec_cmd(char *buf) {
         print("\n");
         return;
     }
+    if (str_starts_with(buf, "caw ") == 1) {
+        command_caw(buf + 4);
+        print("\n");
+        return;
+    }
     print("Invalid command\n");
 }
 
 void main(void) {
+
+    if (set_operator_task() == -1) {
+        return;
+    }
+
     if (create_task_window(600, 200, 20, 780) == -1) {
         return;
     }

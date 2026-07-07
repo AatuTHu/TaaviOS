@@ -10,7 +10,9 @@ static keyboard_buffer_t kbd_buf_instance;
 static keyboard_buffer_t *keyboard_buffer = &kbd_buf_instance;
 static int shift_pressed                  = 0;
 static int caps_lock_pressed              = 0;
+static int ctrl_pressed                   = 0;
 static int waiting_queue_count            = 0;
+static int operator_pid                   = -1;
 static int waiting_queue[MAX_TASKS];
 
 int keyboard_get_foreground_pid() {
@@ -80,6 +82,30 @@ int keyboard_read_from_buffer(char *out, uint32_t pid) {
     return 1;
 }
 
+int keyboard_set_operator_pid(uint32_t pid) {
+    if (pid >= MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+
+    if (operator_pid == -1) {
+        DEBUG("[KEYBOARD][RCFP]: Set %d as operator pid\n", pid);
+        operator_pid = pid;
+        return STATUS_OK;
+    }
+
+    return STATUS_ERROR;
+}
+
+int keyboard_replace_cur_foreground_pid(uint32_t new_pid) {
+    DEBUG("[KEYBOARD][RCFP]: Replacing current foreground pid with %d\n", new_pid);
+    if (new_pid >= MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+    keyboard_clear_buffer();
+    keyboard_buffer->foreground_pid = new_pid;
+    return STATUS_OK;
+}
+
 void keyboard_handler(uint8_t scancode) {
 
     if ((scancode == 0x2A) || (scancode == 0x36)) {
@@ -91,8 +117,24 @@ void keyboard_handler(uint8_t scancode) {
         return;
     }
 
+    if (scancode == 0x1D) {
+        ctrl_pressed = 1;
+        return;
+    }
+
+    if (scancode == 0x9D) {
+        ctrl_pressed = 0;
+        return;
+    }
+
     if (scancode == 0x3A) {
         caps_lock_pressed = 1 - caps_lock_pressed;
+        return;
+    }
+
+    if (ctrl_pressed && scancode == 0x18) {
+        if (operator_pid != -1)
+            keyboard_replace_cur_foreground_pid(operator_pid);
         return;
     }
 

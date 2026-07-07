@@ -97,6 +97,22 @@ void itoa(int n, char *buf) {
     buf[i] = '\0';
 }
 
+int atoi(const char *str) {
+    int res = 0;
+    int i   = 0;
+
+    while (str[i] == ' ') {
+        i++;
+    }
+
+    while (str[i] >= '0' && str[i] <= '9') {
+        res = res * 10 + (str[i] - '0');
+        i++;
+    }
+
+    return res;
+}
+
 int strcat(char *dst, const char *src, int max_len) {
     int dst_len = strlen(dst);
     int i       = 0;

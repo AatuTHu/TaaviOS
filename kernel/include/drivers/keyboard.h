@@ -200,5 +200,7 @@ void keyboard_handler(uint8_t scancode);
 void keyboard_set_foreground_pid(int pid);
 int keyboard_read_from_buffer(char *out, uint32_t pid);
 int keyboard_get_foreground_pid();
+int keyboard_set_operator_pid(uint32_t pid);
+int keyboard_replace_cur_foreground_pid(uint32_t new_pid);
 
 #endif

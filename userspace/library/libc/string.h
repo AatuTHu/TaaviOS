@@ -11,6 +11,7 @@ int strnlen(const char *s, int n);
 int strcmp(const char *a, const char *b);
 int str_eq(char *a, char *b);
 void itoa(int n, char *buf);
+int atoi(const char *str);
 int str_starts_with(const char *str, const char *prefix);
 int strcat(char *dst, const char *src, int n);
 
