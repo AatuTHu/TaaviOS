@@ -120,9 +120,6 @@ void main(void) {
     if (create_task_window(800, 600, 20, 20) == -1) {
         return;
     }
-    if (configurate_task_window(0, 0, 0, 0) == -1) {
-        return;
-    }
 
     print("filesystem interface\n");
     char buf[256];

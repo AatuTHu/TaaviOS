@@ -7,6 +7,12 @@
 #include "sched.h"
 #include "vga.h"
 
+/**
+ * Keyboard driver & routing
+ * Design & Implementation
+ * @author: A.H, 2026
+ */
+
 static keyboard_buffer_t kbd_buf_instance;
 static keyboard_buffer_t *keyboard_buffer = &kbd_buf_instance;
 static int shift_pressed                  = 0;

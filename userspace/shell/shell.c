@@ -90,9 +90,7 @@ void main(void) {
     if (create_task_window(600, 200, 20, 780) == -1) {
         return;
     }
-    if (configurate_task_window(0, 0, 0, 0) == -1) {
-        return;
-    }
+
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     /* print("--------------------------------------------------------------------"

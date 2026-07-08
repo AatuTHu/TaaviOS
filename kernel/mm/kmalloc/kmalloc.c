@@ -3,6 +3,13 @@
 #include "klog.h"
 #include "vmm.h"
 
+/**
+ * Heap allocator
+ * Design & Implementation:
+ * Inspiration from osdev & countles other osdev projects
+ * @author: A.H, 2026
+ */
+
 #define MAX_ALLOC_SPINS 4
 
 static block_header_t *free_list = NULL;

@@ -321,6 +321,18 @@ static int32_t sys_yield(struct registers *r) {
     return STATUS_OK;
 }
 
+/**
+ * sys_configure_window - When userspace task wants to make changes to their window.
+ *
+ * Description:
+ * There are 4 configure operations that can be made to window
+ * first one is to create the window so that it is shown on the screen
+ * second one is to paint it tho atm it does not do anything
+ * third one is to move the window to another location on the screen.
+ * fourth one sets the current window as the operator.
+ *
+ * Return: STATUS_OK || STATUS_ERROR.
+ */
 static int32_t sys_configure_window(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
     uint32_t operation = r->ebx;
@@ -362,6 +374,16 @@ static int32_t sys_configure_window(struct registers *r) {
     return STATUS_ERROR;
 }
 
+/**
+* sys_change_active-window - when user task wishes to switch to another task.
+
+* Description:
+* This functions routes the keyboard to be directed to window that the user wants to be "active"
+* creating the illusion of switching active windows. But in reality all windows are active.
+*
+* Context: Function was made so I could change between operator task and other tasks
+* Return: status_ok || status_error.
+*/
 static int32_t sys_change_active_window(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_CAW]\n");
     int target_pid  = r->ebx;

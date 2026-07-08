@@ -10,6 +10,12 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 
 **Hail Mary Protocol** If a kernel clerk triggers an exception, the isr_handler intercepts the fault before it can panic and shutdown the system. The exception vector routes to activate_hail_mary, which invokes the clerk's registered recovery fallback (fs_recovery). This purges the exact ledger request that caused the crash, marks it TERMINATED to release the blocked user process with an error, and triggers a Blankie reset. The clerk restarts with a clean stack and the kernel survives.
 
+### Clerks
+
+**Gui** Gui is responsible for screen operations whether it is to draw a screen to a program window, delete the window, or hide it. It also orchestrates all the windows on the screen acting as a window manager.
+
+**FS** FS is responsible for the filesystem operations. It reads, writes, opens, and closes files for the user programs. It also holds the directory traversal data for every task that changes its working directory. Other tasks include creating a virtual directory with system information (memory usage, tasks, CPU time).
+
 ## Status
 - [x] Protected mode, paging, GDT/IDT/TSS
 - [x] PMM, VMM, kmalloc/kfree
@@ -19,9 +25,17 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 - [x] sys_open, sys_read, sys_write
 - [x] Fs_task, Reaper_task
 - [x] Blankie, Hail Mary, ledger protocols
-- [ ] GUI, vga
+- [x] GUI
 
-## Tradeoffs
-Same as any monolithic kernel: clerks share the address space, so a rogue clerk can corrupt another clerk's memory. Hail Mary contains faults after the fact but doesn't prevent them.
+## Tradeoffs of Microlithic Kernel Model
+In its essence, the microlithic kernel is a monolith with the organization of a microkernel.
+
+### Advantages
+**Zero-Overhead IPC:** Because clerks execute within the active user task's page directory, requests via the Ledger Protocol require absolutely no physical or virtual memory copying (cr3 switches are completely bypassed). This provides the performance speed of a standard monolithic system call with the modular structural isolation of a microkernel. 
+**Predictable Lifecycle:** The Blankie Protocol ensures clerks maintain a clean stack baseline, mitigating long-term state degradation or deep call stack overflows.
+
+### Risks & Mitigations
+**Shared Fault Domain:** Running more code at the Ring 0 level inherently increases the risk of a complete system shutdown or complex deadlocks.
+**The Hail Mary Safeguard:** To combat the risk of system-wide panics, the Hail Mary Protocol acts as the last line of defence as it intercepts Ring 0 exceptions, safely releases the blocked user process with an error, and resets the clerk without bringing down the entire kernel.
 
 // A.H — 2026
