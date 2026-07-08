@@ -51,8 +51,8 @@ void fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t w, ui
     }
 }
 
-void fb_clear(uint32_t *pixel_buffer, uint32_t color) {
-    fb_fill_rect(pixel_buffer, 0, 0, fb.width, fb.height, color);
+void fb_clear(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t color) {
+    fb_fill_rect(pixel_buffer, 0, 0, width, height, color);
 }
 
 // y font height

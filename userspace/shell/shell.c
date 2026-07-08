@@ -4,18 +4,16 @@
 #include <stddef.h>
 #include <stdint.h>
 
-static int fd = -1;
-static char dir_name[8];
-
 void command_help() {
-    print("\n----------------------------------------------------------\n");
-    print("Available commands                                          \n");
-    print("- help               'Prints this list'                     \n");
-    print("- about              'Useless function'                     \n");
-    print("- get my pid         'Shells pid'                           \n");
-    print("- exec  [task]       'Executes a task'                      \n");
-    print("- caw [pid]          'Changes active window to provided pit'\n");
-    print("- exit               'Exits and kills shell'                \n");
+    print("\n-----------------------------------------------------------\n");
+    print("Available commands                                           \n");
+    print("- help                'Prints this list'                     \n");
+    print("- about               'Useless function'                     \n");
+    print("- get my pid          'Shells pid'                           \n");
+    print("- exec [task]         'Executes a task'                      \n");
+    print("- caw  [pid]          'Changes active window to provided pit'\n");
+    print("- tasks               'Lists are active tasks with their pids\n'");
+    print("- exit                'Exits and kills shell'                \n");
     print("\n");
 }
 
@@ -42,12 +40,6 @@ void command_exec(const char *path) {
     exec(path);
 }
 
-void command_clear() {
-    for (uint8_t i = 0; i < 100; i++) {
-        print("\n");
-    }
-}
-
 void command_caw(const char *target) {
     int target_pid = atoi(target);
     if (target_pid == 0 || ch_act_window(target_pid) == -1) {
@@ -56,11 +48,6 @@ void command_caw(const char *target) {
 }
 
 void exec_cmd(char *buf) {
-    if (str_eq(buf, "clear") == 1) {
-        command_clear();
-        print("\n");
-        return;
-    }
     if (str_eq(buf, "help") == 1) {
         command_help();
         print("\n");
@@ -162,7 +149,6 @@ void main(void) {
 
     while (1) {
         print("\n");
-        print(dir_name);
         print(">> ");
         pos = 0;
         while (1) {

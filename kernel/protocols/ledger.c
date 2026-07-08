@@ -371,7 +371,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
 
     // DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Counting for %d\n", clerk_pid);
 
-    if (clerk_pid < 0 || clerk_pid > CLERK_COUNT) {
+    if (clerk_pid > CLERK_COUNT) {
         return STATUS_ERROR;
     }
 

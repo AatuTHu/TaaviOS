@@ -3,6 +3,7 @@
 #include "io.h"
 #include "isr.h"
 #include "klog.h"
+#include "kstring.h"
 #include "sched.h"
 #include "vga.h"
 
@@ -23,18 +24,31 @@ static void keyboard_clear_buffer() {
     keyboard_buffer->read = keyboard_buffer->write;
 }
 
+int keyboard_replace_cur_foreground_pid(uint32_t new_pid) {
+    DEBUG("[KEYBOARD][RCFP]: Replacing current foreground pid with %d\n", new_pid);
+    if (new_pid >= MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+
+    keyboard_clear_buffer();
+    keyboard_buffer->foreground_pid = new_pid;
+    return STATUS_OK;
+}
+
 void keyboard_set_foreground_pid(int pid) {
     if (pid == -1) {
-        if (waiting_queue_count > 0) {
+        if (waiting_queue_count > 0 && operator_pid == -1) {
             pid = waiting_queue[0];
             for (int i = 0; i < waiting_queue_count - 1; i++) {
                 waiting_queue[i] = waiting_queue[i + 1];
             }
             waiting_queue_count--;
+        } else if (operator_pid != -1) {
+            pid = operator_pid;
         }
     }
-    keyboard_clear_buffer();
-    keyboard_buffer->foreground_pid = pid;
+
+    keyboard_replace_cur_foreground_pid(pid);
 }
 
 static void keyboard_add_to_waiting_queue(int pid) {
@@ -94,16 +108,6 @@ int keyboard_set_operator_pid(uint32_t pid) {
     }
 
     return STATUS_ERROR;
-}
-
-int keyboard_replace_cur_foreground_pid(uint32_t new_pid) {
-    DEBUG("[KEYBOARD][RCFP]: Replacing current foreground pid with %d\n", new_pid);
-    if (new_pid >= MAX_TASKS) {
-        return STATUS_ERROR;
-    }
-    keyboard_clear_buffer();
-    keyboard_buffer->foreground_pid = new_pid;
-    return STATUS_OK;
 }
 
 void keyboard_handler(uint8_t scancode) {

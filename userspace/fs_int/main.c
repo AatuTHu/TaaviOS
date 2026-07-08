@@ -5,6 +5,7 @@
 
 static int fd = -1;
 static char dir_name[8];
+static int is_running = 0;
 
 void command_help() {
     print("\n------------------------------------------\n");
@@ -15,8 +16,8 @@ void command_help() {
     print("- mkdir [text]       'Creates a directory'       \n");
     print("- cd    [text]       'Changes working directory' \n");
     print("- read               'Reads the opened file'     \n");
-    print("- close              'close opened file'         \n");
-    print("- exit               'Exits and kills shell'     \n");
+    print("- close              'Close opened file'         \n");
+    print("- exit               'Close fs_interface'        \n");
     print("\n");
 }
 
@@ -108,6 +109,10 @@ void exec_cmd(char *buf) {
         command_cd(buf + 3);
         return;
     }
+    if (str_eq(buf, "exit") == 1) {
+        is_running = 1;
+        return;
+    }
     print("Invalid command\n");
 }
 
@@ -124,7 +129,7 @@ void main(void) {
     int pos = 0;
     char c;
 
-    while (1) {
+    while (is_running < 1) {
         print("\n");
         print(dir_name);
         print(">> ");

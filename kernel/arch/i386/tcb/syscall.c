@@ -31,8 +31,9 @@ static int32_t sys_exit(struct registers *r) {
     if (current->state == TASK_DEAD)
         return STATUS_OK;
 
-    if (keyboard_get_foreground_pid() == (int)current->pid)
+    if (keyboard_get_foreground_pid() == (int)current->pid) {
         keyboard_set_foreground_pid(-1);
+    }
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting fs_task release allocated memory\n");
     ledger_add_fs_req(current->pid, FREE, 0, NULL, NULL, 0, 0);
@@ -244,7 +245,7 @@ static int32_t sys_exec(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    uint32_t entry = elf_load(binary_buffer, pd);
+    int entry = elf_load(binary_buffer, pd);
 
     if (entry == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: elf load failed aborting.\n");
@@ -353,7 +354,6 @@ static int32_t sys_configure_window(struct registers *r) {
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case 3:
-        DEBUG_SYSCALL("[SYSCALL][CONWI]: Setting operator\n");
         return keyboard_set_operator_pid(current->pid);
     default:
         current->state = TASK_RUNNING;
