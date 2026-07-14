@@ -25,11 +25,13 @@ static syscall_fn_t syscall_table[MAX_SYSCALLS];
 static int32_t sys_exit(struct registers *r) {
     const task_t *current = scheduler_get_current_task();
 
-    if (current == NULL)
+    if (current == NULL) {
         return STATUS_ERROR;
+    }
 
-    if (current->state == TASK_DEAD)
+    if (current->state == TASK_DEAD) {
         return STATUS_OK;
+    }
 
     if (keyboard_get_foreground_pid() == (int)current->pid) {
         keyboard_set_foreground_pid(-1);
@@ -59,6 +61,10 @@ static int32_t sys_read(struct registers *r) {
     char *buf             = (char *)r->ecx;
     uint32_t buff_size    = (uint32_t)r->edx;
     const task_t *current = scheduler_get_current_task();
+
+    if (current == NULL) {
+        return STATUS_ERROR;
+    }
 
     if (fd == 0) {
         int nread = 0;
@@ -92,6 +98,10 @@ static int32_t sys_write(struct registers *r) {
     const char *buf       = (char *)r->ecx;
     uint32_t len          = r->edx;
     const task_t *current = scheduler_get_current_task();
+
+    if (current == NULL) {
+        return STATUS_ERROR;
+    }
 
     switch (fd) {
     case 1:
@@ -156,11 +166,13 @@ static int32_t sys_close(struct registers *r) {
     int fd                = r->ebx;
     const task_t *current = scheduler_get_current_task();
 
-    if (fd >= 3 && fd <= MAX_FD_ENTRIES)
+    if (fd >= 3 && fd <= MAX_FD_ENTRIES) {
         return STATUS_ERROR;
+    }
 
-    if (current == NULL)
+    if (current == NULL) {
         return STATUS_ERROR;
+    }
 
     ledger_add_fs_req(current->pid, CLOSE, fd, NULL, NULL, 0, 0);
 
@@ -186,8 +198,9 @@ static int32_t sys_chdir(struct registers *r) {
     uint32_t len          = r->ecx;
     const task_t *current = scheduler_get_current_task();
 
-    if (current == NULL)
+    if (current == NULL) {
         return STATUS_ERROR;
+    }
 
     ledger_add_fs_req(current->pid, FIND, 0, path, NULL, len, 0);
     scheduler_set_task_state(TASK_BLOCKED);
@@ -218,7 +231,7 @@ static int32_t sys_exec(struct registers *r) {
     uint32_t file_size         = 0;
     uint32_t start_dir_cluster = f32_fs.root_cluster;
     uint8_t file_attr          = 0;
-    char task_name[13];
+    char task_name[11];
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
     if (fat32_find_cluster(start_dir_cluster, filename, &file_cluster, &dir_cluster, &file_size, task_name, &file_attr) ==
@@ -337,6 +350,11 @@ static int32_t sys_configure_window(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
     uint32_t operation = r->ebx;
     task_t *current    = scheduler_get_current_task();
+
+    if (current == NULL) {
+        return STATUS_ERROR;
+    }
+
     uint32_t width, height, x, y = 0;
 
     switch (operation) {

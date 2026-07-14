@@ -5,15 +5,15 @@
 #include <stdint.h>
 
 void command_help() {
-    print("\n-----------------------------------------------------------\n");
-    print("Available commands                                           \n");
-    print("- help                'Prints this list'                     \n");
-    print("- about               'Useless function'                     \n");
-    print("- get my pid          'Shells pid'                           \n");
-    print("- exec [task]         'Executes a task'                      \n");
-    print("- caw  [pid]          'Changes active window to provided pit'\n");
-    print("- tasks               'Lists are active tasks with their pids\n'");
-    print("- exit                'Exits and kills shell'                \n");
+    print("\n------------------------------------------------------------\n");
+    print("Available commands                                            \n");
+    print("- help                'Prints this list'                      \n");
+    print("- about               'Useless function'                      \n");
+    print("- get my pid          'Shells pid'                            \n");
+    print("- exec [task]         'Executes a task'                       \n");
+    print("- caw  [pid]          'Changes active window to provided pit' \n");
+    print("- tasks               'Lists are active tasks with their pids'\n");
+    print("- exit                'Exits and kills shell'                 \n");
     print("\n");
 }
 

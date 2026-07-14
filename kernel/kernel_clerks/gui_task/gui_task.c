@@ -26,6 +26,7 @@ static int copy_pixels_to_screen(window_t *entry) {
             entry->pixels + row * entry->width,                                                                                    // src
             entry->width * 4);                                                                                                     // len
     }
+    return STATUS_OK;
 }
 
 /**
@@ -93,6 +94,47 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
 }
 
 /**
+ * gui_delete_window - Used when task is killed, regardles if it has a window or not.
+ * @param owner_pid: window entry owner pid
+ *
+ * Description:
+ * Function searches from the program_windows array the correct entry and frees the allocated memory
+ * aswell as clears the drawn pixels from the screen where the app used to be.
+ *
+ * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
+ */
+static int gui_delete_window(uint32_t owner_pid) {
+    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
+            DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
+            window_t *entry = program_windows[i];
+
+            fb_clear(entry->pixels, entry->width, entry->height, fg_color);
+            copy_pixels_to_screen(entry);
+
+            compositor[entry->wid].entry    = NULL;
+            compositor[entry->wid].screen_x = 0;
+            compositor[entry->wid].screen_y = 0;
+
+            if (entry->pixels != NULL) {
+                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
+                kfree(entry->pixels);
+            }
+            kfree(entry);
+            program_windows[i] = NULL;
+
+            DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: deletion succesfull\n");
+            return STATUS_OK;
+        }
+    }
+
+    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", owner_pid);
+    return STATUS_ERROR;
+}
+
+/**
  * gui_create_window_entry - used if a task wishes to create a window to screen.
  * @param owner_pid: window entry owner pid
  * @param width: window width
@@ -111,11 +153,22 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
  */
 static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t height, uint32_t x, uint32_t y) {
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Trying to initialize a window\n");
+
     int slot = -1;
     for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] == NULL) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
+            gui_delete_window(owner_pid);
             slot = i;
             break;
+        }
+    }
+
+    if (slot == -1) {
+        for (int i = 0; i < MAX_TASKS; i++) {
+            if (program_windows[i] == NULL) {
+                slot = i;
+                break;
+            }
         }
     }
 
@@ -181,47 +234,6 @@ static int gui_paint_window_to_screen(uint32_t owner_pid) {
     */
 
     return STATUS_OK;
-}
-
-/**
- * gui_delete_window - Used when task is killed, regardles if it has a window or not.
- * @param owner_pid: window entry owner pid
- *
- * Description:
- * Function searches from the program_windows array the correct entry and frees the allocated memory
- * aswell as clears the drawn pixels from the screen where the app used to be.
- *
- * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
- */
-static int gui_delete_window(uint32_t owner_pid) {
-    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
-
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
-            DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
-            window_t *entry = program_windows[i];
-
-            fb_clear(entry->pixels, entry->width, entry->height, fg_color);
-            copy_pixels_to_screen(entry);
-
-            compositor[entry->wid].entry    = NULL;
-            compositor[entry->wid].screen_x = 0;
-            compositor[entry->wid].screen_y = 0;
-
-            if (entry->pixels != NULL) {
-                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
-                kfree(entry->pixels);
-            }
-            kfree(entry);
-            program_windows[i] = NULL;
-
-            DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: deletion succesfull\n");
-            return STATUS_OK;
-        }
-    }
-
-    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", owner_pid);
-    return STATUS_ERROR;
 }
 
 static int gui_handle_request(request_table *req) {

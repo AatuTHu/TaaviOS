@@ -135,6 +135,7 @@ void main(void) {
             int n = scan(&c);
             if (n > 0) {
                 if (c == '\n') {
+                    print("\n");
                     buf[pos] = 0;
                     exec_cmd(buf);
                     pos = 0;
