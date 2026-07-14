@@ -16,8 +16,9 @@
 
 static window_t *program_windows[MAX_TASKS];
 static blueprint_t compositor[MAX_TASKS];
-static uint32_t bg_color = 0;
-static uint32_t fg_color = 0;
+static uint32_t bg_color       = 0;
+static uint32_t fg_color       = 0;
+static int hail_mary_act_count = 0;
 
 static int copy_pixels_to_screen(window_t *entry) {
     for (uint32_t row = 0; row < entry->height; row++) {
@@ -290,7 +291,8 @@ void gui_task_loop() {
 }
 
 static void gui_recovery() {
-    DEBUG_GUI_TASK("[GUI_TASK][RECOVERY]:\n");
+    DEBUG_GUI_TASK("[GUI_TASK][RECOVERY]: activated %d times\n", hail_mary_act_count);
+    hail_mary_act_count++;
     ledger_check_request(gui_task_pid);
     blankie_activate(gui_task_pid);
 }

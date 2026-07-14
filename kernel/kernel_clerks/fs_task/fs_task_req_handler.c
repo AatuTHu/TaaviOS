@@ -153,7 +153,7 @@ static int open(request_table *req) {
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
-    char filename[9];
+    char filename[13];
     const char *path = (char *)req->path;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
@@ -375,7 +375,7 @@ void fs_handle_request(request_table *req) {
         scheduler_wake_task(req->caller_pid);
         return;
     case CLOSE:
-        req->status = (close(req) == STATUS_ERROR) ? FAILED : TERMINATED;
+        req->status = (close(req) == STATUS_ERROR) ? TERMINATED : CLOSE;
         return;
     case CREATE:
         req->status       = (create(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
