@@ -24,7 +24,7 @@ static void update_remaining_heap_size() {
         current = current->next;
     }
     remaining_heap_size = total_free;
-    // DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
+    DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
 }
 
 void kmalloc_init(void *heap_start, uint32_t heap_size) {
@@ -41,7 +41,7 @@ void kmalloc_init(void *heap_start, uint32_t heap_size) {
 
 void *kmalloc(uint32_t size) {
 
-    DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
+    // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
     block_header_t *current = free_list;
     block_header_t *prev    = NULL;
     int tries               = 0;
@@ -59,7 +59,7 @@ void *kmalloc(uint32_t size) {
                     split_block->next  = current->next;
                     current->size      = size;
                     current->next      = split_block;
-                    DEBUG_KMALLOC("[KMALLOC][ALLOC]: Block split — new block at 0x%x size: %d\n", split_block, split_block->size);
+                    //   DEBUG_KMALLOC("[KMALLOC][ALLOC]: Block split — new block at 0x%x size: %d\n", split_block, split_block->size);
                 }
                 if (prev == NULL) {
                     free_list = current->next;
@@ -67,7 +67,7 @@ void *kmalloc(uint32_t size) {
                     prev->next = current->next;
                 }
                 update_remaining_heap_size();
-                DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocated at 0x%x\n", (uint8_t *)current + sizeof(block_header_t));
+                // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocated at 0x%x\n", (uint8_t *)current + sizeof(block_header_t));
 
                 return (void *)((uint8_t *)current + sizeof(block_header_t));
             }
@@ -117,7 +117,7 @@ static void merge() {
     block_header_t *current = free_list;
     while (current != NULL && current->next != NULL) {
         if ((block_header_t *)((uint8_t *)current + sizeof(block_header_t) + current->size) == current->next) {
-            DEBUG_KMALLOC("[KMALLOC][MERGE]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
+            //  DEBUG_KMALLOC("[KMALLOC][MERGE]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
             current->size += sizeof(block_header_t) + current->next->size;
             // DEBUG_KMALLOC("[KMALLOC][MERGE]: Currents size after merge: %d\n", current->size);
 
@@ -130,7 +130,7 @@ static void merge() {
 }
 
 void kfree(void *ptr) {
-    DEBUG_KMALLOC("[KMALLOC][FREE]: Freeing at 0x%x\n", ptr);
+    // DEBUG_KMALLOC("[KMALLOC][FREE]: Freeing at 0x%x\n", ptr);
     block_header_t *addr =
         (block_header_t *)((uint8_t *)ptr - sizeof(block_header_t));
     if (addr->magic != HEAP_MAGIC) {

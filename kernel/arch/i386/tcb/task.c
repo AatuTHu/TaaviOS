@@ -47,15 +47,24 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
     }
 
     if (task_mode == USER_TASK) {
-        if (vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE,
-                PAGE_USER_RW) == STATUS_ERROR)
+        if (vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW) == STATUS_ERROR) {
+            if (vmm_free_user_space(virt_dir) == STATUS_ERROR) {
+                ERROR("[TASK]: Failed to free virtual page directory\n");
+            }
+            DEBUG_TASK("[TASK]: Freeing physical page directory\n");
+            if (pmm_free(virt_to_phys((uint32_t)virt_dir)) == STATUS_ERROR) {
+                ERROR("[TASK]: Failed to free physical page directory\n");
+            }
             return NULL;
+        }
     }
 
     uint32_t kernel_stack =
         pmm_alloc(); // allocate a physical page so that it is reality
-    if (kernel_stack == 0)
+    if (kernel_stack == 0) {
+        kfree(task);
         return NULL;
+    }
 
     memset(&task->context, 0, sizeof(struct registers));
 
@@ -93,9 +102,6 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     if (task == NULL)
         return;
 
-    DEBUG_TASK("[TASK]: Destroyn task: %s \n", task->name);
-    task_table[task->pid] = NULL;
-
     DEBUG_TASK("[TASK]: Freeing virtual memory \n");
     if (task_mode == USER_TASK)
         if (vmm_free_user_space(task->page_dir) == STATUS_ERROR) {
@@ -113,10 +119,11 @@ void task_destroy(task_t *task, uint8_t task_mode) {
         ERROR("[TASK]: Failed to free physical page directory\n");
     }
 
+    DEBUG_TASK("[TASK]: Destroyn task: %s \n", task->name);
+    task_table[task->pid] = NULL;
     DEBUG_TASK("[TASK]: Freeing task\n");
     kfree(task);
-
-    DEBUG_TASK("[TASK]: Task destoyed\n");
+    DEBUG_TASK("[TASK]: Task destroyed\n");
 }
 
 task_t *task_get(uint32_t pid) {

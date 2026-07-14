@@ -157,13 +157,13 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
 
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    //    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
+    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     wake_clerk(new_request->clerk_pid);
     return STATUS_OK;
@@ -190,7 +190,6 @@ case_error:
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
 int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const char *path, const char *buf, uint32_t buffer_size, uint32_t flags) {
-    __asm__ __volatile__("cli");
     clerk_queue *q = ledger_get_queue(fs_task_pid);
     if (q == NULL) {
         ERROR("[LEDGER][ADD_FS_REQUEST]: clerk pid is invalid\n");
@@ -246,19 +245,17 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
 
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
+    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
+    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 
     wake_clerk(new_request->clerk_pid);
-    __asm__ __volatile__("sti");
     return STATUS_OK;
 
 case_error:
     scheduler_wake_task(caller_pid);
-    __asm__ __volatile__("sti");
     return STATUS_ERROR;
 }
 
@@ -295,7 +292,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
             switch (req->request_type) {
             case OPEN:
                 req->status = TERMINATED;
-                wake_clerk(reaper_task_pid);
+
                 return req->fd;
             case LIST:
             case READ:
@@ -309,7 +306,6 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
             }
 
             req->status = TERMINATED;
-            wake_clerk(reaper_task_pid);
             DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %d\n", caller_pid);
             return STATUS_OK;
         }
@@ -356,6 +352,15 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
 
     for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] != NULL && q->table[i]->status == PENDING) {
+            *q->last_idx = i;
+            DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND AT %d\n", i);
+            q->table[i]->status = IN_PROGRESS;
+            return q->table[i];
+        }
+    }
+
+    for (int i = 0; i < q->max_entries; i++) {
+        if (q->table[i] != NULL && q->table[i]->status == FAILED) {
             *q->last_idx = i;
             DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND AT %d\n", i);
             q->table[i]->status = IN_PROGRESS;

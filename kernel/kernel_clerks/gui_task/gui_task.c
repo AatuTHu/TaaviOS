@@ -43,9 +43,9 @@ static int copy_pixels_to_screen(window_t *entry) {
  * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
  */
 static int gui_draw_string(const char *str, uint32_t caller_pid) {
+    DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == caller_pid) {
-            DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d at table index %d\n", caller_pid, i);
             // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s for %d\n", str, caller_pid);
             window_t *entry = program_windows[i];
 
@@ -59,8 +59,8 @@ static int gui_draw_string(const char *str, uint32_t caller_pid) {
 
             fb_draw_string(entry->pixels, &x_pos, &y_pos, entry->width, entry->height, str, entry->fg_color, entry->bg_color);
 
-            DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New x position %d\n", x_pos);
-            DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", y_pos);
+            // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New x position %d\n", x_pos);
+            // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", y_pos);
 
             entry->x_offset = x_pos;
             entry->y_offset = y_pos;
@@ -104,14 +104,19 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
  * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
  */
 static int gui_delete_window(uint32_t owner_pid) {
-    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
+    // DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
 
     for (int i = 0; i < MAX_TASKS; i++) {
+        __asm__ __volatile__("cli");
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
-            DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
+            //  DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
             window_t *entry = program_windows[i];
 
-            fb_clear(entry->pixels, entry->width, entry->height, fg_color);
+            if (fb_clear(entry->pixels, entry->width, entry->height, fg_color) == STATUS_ERROR) {
+                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
+                return STATUS_ERROR;
+            }
+
             copy_pixels_to_screen(entry);
 
             compositor[entry->wid].entry    = NULL;
@@ -119,7 +124,7 @@ static int gui_delete_window(uint32_t owner_pid) {
             compositor[entry->wid].screen_y = 0;
 
             if (entry->pixels != NULL) {
-                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
+                //         DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
                 kfree(entry->pixels);
             }
             kfree(entry);
@@ -255,7 +260,7 @@ static int gui_handle_request(request_table *req) {
         scheduler_wake_task(req->caller_pid);
         return STATUS_OK;
     case DELETE:
-        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : TERMINATED;
+        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : FAILED;
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
@@ -286,6 +291,7 @@ void gui_task_loop() {
 
 static void gui_recovery() {
     DEBUG_GUI_TASK("[GUI_TASK][RECOVERY]:\n");
+    ledger_check_request(gui_task_pid);
     blankie_activate(gui_task_pid);
 }
 
@@ -298,7 +304,7 @@ void gui_init(task_t *gui_task) {
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
 
-    fb_fill_rect((uint32_t *)fb.virt_addr, 0, 0, 1280, 1024, fg_color);
+    fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, fg_color);
 
     memset(compositor, 0, sizeof(compositor));
 

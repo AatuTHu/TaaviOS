@@ -21,44 +21,42 @@ uint32_t fb_pack_color(uint8_t r, uint8_t g, uint8_t b) {
     return (r << fb.red_pos) | (g << fb.green_pos) | (b << fb.blue_pos);
 }
 
-void fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
+int fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint32_t color) {
 
-    /*
-    DEBUG_FB("[FB][FILL_REXT]: given buffer: 0x%x\n", pixel_buffer);
+    // DEBUG_FB("[FB][FILL_REXT]: given buffer: 0x%x\n", pixel_buffer);
     DEBUG_FB("[FB][FILL_RECT]: given x %d\n", x);
     DEBUG_FB("[FB][FILL_RECT]: given y %d\n", y);
     DEBUG_FB("[FB][FILL_RECT]: given w %d\n", w);
     DEBUG_FB("[FB][FILL_RECT]: given h %d\n", h);
-    DEBUG_FB("[FB][FILL_RECT]: given color %d\n", color);
+    // DEBUG_FB("[FB][FILL_RECT]: given color %d\n", color);
     DEBUG_FB("[FB][FILL_RECT]: fb width %d\n", fb.width);
-    DEBUG_FB("[FB][FILL_RECT]: fb height %d\n", fb.height);*/
+    DEBUG_FB("[FB][FILL_RECT]: fb height %d\n", fb.height);
 
     if (w > fb.width || h > fb.height) {
         ERROR("[FB][FILL_RECT]: Window cant be biger than the screen\n");
-        return;
+        return STATUS_ERROR;
     }
 
     for (uint32_t i = 0; i < w; i++) {
         if ((x + i) >= fb.width) {
             DEBUG_FB("[FB][FILL_RECT]: exceeded screen width x: %d & i: %d & width: %d\n", x, i, fb.width);
-            break;
+            return STATUS_ERROR;
         }
 
         for (uint32_t j = 0; j < h; j++) {
             if ((y + j) >= fb.height) {
                 DEBUG_FB("[FB][FILL_REXT]: exceeded screen height y: %d & j: %d & height: %d\n", y, j, fb.height);
-                break;
+                return STATUS_ERROR;
             }
 
             fb_put_pixel(pixel_buffer, x + i, y + j, w, color);
         }
     }
+    return STATUS_OK;
 }
 
-void fb_clear(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t color) {
-    DEBUG_FB("[FB][CLEAR_WINDOW]: clear width: %d\n", width);
-    DEBUG_FB("[FB][CLEAR_WINDOW]: clear height: %d\n", height);
-    fb_fill_rect(pixel_buffer, 0, 0, width, height, color);
+int fb_clear(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t color) {
+    return fb_fill_rect(pixel_buffer, 0, 0, width, height, color);
 }
 
 // y font height

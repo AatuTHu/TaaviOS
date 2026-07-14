@@ -32,9 +32,8 @@ static int current_idx               = -1;
 static volatile uint8_t scheduler_on = 0;
 
 static int scheduler_has_runnable_task() {
-
     for (int i = 0; i < task_count; i++) {
-        if (tasks[i] && tasks[i]->state == TASK_READY) {
+        if (tasks[i] != NULL && tasks[i]->state == TASK_READY) {
             return 1;
         }
     }
@@ -105,7 +104,7 @@ static void scheduler_check_clerks() {
 static int scheduler_find_next_task() {
     for (int i = 1; i <= task_count; i++) {
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->priority == PRIORITY_HIGH &&
+        if (tasks[next_idx] != NULL && tasks[next_idx]->priority == PRIORITY_HIGH &&
             (tasks[next_idx]->state == TASK_READY ||
                 tasks[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
@@ -114,7 +113,7 @@ static int scheduler_find_next_task() {
 
     for (int i = 1; i <= task_count; i++) {
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->priority == PRIORITY_NORMAL &&
+        if (tasks[next_idx] != NULL && tasks[next_idx]->priority == PRIORITY_NORMAL &&
             (tasks[next_idx]->state == TASK_READY ||
                 tasks[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
@@ -123,7 +122,7 @@ static int scheduler_find_next_task() {
 
     for (int i = 1; i <= task_count; i++) {
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->priority == PRIORITY_LOW &&
+        if (tasks[next_idx] != NULL && tasks[next_idx]->priority == PRIORITY_LOW &&
             (tasks[next_idx]->state == TASK_READY ||
                 tasks[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
@@ -241,6 +240,7 @@ void scheduler_remove_task() {
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
+
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Remove complite\n");
 }
 

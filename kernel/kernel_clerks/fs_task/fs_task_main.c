@@ -21,7 +21,7 @@ fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
  * Context: Runs besides other tasks to achieve asynchronous feeling.
  */
 void fs_task_loop() {
-    DEBUG_FS_TASK("[FS_TASK]: \n");
+    // DEBUG_FS_TASK("[FS_TASK]: \n");
     while (1) {
         request_table *req = ledger_fetch_next_req(fs_task_pid);
 

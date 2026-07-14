@@ -21,16 +21,8 @@
 
 void reaper_task_loop() {
     while (1) {
-        __asm__ __volatile__("cli");
-        // DEBUG("[REAPER][LOOP]: Reaping scheduler\n");
         scheduler_remove_task();
-        __asm__ __volatile__("sti");
-
-        __asm__ __volatile__("cli");
-        // DEBUG_GUI_TASK("[REAPER][LOOP]: Reaping ledger:\n");
         ledger_remove_request();
-        __asm__ __volatile__("sti");
-
         blankie_activate(reaper_task_pid);
     }
 }

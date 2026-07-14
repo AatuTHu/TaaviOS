@@ -57,7 +57,7 @@ int blankie_activate(uint32_t pid) {
     task->state       = TASK_SLEEPING;
 
     DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save %s\n", task->name);
-    while (1) {}
+    while (1) { __asm__ __volatile__("sti; hlt"); }
 
     return STATUS_OK;
 }
