@@ -231,7 +231,7 @@ static int32_t sys_exec(struct registers *r) {
     uint32_t file_size         = 0;
     uint32_t start_dir_cluster = f32_fs.root_cluster;
     uint8_t file_attr          = 0;
-    char task_name[11];
+    char task_name[TASK_NAME_LENGTH];
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
     if (fat32_find_cluster(start_dir_cluster, filename, &file_cluster, &dir_cluster, &file_size, task_name, &file_attr) ==

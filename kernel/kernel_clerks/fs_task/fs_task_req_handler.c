@@ -2,7 +2,7 @@
 #include "fs_task.h"
 
 static dir_traversal_t *dir_map[MAX_TASKS];
-
+static tasks_dir_t virt_tasks_dir[MAX_TASKS];
 /*
  * Fs_task
  * Design & Implementation: A.H, 2026
@@ -153,7 +153,7 @@ static int open(request_table *req) {
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
-    char filename[13];
+    char filename[TASK_NAME_LENGTH];
     const char *path = (char *)req->path;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
@@ -259,7 +259,7 @@ static int find(const request_table *req) {
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     const char *path          = (char *)req->path;
-    char filename[9];
+    char filename[TASK_NAME_LENGTH];
 
     if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
         direction = backwards;
@@ -351,10 +351,38 @@ static int free(request_table *req) {
     return STATUS_OK;
 }
 
+int fs_return_vdir_tasks(request_table *req) {
+    DEBUG_FS_TASK("[FS_TASK][M_VIRT_DIR]: Returning vdir tasks\n");
+    int slots_read = 0;
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_t *temp_task = task_get_by_index(i);
+        if (virt_tasks_dir[i].slot_used == 1) {
+            DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASK]: Found %d - %s \n", virt_tasks_dir[i].pid, virt_tasks_dir[i].name);
+            slots_read++;
+        }
+    }
+
+    if (slots_read > 0) {
+        req->fd = slots_read;
+        return STATUS_OK;
+    }
+
+    req->fd = 0;
+    return STATUS_ERROR;
+}
+
 void fs_handle_request(request_table *req) {
-    task_t *fs_task = task_get(fs_task_pid);
+    task_t *fs_task = task_get_by_pid(fs_task_pid);
 
     if (fs_task == NULL || req == NULL) {
+        return;
+    }
+
+    if (req->path != NULL && strcmp(req->path, "SYS_INFO/TASKS") == 0) {
+        req->status       = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         return;
     }
 
@@ -401,5 +429,23 @@ void fs_handle_request(request_table *req) {
         req->status = TERMINATED;
         scheduler_wake_task(req->caller_pid);
         return;
+    }
+}
+
+void fs_maintain_virt_dir() {
+    DEBUG_FS_TASK("[FS_TASK][M_VIRT_DIR]: Maintaining virtual directory\n");
+    memset(virt_tasks_dir, 0, sizeof(virt_tasks_dir));
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_t *temp_task = task_get_by_index(i);
+
+        if (temp_task == NULL || temp_task->task_mode == KERNEL_TASK || temp_task->state == TASK_DEAD) {
+            continue;
+        }
+
+        virt_tasks_dir[i].pid = temp_task->pid;
+        strcpy(virt_tasks_dir[i].name, temp_task->name);
+        virt_tasks_dir[i].slot_used = 1;
+        DEBUG_FS_TASK("[FS_TASK][M_VIRT_DIR]: Added %d - %s to virtual directory\n", virt_tasks_dir[i].pid, virt_tasks_dir[i].name);
     }
 }

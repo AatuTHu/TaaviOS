@@ -243,7 +243,7 @@ static int gui_paint_window_to_screen(uint32_t owner_pid) {
 }
 
 static int gui_handle_request(request_table *req) {
-    task_t *gui_task = task_get(gui_task_pid);
+    task_t *gui_task = task_get_by_pid(gui_task_pid);
 
     if (gui_task == NULL || req == NULL)
         return STATUS_ERROR;

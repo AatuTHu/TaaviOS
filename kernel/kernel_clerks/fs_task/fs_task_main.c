@@ -33,6 +33,7 @@ void fs_task_loop() {
                 //__asm__ __volatile__("sti");
             }
         }
+        fs_maintain_virt_dir();
 
         /*
          * if(virt file needs servicing)

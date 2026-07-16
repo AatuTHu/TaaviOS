@@ -126,13 +126,20 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     DEBUG_TASK("[TASK]: Task destroyed\n");
 }
 
-task_t *task_get(uint32_t pid) {
+task_t *task_get_by_pid(uint32_t pid) {
     if (pid < MAX_TASKS) {
         for (int i = 0; i < MAX_TASKS; i++) {
             if (task_table[i] != NULL && task_table[i]->pid == pid) {
                 return task_table[i];
             }
         }
+    }
+    return NULL;
+}
+
+task_t *task_get_by_index(uint32_t index) {
+    if (task_table[index] != NULL) {
+        return task_table[index];
     }
     return NULL;
 }
