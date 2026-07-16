@@ -13,5 +13,6 @@ int strlen(const char *s);
 int strcmp(const char *a, const char *b);
 void itoa(int n, char *buf);
 char *strcat(char *dst, const char *src);
+int atoi(const char *str);
 
 #endif

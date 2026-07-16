@@ -18,7 +18,7 @@ clerk_queue clerk_queues[CLERK_COUNT] = {
 };
 
 static void wake_clerk(uint32_t clerk_pid) {
-    task_t *clerk = task_get(clerk_pid);
+    task_t *clerk = task_get_by_pid(clerk_pid);
     if (clerk_pid != reaper_task_pid) {
         clerk->priority = PRIORITY_HIGH;
     }
@@ -222,10 +222,9 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
         //     new_request->buf, buffer_size);
     }
 
-    if (type == OPEN || type == FIND || type == CREATE) {
+    if (path != NULL && (type == OPEN || type == FIND || type == CREATE || type == LIST)) {
         strncpy(new_request->path, path, sizeof(new_request->path));
-        // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: path: %s and buf length: %d\n",
-        //     new_request->path, buffer_size);
+        DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: path: %s and buf length: %d\n", new_request->path, buffer_size);
     }
 
     int found = -1;

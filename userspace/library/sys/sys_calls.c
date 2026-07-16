@@ -74,8 +74,8 @@ int sys_exec(const char *filename) {
     return result;
 }
 
-int sys_getdirents(const char *buf, uint32_t len) {
-    __asm__ __volatile__("int $0x80" : : "a"(141), "b"(buf), "c"(len));
+int sys_getdirents(const char *buf, const char *path, uint32_t len) {
+    __asm__ __volatile__("int $0x80" : : "a"(141), "b"(buf), "c"(len), "d"(path));
     return 0;
 }
 

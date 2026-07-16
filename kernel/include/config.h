@@ -7,10 +7,11 @@
 #define SEG_USER_DATA   0x23
 #define GDT_TSS_SEL     0x2B
 
-#define PIT_FREQUENCY 1000
-#define MAX_TASKS     256
-#define USER_TASK     1
-#define KERNEL_TASK   0
+#define TASK_NAME_LENGTH 9
+#define PIT_FREQUENCY    1000
+#define MAX_TASKS        256
+#define USER_TASK        1
+#define KERNEL_TASK      0
 
 #define PAGE_SIZE              4096
 #define MAX_PAGES              (1024 * 1024)

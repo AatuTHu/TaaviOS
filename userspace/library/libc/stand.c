@@ -72,7 +72,7 @@ int change_directory(const char *path, char *directory_name) {
 }
 
 int list_dirents(const char *buf, int buffer_size) {
-    sys_getdirents(buf, buffer_size);
+    sys_getdirents(buf, NULL, buffer_size);
     return 0;
 }
 

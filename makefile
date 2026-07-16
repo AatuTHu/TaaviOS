@@ -19,7 +19,7 @@ ASM_SRCS = $(shell find kernel boot -name '*.asm')
 C_OBJS   = $(patsubst %.c,   $(BUILD)/%.o, $(C_SRCS))
 ASM_OBJS = $(patsubst %.asm, $(BUILD)/%.o, $(ASM_SRCS))
 OBJS     = $(ASM_OBJS) $(C_OBJS)
-all: $(BUILD)/taavi.bin
+all: $(BUILD)/taavi.bin $(BUILD)/taavi.elf
 $(BUILD)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -28,10 +28,14 @@ $(BUILD)/%.o: %.asm
 	$(AS) $(ASFLAGS) $< -o $@
 $(BUILD)/taavi.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
-iso: $(BUILD)/taavi.bin
+$(BUILD)/taavi.elf: $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $(OBJS)
+
+iso: $(BUILD)/taavi.bin $(BUILD)/taavi.elf
 	$(MAKE) -C userspace
 	mkdir -p isodir/boot/grub
 	cp $(BUILD)/taavi.bin isodir/boot/
+	cp $(BUILD)/taavi.elf isodir/boot/
 	cp userspace/build/bin/*.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/taavi.iso isodir
@@ -45,7 +49,7 @@ run: iso
 clean:
 	$(MAKE) -C userspace clean
 	find . -name '*.o' -delete
-	rm -f taavi.bin taavi.iso
+	rm -f taavi.bin taavi.iso taavi.elf
 	rm -rf $(BUILD) isodir
 	rm -f cppcheck_report.txt
 
@@ -58,6 +62,11 @@ disk:
 	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::test/hello.txt
 	mcopy -i fat.img ./isodir/boot/shell.elf ::sysbin/shell
 	mcopy -i fat.img ./isodir/boot/fs_int.elf ::sysbin/fs_int
+
+reset:
+	$(MAKE) clean
+	$(MAKE) iso
+	$(MAKE) disk
 
 check:
 	cppcheck \

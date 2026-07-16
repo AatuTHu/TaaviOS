@@ -32,11 +32,18 @@ typedef struct dir_traversal_t {
     uint32_t prev_cluster;
 } dir_traversal_t;
 
+typedef struct tasks_dir_t {
+    uint32_t pid;
+    char name[TASK_NAME_LENGTH];
+    uint8_t slot_used;
+} tasks_dir_t;
+
 void fs_init(const task_t *fs_task);
 void fs_task_loop();
 // void fs_recovery();
 // void fs_wake_task(uint32_t pid);
 void fs_handle_request(request_table *req);
+void fs_maintain_virt_dir();
 
 extern fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
 

@@ -8,6 +8,7 @@ void command_help() {
     print("\n------------------------------------------------------------\n");
     print("Available commands                                            \n");
     print("- help                'Prints this list'                      \n");
+    print("- lista               'Lists active tasks'                    \n");
     print("- about               'Useless function'                      \n");
     print("- get my pid          'Shells pid'                            \n");
     print("- exec [task]         'Executes a task'                       \n");
@@ -47,6 +48,13 @@ void command_caw(const char *target) {
     }
 }
 
+void command_lista() {
+    char tasks[512] = {0};
+    int result      = get_ac_tasks(tasks, sizeof(tasks));
+    print("\n");
+    print(tasks);
+}
+
 void exec_cmd(char *buf) {
     if (str_eq(buf, "help") == 1) {
         command_help();
@@ -55,6 +63,11 @@ void exec_cmd(char *buf) {
     }
     if (str_eq(buf, "about") == 1) {
         command_about();
+        print("\n");
+        return;
+    }
+    if (str_eq(buf, "lista") == 1) {
+        command_lista();
         print("\n");
         return;
     }

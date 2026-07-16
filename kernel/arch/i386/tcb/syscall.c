@@ -231,7 +231,7 @@ static int32_t sys_exec(struct registers *r) {
     uint32_t file_size         = 0;
     uint32_t start_dir_cluster = f32_fs.root_cluster;
     uint8_t file_attr          = 0;
-    char task_name[11];
+    char task_name[TASK_NAME_LENGTH];
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Trying to find %s\n", filename);
     if (fat32_find_cluster(start_dir_cluster, filename, &file_cluster, &dir_cluster, &file_size, task_name, &file_attr) ==
@@ -308,6 +308,7 @@ static int32_t sys_getdents(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_GETDENTS]\n");
     char *buffer = (char *)r->ebx;
     uint32_t len = r->ecx;
+    char *path   = (char *)r->edx;
 
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {
@@ -315,7 +316,7 @@ static int32_t sys_getdents(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(current->pid, LIST, 0, NULL, buffer, len, O_RDONLY);
+    ledger_add_fs_req(current->pid, LIST, 0, path, buffer, len, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
