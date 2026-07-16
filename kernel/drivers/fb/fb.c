@@ -59,75 +59,82 @@ int fb_clear(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t c
     return fb_fill_rect(pixel_buffer, 0, 0, width, height, color);
 }
 
+int fb_scroll_text(uint32_t *pixel_buffer, uint32_t *y_offset, uint32_t *x_offset, uint32_t width, uint32_t height, uint32_t color) {
+
+    if (width > fb.width || height > fb.height || pixel_buffer == NULL) {
+        return STATUS_ERROR;
+    }
+
+    uint32_t *buf = (uint32_t *)pixel_buffer;
+    memmove(buf, buf + width * FONT_HEIGHT, (height - FONT_HEIGHT) * width * sizeof(uint32_t));
+    for (uint32_t row = height - FONT_HEIGHT; row < height; row++)
+        for (uint32_t col = 0; col < width; col++)
+            fb_put_pixel(pixel_buffer, col, row, width, color);
+    *y_offset = height - FONT_HEIGHT;
+    *x_offset = DEFAULT_HORIZONTAL_PADDING;
+    return STATUS_OK;
+}
+
 // y font height
 // x space between chars?
 static void fb_draw_char(uint32_t *pixel_buffer, uint32_t **x, uint32_t **y, uint32_t width, uint32_t height, char c, uint32_t fg_color, uint32_t bg_color) {
-    const uint8_t *glyph = PC_FACE_MODERNDOS_8x16[(uint8_t)c];
+    uint8_t *glyph     = PC_FACE_MODERNDOS_8x16[(uint8_t)c];
+    uint8_t backspaced = 0;
 
     switch (c) {
     case '\0':
         return;
     case '\n':
-        if ((**y + 16) > height) {
-            uint32_t *buf = (uint32_t *)pixel_buffer;
-            memmove(buf, buf + width * 16, (height - 16) * width * sizeof(uint32_t));
-            for (uint32_t row = height - 16; row < height; row++)
-                for (uint32_t col = 0; col < width; col++)
-                    fb_put_pixel(pixel_buffer, col, row, width, bg_color);
-            **y = height - 16;
-            **x = 0;
+
+        if ((**y + FONT_HEIGHT) >= (height - DEFAULT_VERTICAL_PADDING)) {
+            uint32_t y_pos = **y, x_pos = **x;
+            fb_scroll_text(pixel_buffer, &y_pos, &x_pos, width, height, bg_color);
+            **y = y_pos;
+            **x = x_pos;
             return;
         }
 
-        **y += 16;
-        **x = 0;
+        **y += FONT_HEIGHT;
+        **x = DEFAULT_HORIZONTAL_PADDING;
         return;
     case '\b':
-        if (**x >= 8) {
-            **x -= 8;
-        } else if (**y >= 16) {
-            **y -= 16;
-            **x = width - 8;
+        if (**x >= FONT_WIDTH) {
+            **x -= FONT_WIDTH;
+        } else if (**y >= FONT_HEIGHT) {
+            **y -= FONT_HEIGHT;
+            **x = width - FONT_WIDTH;
         } else if (**x == 0 && **y == 0) {
             return;
         }
-        const uint8_t *empty = PC_FACE_MODERNDOS_8x16[0];
-        for (int row = 0; row < 16; row++) {
-            uint8_t byte = empty[row];
-            for (int col = 0; col < 8; col++) {
-                uint8_t bit    = byte & (0x80 >> col);
-                uint32_t color = bit != 0 ? fg_color : bg_color;
-                fb_put_pixel(pixel_buffer, **x + col, **y + row, width, color);
-            }
-        }
-        return;
+        backspaced = 1;
+        glyph      = PC_FACE_MODERNDOS_8x16[0];
+        break;
     }
 
-    for (int row = 0; row < 16; row++) {
+    for (int row = 0; row < FONT_HEIGHT; row++) {
         uint8_t byte = glyph[row];
-        for (int col = 0; col < 8; col++) {
+        for (int col = 0; col < FONT_WIDTH; col++) {
             uint8_t bit    = byte & (0x80 >> col);
             uint32_t color = bit != 0 ? fg_color : bg_color;
             fb_put_pixel(pixel_buffer, **x + col, **y + row, width, color);
         }
     }
 
-    **x += 8;
-
-    if ((**y + 16) > height) {
-        uint32_t *buf = (uint32_t *)pixel_buffer;
-        memmove(buf, buf + width * 16, (height - 16) * width * sizeof(uint32_t));
-        for (uint32_t row = height - 16; row < height; row++)
-            for (uint32_t col = 0; col < width; col++)
-                fb_put_pixel(pixel_buffer, col, row, width, bg_color);
-        **y = height - 16;
-        **x = 0;
+    if (backspaced == 1)
         return;
-    }
+
+    **x += FONT_WIDTH;
 
     if (**x >= width) {
-        **y += 16;
-        **x = 0;
+        if ((**y + FONT_HEIGHT) >= (height - DEFAULT_VERTICAL_PADDING)) {
+            uint32_t y_pos = **y, x_pos = **x;
+            fb_scroll_text(pixel_buffer, &y_pos, &x_pos, width, height, bg_color);
+            **y = y_pos;
+            **x = x_pos;
+            return;
+        }
+        **y += FONT_HEIGHT;
+        **x = DEFAULT_HORIZONTAL_PADDING;
     }
 }
 

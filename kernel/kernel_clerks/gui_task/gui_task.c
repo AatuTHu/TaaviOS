@@ -195,8 +195,8 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     entry->owner_pid = owner_pid;
     entry->width     = width;
     entry->height    = height;
-    entry->x_offset  = 0;
-    entry->y_offset  = 0;
+    entry->x_offset  = DEFAULT_HORIZONTAL_PADDING;
+    entry->y_offset  = DEFAULT_VERTICAL_PADDING;
     entry->z_index   = 1;
     entry->fg_color  = fb_pack_color(255, 255, 255);
     entry->bg_color  = fb_pack_color(0, 0, 0);

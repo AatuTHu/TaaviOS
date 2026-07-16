@@ -15,7 +15,6 @@ void command_help() {
     print("- caw  [pid]          'Changes active window to provided pit' \n");
     print("- tasks               'Lists are active tasks with their pids'\n");
     print("- exit                'Exits and kills shell'                 \n");
-    print("\n");
 }
 
 void command_about() {
@@ -159,7 +158,6 @@ void main(void) {
      }*/
 
     while (1) {
-        print("\n");
         print(">> ");
         pos = 0;
         while (1) {

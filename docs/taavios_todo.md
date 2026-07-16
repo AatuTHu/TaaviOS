@@ -40,3 +40,7 @@
 **Memory**
 - Look in to how we can allocate more heap if it is at the end' <- Was able to build this. however
   It can allocate more space for heap. But if the space if deallocated it should be returned? That is the whole point to not have huge amount of heap at the start?
+
+**GUI_TASK**
+- Calculate how many lines there can be at a window and do the scrolling by that count instead of offset at a height - padding. 
+  height/16 = lines in window. Each x > width or \n adds to y a one. Might aswell divide the window to x slots.

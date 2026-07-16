@@ -63,6 +63,9 @@ typedef enum {
 #define O_RDWR   0x04
 #define O_CREAT  0x08
 
+#define DEFAULT_HORIZONTAL_PADDING 5
+#define DEFAULT_VERTICAL_PADDING   5
+
 #define MAX_FD_ENTRIES      256
 #define MAX_FS_REQ_ENTRIES  50
 #define MAX_GUI_REQ_ENTRIES 500
