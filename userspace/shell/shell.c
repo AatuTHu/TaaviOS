@@ -49,11 +49,10 @@ void command_caw(const char *target) {
 }
 
 void command_lista() {
-    int result = open("SYS_INFO/TASKS", O_RDONLY);
-
-    if (result >= 3) {
-        print("lista\n");
-    }
+    char tasks[512] = {0};
+    int result      = get_ac_tasks(tasks, sizeof(tasks));
+    print("\n");
+    print(tasks);
 }
 
 void exec_cmd(char *buf) {

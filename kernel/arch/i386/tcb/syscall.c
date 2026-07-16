@@ -308,6 +308,7 @@ static int32_t sys_getdents(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_GETDENTS]\n");
     char *buffer = (char *)r->ebx;
     uint32_t len = r->ecx;
+    char *path   = (char *)r->edx;
 
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {
@@ -315,7 +316,7 @@ static int32_t sys_getdents(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(current->pid, LIST, 0, NULL, buffer, len, O_RDONLY);
+    ledger_add_fs_req(current->pid, LIST, 0, path, buffer, len, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 

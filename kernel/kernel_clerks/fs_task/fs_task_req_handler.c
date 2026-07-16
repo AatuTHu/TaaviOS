@@ -298,7 +298,51 @@ static int find(const request_table *req) {
     return STATUS_OK;
 }
 
+int fs_return_vdir_tasks(request_table *req) {
+    DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Returning vdir tasks\n");
+    int read_size = 0;
+
+    char *list_buffer = (char *)kmalloc(req->buffer_size + 1);
+
+    if (list_buffer == NULL) {
+        ERROR("[FS_TASK][R_VIRT_DIR_TASKS]: Was unable to allocate buffer. Aborting\n");
+        return STATUS_ERROR;
+    }
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_t *temp_task = task_get_by_index(i);
+        if (virt_tasks_dir[i].slot_used == 1) {
+            char spid[10];
+            itoa(virt_tasks_dir[i].pid, spid);
+
+            memcpy(&list_buffer[read_size], spid, strlen(spid));
+            read_size += strlen(spid);
+            list_buffer[read_size] = '/';
+            read_size += 1;
+            memcpy(&list_buffer[read_size], virt_tasks_dir[i].name, strlen(virt_tasks_dir[i].name));
+            read_size += strlen(virt_tasks_dir[i].name);
+
+            list_buffer[read_size] = '\n';
+            read_size += 1;
+            list_buffer[read_size] = '\0';
+
+            DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Read size %d \n", read_size);
+        }
+    }
+
+    // DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Found %s\n", list_buffer);
+    memcpy(req->buf, list_buffer, read_size);
+
+    kfree(list_buffer);
+    return (read_size > 0) ? STATUS_OK : STATUS_ERROR;
+}
+
 static int list(request_table *req) {
+
+    if (strcmp(req->path, "SYS_INFO/TASKS") == 0) {
+        return (fs_return_vdir_tasks(req) == STATUS_ERROR) ? STATUS_ERROR : STATUS_OK;
+    }
+
     uint32_t base_cluster = f32_fs.root_cluster;
     uint32_t read_size    = 0;
     dir_traversal_t *map  = dir_get_direction(req->caller_pid);
@@ -351,38 +395,10 @@ static int free(request_table *req) {
     return STATUS_OK;
 }
 
-int fs_return_vdir_tasks(request_table *req) {
-    DEBUG_FS_TASK("[FS_TASK][M_VIRT_DIR]: Returning vdir tasks\n");
-    int slots_read = 0;
-
-    for (int i = 0; i < MAX_TASKS; i++) {
-        task_t *temp_task = task_get_by_index(i);
-        if (virt_tasks_dir[i].slot_used == 1) {
-            DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASK]: Found %d - %s \n", virt_tasks_dir[i].pid, virt_tasks_dir[i].name);
-            slots_read++;
-        }
-    }
-
-    if (slots_read > 0) {
-        req->fd = slots_read;
-        return STATUS_OK;
-    }
-
-    req->fd = 0;
-    return STATUS_ERROR;
-}
-
 void fs_handle_request(request_table *req) {
     task_t *fs_task = task_get_by_pid(fs_task_pid);
 
     if (fs_task == NULL || req == NULL) {
-        return;
-    }
-
-    if (req->path != NULL && strcmp(req->path, "SYS_INFO/TASKS") == 0) {
-        req->status       = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
         return;
     }
 
