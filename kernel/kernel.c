@@ -193,7 +193,7 @@ void kernel_main(const uint32_t *mboot_info) {
         DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n",
             first_task->context.eip, first_task->context.useresp,
             first_task->name);
-        // clear_terminal(); vga relic
+
         jump_to_usermode(first_task->context.eip, first_task->context.useresp, first_task->kernel_stack);
     }
 }
