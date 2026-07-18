@@ -8,7 +8,9 @@ void memcpy(void *dst, const void *src, uint32_t n) {
 
 void memset(void *ptr, int value, int size) {
     char *p = (char *)ptr;
-    for (int i = 0; i < size; i++) { p[i] = value; }
+    for (int i = 0; i < size; i++) {
+        p[i] = value;
+    }
 }
 
 int memcmp(const void *s1, const void *s2, size_t n) {

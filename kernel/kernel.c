@@ -49,7 +49,7 @@ static void init_arch() {
 
     DEBUG("[KERNEL]: Allocating kernel page directory\n");
     vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE,
-        PAGE_PRESENT | PAGE_RW);
+              PAGE_PRESENT | PAGE_RW);
 }
 
 static void init_mm(const uint32_t *mboot_info) {
@@ -70,8 +70,8 @@ static void check_for_modules(const uint32_t *mboot_info) {
         total_mods = mbi->mods_count;
 
         for (uint32_t i = 0; i < total_mods && i < MAX_MODS; i++) {
-            module_starts[i] = mods[i].mod_start;
-            module_ends[i]   = mods[i].mod_end;
+            module_starts[i]    = mods[i].mod_start;
+            module_ends[i]      = mods[i].mod_end;
 
             uint32_t start_page = mods[i].mod_start / PAGE_SIZE;
             uint32_t end_page   = (mods[i].mod_end + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -104,7 +104,7 @@ static void init_microlithic() {
     DEBUG("[KERNEL]: --INIT KERNEL TASKS--\n");
     DEBUG("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, "idle",
-        &kernel_page_dir, KERNEL_TASK);
+                                      &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         scheduler_add(kernel_task);
@@ -112,7 +112,7 @@ static void init_microlithic() {
 
     DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
     kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, "fs_task",
-        &kernel_page_dir, KERNEL_TASK);
+                              &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         fs_init(kernel_task);
@@ -121,7 +121,7 @@ static void init_microlithic() {
 
     DEBUG("[KERNEL]: Creating an reaper kernel task\n");
     kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop,
-        "reaper", &kernel_page_dir, KERNEL_TASK);
+                              "reaper", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         reaper_init(kernel_task);
@@ -130,7 +130,7 @@ static void init_microlithic() {
 
     DEBUG("[KERNEL]: Creating an graphical user interface kernel task\n");
     kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop,
-        "gui_task", &kernel_page_dir, KERNEL_TASK);
+                              "gui_task", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         gui_init(kernel_task);
@@ -191,8 +191,8 @@ void kernel_main(const uint32_t *mboot_info) {
         vmm_switch(first_task->page_dir);
         first_task->started = 1;
         DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n",
-            first_task->context.eip, first_task->context.useresp,
-            first_task->name);
+              first_task->context.eip, first_task->context.useresp,
+              first_task->name);
 
         jump_to_usermode(first_task->context.eip, first_task->context.useresp, first_task->kernel_stack);
     }

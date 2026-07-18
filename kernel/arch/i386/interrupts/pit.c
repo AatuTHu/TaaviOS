@@ -39,7 +39,7 @@ void pit_sleep_ms(uint32_t ms) {
     uint32_t tick_count_start = tick_count;
 
     // Convert target milliseconds to the equivalent number of ticks
-    uint32_t ticks_to_wait = ms * (ticks_per_second / 1000);
+    uint32_t ticks_to_wait    = ms * (ticks_per_second / 1000);
 
     // Loop until the required time has elapsed in the background
     while ((tick_count - tick_count_start) < ticks_to_wait) {

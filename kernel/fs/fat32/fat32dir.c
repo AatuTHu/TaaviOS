@@ -25,8 +25,8 @@ void fat32_list_dir(uint32_t cluster, uint8_t *out_buf, uint32_t *out_size) {
     const fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
     uint32_t max_entries            = __fat32_calculate_max_dir_entries();
 
-    *out_size  = 0;
-    out_buf[0] = '\0';
+    *out_size                       = 0;
+    out_buf[0]                      = '\0';
 
     for (uint32_t i = 0; i < max_entries; i++) {
         if (dir_entry[i].name[0] == FAT32_DIRENT_FREE)
@@ -42,7 +42,7 @@ void fat32_list_dir(uint32_t cluster, uint8_t *out_buf, uint32_t *out_size) {
 
         char name_buf[12];
         memcpy(name_buf, dir_entry[i].name, 11);
-        name_buf[11] = '\0';
+        name_buf[11]      = '\0';
 
         uint32_t name_len = strlen(name_buf);
         memcpy(&out_buf[*out_size], name_buf, name_len);

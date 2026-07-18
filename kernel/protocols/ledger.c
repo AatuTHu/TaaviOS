@@ -10,7 +10,7 @@ request_table *fs_table[MAX_FS_REQ_ENTRIES];
 int last_fs_req_idx = -1;
 
 request_table *gui_table[MAX_GUI_REQ_ENTRIES];
-int last_gui_req_idx = -1;
+int last_gui_req_idx                  = -1;
 
 clerk_queue clerk_queues[CLERK_COUNT] = {
     [fs_task_pid]  = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
@@ -157,13 +157,13 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
 
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    //    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
-    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
-    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
-    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
-    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
-    //   DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     wake_clerk(new_request->clerk_pid);
     return STATUS_OK;
@@ -202,6 +202,8 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
         goto case_error;
     }
 
+    memset(new_request, 0, sizeof(request_table));
+
     if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type == READ || type == WRITE)) {
         ERROR("[LEDGER][ADD_FS_REQUEST]: Invalid fd number. Aborting\n");
         kfree(new_request);
@@ -223,7 +225,8 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     }
 
     if (path != NULL && (type == OPEN || type == FIND || type == CREATE || type == LIST)) {
-        strncpy(new_request->path, path, sizeof(new_request->path));
+        strncpy(new_request->path, path, sizeof(new_request->path) - 1);
+        new_request->path[sizeof(new_request->path) - 1] = '\0';
         DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: path: %s and buf length: %d\n", new_request->path, buffer_size);
     }
 
@@ -244,11 +247,11 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
 
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
-    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
-    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 
     wake_clerk(new_request->clerk_pid);
     return STATUS_OK;
@@ -294,10 +297,15 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
 
                 return req->fd;
             case LIST:
+                if (out != NULL) {
+                    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d\n", caller_pid, req->buffer_size);
+                    memcpy(out, req->buf, req->buffer_size);
+                }
+                req->status = TERMINATED;
+                return req->buffer_size;
             case READ:
                 if (out != NULL) {
                     memcpy(out, req->buf, req->buffer_size);
-                    out[req->buffer_size] = '\0';
                 }
                 break;
             default:
@@ -305,7 +313,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
             }
 
             req->status = TERMINATED;
-            DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %d\n", caller_pid);
+            DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %d. With req.type: %d\n", caller_pid, req->request_type);
             return STATUS_OK;
         }
 

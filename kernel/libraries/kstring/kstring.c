@@ -8,7 +8,9 @@ void memcpy(void *dst, const void *src, uint32_t n) {
 
 void memset(void *ptr, int value, int size) {
     char *p = (char *)ptr;
-    for (int i = 0; i < size; i++) { p[i] = value; }
+    for (int i = 0; i < size; i++) {
+        p[i] = value;
+    }
 }
 
 void *memmove(void *dest, const void *src, size_t n) {
@@ -50,7 +52,9 @@ void strncpy(char *dest, const char *src, uint32_t size) {
         if (src[i] != '\0') {
             dest[i] = src[i];
         } else {
-            while (i < size) { dest[i++] = '\0'; }
+            while (i < size) {
+                dest[i++] = '\0';
+            }
             break;
         }
     }
@@ -62,6 +66,18 @@ int strcmp(const char *a, const char *b) {
         b++;
     }
     return *a - *b;
+}
+
+int strncmp(const char *a, const char *b, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (*a != *b || *a == '\0') {
+            return (unsigned char)*a - (unsigned char)*b;
+        }
+        a++;
+        b++;
+    }
+
+    return 0;
 }
 
 char *strcat(char *dst, const char *src) {

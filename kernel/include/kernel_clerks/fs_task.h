@@ -10,10 +10,10 @@
 #include "task.h"
 #include <stdint.h>
 
-#define INVALID_IDX        -1
+#define INVALID_IDX -1
 #define free_starting_slot 3
-#define backwards          0
-#define forwards           1
+#define backwards 0
+#define forwards 1
 
 typedef struct fd_entry_t {
     uint32_t owner_pid;

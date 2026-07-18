@@ -14,7 +14,7 @@ static uint32_t page_count = 0;
 static void fb_put_pixel(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t color) {
     uint32_t *position = (uint32_t *)(pixel_buffer + y * width + x);
     // DEBUG_FB("[FB][PUT_PIXEL]: position: %d\n", *position);
-    *position = color;
+    *position          = color;
 }
 
 uint32_t fb_pack_color(uint8_t r, uint8_t g, uint8_t b) {
@@ -172,16 +172,16 @@ int fb_init(const struct multiboot_info *mbi) {
     /*for (uint32_t i = 0; i < page_count; i++) {
         paging_map(&kernel_page_dir, FB_VIRTUAL_BASE + i * PAGE_SIZE, (uint32_t)mbi->framebuffer_addr + i * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
     }*/
-    fb.phys_addr = mbi->framebuffer_addr;
-    fb.width     = mbi->framebuffer_width;
-    fb.height    = mbi->framebuffer_height;
-    fb.pitch     = mbi->framebuffer_pitch;
-    fb.bpp       = mbi->framebuffer_bpp;
-    fb.virt_addr = FB_VIRTUAL_BASE;
+    fb.phys_addr  = mbi->framebuffer_addr;
+    fb.width      = mbi->framebuffer_width;
+    fb.height     = mbi->framebuffer_height;
+    fb.pitch      = mbi->framebuffer_pitch;
+    fb.bpp        = mbi->framebuffer_bpp;
+    fb.virt_addr  = FB_VIRTUAL_BASE;
 
-    fb.blue_pos  = mbi->framebuffer_blue_field_position;
-    fb.red_pos   = mbi->framebuffer_red_field_position;
-    fb.green_pos = mbi->framebuffer_green_field_position;
+    fb.blue_pos   = mbi->framebuffer_blue_field_position;
+    fb.red_pos    = mbi->framebuffer_red_field_position;
+    fb.green_pos  = mbi->framebuffer_green_field_position;
 
     fb.blue_size  = mbi->framebuffer_blue_mask_size;
     fb.red_size   = mbi->framebuffer_red_mask_size;

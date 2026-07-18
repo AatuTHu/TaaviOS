@@ -51,7 +51,11 @@ void command_lista() {
     char tasks[512] = {0};
     int result      = get_ac_tasks(tasks, sizeof(tasks));
     print("\n");
-    print(tasks);
+    if (result > 0) {
+        print(tasks);
+    } else {
+        print("Failed to get tasks\n");
+    }
 }
 
 void exec_cmd(char *buf) {

@@ -6,10 +6,10 @@
 
 #define O_RDONLY 0x01
 #define O_WRONLY 0x02
-#define O_RDWR   0x04
-#define O_CREAT  0x08
+#define O_RDWR 0x04
+#define O_CREAT 0x08
 
-#define STATUS_OK    0
+#define STATUS_OK 0
 #define STATUS_ERROR -1
 
 void print(const char *msg);
@@ -22,7 +22,7 @@ void write(int fd, const char *msg);
 void close(uint32_t fd);
 int mkdir(const char *path);
 int change_directory(const char *path, char *directory_name);
-int list_dirents(const char *buf, int buffer_size);
+int list_dirents(char *buf, int buffer_size);
 
 int exec(const char *filename);
 void idle(void);

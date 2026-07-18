@@ -12,6 +12,5 @@ int ch_act_window(int target_pid) {
 }
 
 int get_ac_tasks(char *buf, int len) {
-    char path[15] = "SYS_INFO/TASKS";
-    return sys_getdirents(buf, path, len);
+    return sys_getdirents(buf, "SYS_INFO/TASKS", len);
 }

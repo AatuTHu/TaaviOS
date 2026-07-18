@@ -2,8 +2,8 @@
 #include "string.h"
 #include "sys_calls.h"
 
-#define forward      0
-#define backward     -1
+#define forward 0
+#define backward -1
 #define MAX_PATH_LEN 128
 static char save_path[MAX_PATH_LEN];
 
@@ -71,9 +71,8 @@ int change_directory(const char *path, char *directory_name) {
     return parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN);
 }
 
-int list_dirents(const char *buf, int buffer_size) {
-    sys_getdirents(buf, NULL, buffer_size);
-    return 0;
+int list_dirents(char *buf, int buffer_size) {
+    return sys_getdirents(buf, NULL, buffer_size);
 }
 
 void print(const char *msg) {

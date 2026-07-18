@@ -39,8 +39,8 @@ typedef struct {
 void ledger_check_request(uint32_t clerk_pid);
 int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out);
 int ledger_add_fs_req(uint32_t caller_pid,
-    operations_t type, uint32_t fd, const char *path,
-    const char *buf, uint32_t buffer_size, uint32_t flags);
+                      operations_t type, uint32_t fd, const char *path,
+                      const char *buf, uint32_t buffer_size, uint32_t flags);
 int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *buf, uint32_t buffer_size);
 request_table *ledger_fetch_next_req(uint32_t clerk_pid);
 void ledger_init();

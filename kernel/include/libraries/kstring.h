@@ -11,6 +11,7 @@ void strcpy(char *dest, const char *src);
 void strncpy(char *dest, const char *src, uint32_t size);
 int strlen(const char *s);
 int strcmp(const char *a, const char *b);
+int strncmp(const char *a, const char *b, size_t n);
 void itoa(int n, char *buf);
 char *strcat(char *dst, const char *src);
 int atoi(const char *str);

@@ -51,7 +51,9 @@ int ata_read_sector(uint32_t lba, uint8_t *buf) {
         return -1;
 
     uint16_t *ptr = (uint16_t *)buf;
-    for (int i = 0; i < 256; i++) { ptr[i] = inw(ATA_DATA); }
+    for (int i = 0; i < 256; i++) {
+        ptr[i] = inw(ATA_DATA);
+    }
     return 0;
 }
 
@@ -69,7 +71,9 @@ int ata_write_sector(uint32_t lba, const uint8_t *buf) {
         return -1;
 
     const uint16_t *ptr = (uint16_t *)buf;
-    for (int i = 0; i < 256; i++) { outw(ATA_DATA, ptr[i]); }
+    for (int i = 0; i < 256; i++) {
+        outw(ATA_DATA, ptr[i]);
+    }
 
     outb(ATA_COMMAND, ATA_CMD_CACHE_FLUSH);
     ata_wait_ready();

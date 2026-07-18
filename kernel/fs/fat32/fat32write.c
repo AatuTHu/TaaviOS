@@ -14,7 +14,7 @@
  * Returns: STATUS_ERROR || STATUS_OK
  */
 int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
-    const uint8_t *buf, uint32_t size) {
+                               const uint8_t *buf, uint32_t size) {
 
     DEBUG_FAT32("[FAT32][WRITE_AT_OFFSET]: input param: first_cluster: %d\n", first_cluster);
     DEBUG_FAT32("[FAT32][WRITE_AT_OFFSET]: input param: offset %d\n", offset);
@@ -62,7 +62,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
         }
 
         // Calculate remaining bytes inside the user data buffer
-        uint32_t bytes_left = size - bytes_written;
+        uint32_t bytes_left       = size - bytes_written;
         // Calculate the maximum safe contiguous space remaining in the current
         // active cluster block
         uint32_t space_in_cluster = cluster_size - target_offset;
@@ -124,7 +124,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
  */
 uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 
-    uint32_t cluster_size = f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
+    uint32_t cluster_size    = f32_fs.sectors_per_cluster * FAT32_SECTOR_SIZE;
 
     // Ceiling division formula to determine the total number of blocks required
     // for data
@@ -136,7 +136,7 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size) {
 
     // Allocate a temporary safety bounce buffer so our driver always writes
     // exact cluster blocks
-    uint8_t *temp_buffer = __fat32_allocate_buffer();
+    uint8_t *temp_buffer   = __fat32_allocate_buffer();
     if (temp_buffer == INVALID_BUFFER)
         return INVALID_CLUSTER;
 

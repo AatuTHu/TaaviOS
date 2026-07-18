@@ -96,8 +96,8 @@ void pmm_init(const struct multiboot_info *mboot) {
     uint32_t kernel_start_page = (uint32_t)&_kernel_start / PAGE_SIZE;
     uint32_t kernel_end_page   = (uint32_t)&_kernel_end / PAGE_SIZE;
     DEBUG_CORE_MM("[PMM] Kernel pages: %d-%d (0x%x-0x%x)\n", kernel_start_page,
-        kernel_end_page, kernel_start_page * PAGE_SIZE,
-        kernel_end_page * PAGE_SIZE);
+                  kernel_end_page, kernel_start_page * PAGE_SIZE,
+                  kernel_end_page * PAGE_SIZE);
     for (uint32_t i = kernel_start_page; i < kernel_end_page; i++) {
         __pmm_set_bit(i);
     }
@@ -107,7 +107,7 @@ void pmm_init(const struct multiboot_info *mboot) {
     uint32_t bitmap_start      = bitmap_phys / PAGE_SIZE;
     uint32_t bitmap_end        = (bitmap_phys + bitmap_size_bytes - 1) / PAGE_SIZE;
     DEBUG_CORE_MM("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n", bitmap_start,
-        bitmap_end, bitmap_phys, bitmap_size_bytes);
+                  bitmap_end, bitmap_phys, bitmap_size_bytes);
 
     // Left out for now as bitmap fits inside kernel slots.
     //  for (uint32_t i = bitmap_start; i <= bitmap_end; i++) { __pmm_set_bit(i); }
@@ -122,8 +122,8 @@ void pmm_init(const struct multiboot_info *mboot) {
     }
 
     DEBUG_CORE_MM("[PMM] PMM ready — free: %d pages (%d kb), used: %d pages (%d kb)\n",
-        free_pages, (free_pages * PAGE_SIZE) / 1024, used_pages,
-        (used_pages * PAGE_SIZE) / 1024);
+                  free_pages, (free_pages * PAGE_SIZE) / 1024, used_pages,
+                  (used_pages * PAGE_SIZE) / 1024);
 }
 
 uint32_t pmm_alloc() {

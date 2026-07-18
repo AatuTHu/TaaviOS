@@ -2,7 +2,7 @@
 #include "config.h"
 #include "io.h"
 
-volatile unsigned short *vga = NULL;
+volatile unsigned short *vga      = NULL;
 
 /*
  * This is shit should be rewritten, but it is the first things I wrote
@@ -11,10 +11,10 @@ volatile unsigned short *vga = NULL;
 // Default: White (0x0F) on Black (0x00)
 static uint8_t terminal_attribute = 0x0F;
 
-int x_pos = 0;
-int y_pos = 0;
+int x_pos                         = 0;
+int y_pos                         = 0;
 
-#define terminal_width  80
+#define terminal_width 80
 #define terminal_height 25
 
 // Helper to get a "blank" character with the current color
@@ -76,7 +76,9 @@ static void lift_texts_up() {
 
     // Clear the last line with the current color
     uint16_t blank = get_blank_char();
-    for (int x = 0; x < terminal_width; x++) { vga[get_pos(x, 24)] = blank; }
+    for (int x = 0; x < terminal_width; x++) {
+        vga[get_pos(x, 24)] = blank;
+    }
 
     y_pos = 23;
 }
@@ -133,6 +135,8 @@ void vga_putchar(char c) {
 }
 
 void vga_write(const char *msg) {
-    for (int i = 0; msg[i] != '\0'; i++) { vga_putchar(msg[i]); }
+    for (int i = 0; msg[i] != '\0'; i++) {
+        vga_putchar(msg[i]);
+    }
     update_cursor();
 }

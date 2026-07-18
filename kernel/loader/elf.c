@@ -80,7 +80,7 @@ int elf_load(void *data, page_directory_t *page_dir) {
         uint32_t pages =
             (phdr->p_memsz + PAGE_SIZE - 1) /
             PAGE_SIZE; // this is the one that calculates and round up the size
-        uint32_t size = (phdr->p_memsz + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+        uint32_t size       = (phdr->p_memsz + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
 
         uint32_t page_flags = PAGE_PRESENT | PAGE_USER;
 
@@ -121,7 +121,7 @@ int elf_load(void *data, page_directory_t *page_dir) {
             }
 
             memcpy((void *)phys_to_virt(phys), (uint8_t *)data + file_offset,
-                to_copy);
+                   to_copy);
             memset((void *)(phys_to_virt(phys) + to_copy), 0, to_zero);
         }
     }

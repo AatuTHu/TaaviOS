@@ -71,9 +71,10 @@ void command_cd(const char *path) {
 
 void command_ls() {
     char buf[512] = {0};
-    list_dirents(buf, sizeof(buf));
-
-    print(buf);
+    int read_size = list_dirents(buf, sizeof(buf));
+    if (read_size != 0) {
+        print(buf);
+    }
 }
 
 void exec_cmd(char *buf) {

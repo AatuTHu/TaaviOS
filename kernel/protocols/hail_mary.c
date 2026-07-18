@@ -28,8 +28,8 @@ void register_hail_mary_function(uint32_t pid, void (*cb)(void)) {
     if (entry == NULL)
         return;
 
-    entry->pid = pid;
-    entry->cb  = cb;
+    entry->pid          = pid;
+    entry->cb           = cb;
 
     gosling_table[slot] = entry;
 }

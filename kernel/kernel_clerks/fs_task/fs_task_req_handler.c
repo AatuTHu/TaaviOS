@@ -8,6 +8,18 @@ static tasks_dir_t virt_tasks_dir[MAX_TASKS];
  * Design & Implementation: A.H, 2026
  */
 
+/**
+ * dir_traversal_mapper - short description on when to use.
+ * @param owner_pid: short description.
+ * @param current_cluster: short description.
+ * @param prev_cluster: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, uint32_t prev_cluster) {
     int slot = -1;
 
@@ -58,6 +70,16 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
     return STATUS_OK;
 }
 
+/**
+ * dir_get_direction - short description on when to use.
+ * @param owner_pid: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
@@ -71,8 +93,23 @@ static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
     return NULL;
 }
 
+/**
+ * fs_alloc_fd - short description on when to use.
+ * @param owner_pid: short description.
+ * @param file_cluster: short description.
+ * @param dir_cluster: short description.
+ * @param size: short description.
+ * @param flags: short description.
+ * @param file_attr: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_cluster, uint32_t size,
-    uint32_t flags, uint8_t file_attr) {
+                       uint32_t flags, uint8_t file_attr) {
     int slot = -1;
     for (int i = free_starting_slot; i < MAX_FD_ENTRIES; i++) {
         if (fd_entry_table[i] == NULL) {
@@ -114,6 +151,16 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_c
     return slot;
 }
 
+/**
+ * read - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int read(request_table *req) {
 
     /*
@@ -147,6 +194,16 @@ static int read(request_table *req) {
     return STATUS_OK;
 }
 
+/**
+ * open - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int open(request_table *req) {
     uint32_t file_cluster     = 0;
     uint32_t dir_cluster      = 0;
@@ -154,7 +211,7 @@ static int open(request_table *req) {
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     char filename[TASK_NAME_LENGTH];
-    const char *path = (char *)req->path;
+    const char *path     = (char *)req->path;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
@@ -179,6 +236,16 @@ static int open(request_table *req) {
     return STATUS_OK;
 }
 
+/**
+ * create - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int create(const request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
     uint32_t base_directory = f32_fs.root_cluster;
@@ -204,6 +271,16 @@ static int create(const request_table *req) {
     return STATUS_OK;
 }
 
+/**
+ * write - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int write(const request_table *req) {
     fd_entry_t *entry = fd_entry_table[req->fd];
     if (entry == NULL) {
@@ -217,7 +294,7 @@ static int write(const request_table *req) {
     }
 
     if (fat32_write_file_at_offset(entry->file_cluster, entry->curr_offset,
-            (const uint8_t *)req->buf, req->buffer_size) == STATUS_ERROR) {
+                                   (const uint8_t *)req->buf, req->buffer_size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not write to opened file\n");
         return STATUS_ERROR;
     }
@@ -227,16 +304,26 @@ static int write(const request_table *req) {
     entry->size        = req->buffer_size;
 
     if (fat32_update_dirent_size(entry->dir_cluster, entry->file_cluster,
-            entry->size) == STATUS_ERROR) {
+                                 entry->size) == STATUS_ERROR) {
         ERROR("[FS_TASK][WRITE]: Could not update file\n");
         return STATUS_ERROR;
     }
 
     DEBUG_FS_TASK("[FS_TASK][WRITE]: current offset %d and size %d\n",
-        entry->curr_offset, entry->size);
+                  entry->curr_offset, entry->size);
     return STATUS_OK;
 }
 
+/**
+ * close - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int close(const request_table *req) {
     fd_entry_t *entry = fd_entry_table[req->fd];
     if (entry == NULL) {
@@ -250,10 +337,20 @@ static int close(const request_table *req) {
     return STATUS_OK;
 }
 
+/**
+ * find - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int find(const request_table *req) {
-    uint8_t direction        = forwards;
-    uint32_t current_cluster = 0;
-    uint32_t prev_cluster    = 0;
+    uint8_t direction         = forwards;
+    uint32_t current_cluster  = 0;
+    uint32_t prev_cluster     = 0;
 
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
@@ -298,9 +395,19 @@ static int find(const request_table *req) {
     return STATUS_OK;
 }
 
+/**
+ * fs_return_vdir_tasks - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 int fs_return_vdir_tasks(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Returning vdir tasks\n");
-    int read_size = 0;
+    int read_size     = 0;
 
     char *list_buffer = (char *)kmalloc(req->buffer_size + 1);
 
@@ -310,38 +417,52 @@ int fs_return_vdir_tasks(request_table *req) {
     }
 
     for (int i = 0; i < MAX_TASKS; i++) {
-        task_t *temp_task = task_get_by_index(i);
         if (virt_tasks_dir[i].slot_used == 1) {
             char spid[10];
             itoa(virt_tasks_dir[i].pid, spid);
 
-            memcpy(&list_buffer[read_size], spid, strlen(spid));
-            read_size += strlen(spid);
+            int spid_len       = strlen(spid);
+            int name_len       = strlen(virt_tasks_dir[i].name);
+            int required_space = spid_len + 1 + name_len + 1;
+
+            if (read_size + required_space > req->buffer_size) {
+                break;
+            }
+
+            memcpy(&list_buffer[read_size], spid, spid_len);
+            read_size += spid_len;
+
             list_buffer[read_size] = '/';
             read_size += 1;
-            memcpy(&list_buffer[read_size], virt_tasks_dir[i].name, strlen(virt_tasks_dir[i].name));
-            read_size += strlen(virt_tasks_dir[i].name);
+
+            memcpy(&list_buffer[read_size], virt_tasks_dir[i].name, name_len);
+            read_size += name_len;
 
             list_buffer[read_size] = '\n';
             read_size += 1;
-            list_buffer[read_size] = '\0';
-
-            DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Read size %d \n", read_size);
         }
     }
 
-    // DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Found %s\n", list_buffer);
-    memcpy(req->buf, list_buffer, read_size);
+    list_buffer[read_size] = '\0';
 
+    DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Read size %d \n", read_size);
+    memcpy(req->buf, list_buffer, read_size);
+    req->buffer_size = read_size;
     kfree(list_buffer);
-    return (read_size > 0) ? STATUS_OK : STATUS_ERROR;
+    return STATUS_OK;
 }
 
+/**
+ * list - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int list(request_table *req) {
-
-    if (strcmp(req->path, "SYS_INFO/TASKS") == 0) {
-        return (fs_return_vdir_tasks(req) == STATUS_ERROR) ? STATUS_ERROR : STATUS_OK;
-    }
 
     uint32_t base_cluster = f32_fs.root_cluster;
     uint32_t read_size    = 0;
@@ -368,9 +489,19 @@ static int list(request_table *req) {
     req->buffer_size = read_size;
     kfree(names_buffer);
 
-    return (read_size > 0) ? STATUS_OK : STATUS_ERROR;
+    return STATUS_OK;
 }
 
+/**
+ * free - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 static int free(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->caller_pid);
 
@@ -395,10 +526,27 @@ static int free(request_table *req) {
     return STATUS_OK;
 }
 
+/**
+ * fs_handle_request - short description on when to use.
+ * @param req: short description.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 void fs_handle_request(request_table *req) {
     task_t *fs_task = task_get_by_pid(fs_task_pid);
 
     if (fs_task == NULL || req == NULL) {
+        return;
+    }
+
+    if (req->request_type == LIST && strncmp(req->path, "SYS_INFO/TASKS", sizeof(req->path)) == 0) {
+        req->status       = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         return;
     }
 
@@ -448,7 +596,17 @@ void fs_handle_request(request_table *req) {
     }
 }
 
+/**
+ * fs_maintain_virt_dir - short description on when to use.
+ *
+ * Description:
+ * more lengthy description on what the function DOES
+ *
+ * Context: Why was it made, when to call it.
+ * Return: what if successful, what if unsuccessful.
+ */
 void fs_maintain_virt_dir() {
+
     DEBUG_FS_TASK("[FS_TASK][M_VIRT_DIR]: Maintaining virtual directory\n");
     memset(virt_tasks_dir, 0, sizeof(virt_tasks_dir));
 
@@ -460,8 +618,11 @@ void fs_maintain_virt_dir() {
         }
 
         virt_tasks_dir[i].pid = temp_task->pid;
-        strcpy(virt_tasks_dir[i].name, temp_task->name);
-        virt_tasks_dir[i].slot_used = 1;
+
+        strncpy(virt_tasks_dir[i].name, temp_task->name, sizeof(virt_tasks_dir[i].name) - 1);
+        virt_tasks_dir[i].name[sizeof(virt_tasks_dir[i].name) - 1] = '\0';
+
+        virt_tasks_dir[i].slot_used                                = 1;
         DEBUG_FS_TASK("[FS_TASK][M_VIRT_DIR]: Added %d - %s to virtual directory\n", virt_tasks_dir[i].pid, virt_tasks_dir[i].name);
     }
 }

@@ -8,7 +8,9 @@
  * @author: A.H, 2026
  */
 
+#define FS_MAINTENANCE_INTERVAL 1000
 fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
+static uint32_t maintenance_counter = 0;
 
 /**
  * fs_task_loop - Entry point function used when clerk is created at boot.
@@ -21,25 +23,21 @@ fd_entry_t *fd_entry_table[MAX_FD_ENTRIES];
  * Context: Runs besides other tasks to achieve asynchronous feeling.
  */
 void fs_task_loop() {
-    // DEBUG_FS_TASK("[FS_TASK]: \n");
+    DEBUG_FS_TASK("[FS_TASK]: \n");
+    fs_maintain_virt_dir();
     while (1) {
         request_table *req = ledger_fetch_next_req(fs_task_pid);
 
         if (req != NULL) {
-            if (req->status == PENDING ||
-                req->status == IN_PROGRESS) {
-                //__asm__ __volatile__("cli");
+            if (req->status == PENDING || req->status == IN_PROGRESS) {
                 fs_handle_request(req);
-                //__asm__ __volatile__("sti");
             }
         }
-        fs_maintain_virt_dir();
 
-        /*
-         * if(virt file needs servicing)
-         * calculate next possible cluster/file
-         * close / delete
-         */
+        if (++maintenance_counter >= FS_MAINTENANCE_INTERVAL) {
+            fs_maintain_virt_dir();
+            maintenance_counter = 0;
+        }
 
         blankie_activate(fs_task_pid);
     }

@@ -11,10 +11,10 @@ void tss_set_kernel_stack(uint32_t esp) {
 }
 
 void tss_init(void) {
-    tss = (struct tss_entry){0};
+    tss            = (struct tss_entry){0};
 
-    tss.ss0  = SEG_KERNEL_DATA;
-    tss.esp0 = 0;
+    tss.ss0        = SEG_KERNEL_DATA;
+    tss.esp0       = 0;
 
     tss.iomap_base = sizeof(struct tss_entry);
 

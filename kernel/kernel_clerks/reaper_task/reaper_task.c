@@ -34,6 +34,6 @@ static void reaper_recovery() {
 
 void reaper_init(const task_t *reaper_task) {
     blankie_register(reaper_task_pid, reaper_task->context.eip,
-        reaper_task->kernel_stack);
+                     reaper_task->kernel_stack);
     register_hail_mary_function(reaper_task_pid, reaper_recovery);
 }

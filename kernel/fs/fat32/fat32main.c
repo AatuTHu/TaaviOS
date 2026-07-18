@@ -18,7 +18,7 @@ fat32_fs_t f32_fs;
  * Return: STATUS_ERROR || STATUS_OK.
  */
 int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t *out_file_cluster, uint32_t *out_dir_cluster, uint32_t *out_size,
-    char *out_fname, uint8_t *out_attr) {
+                       char *out_fname, uint8_t *out_attr) {
 
     if (path == NULL) {
         ERROR("[FAT32][FIND_CLUSTER]: Given path was invalid\n");
@@ -65,8 +65,8 @@ int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t
 
         // Search the current directory cluster for the formatted 8.3 name
         if (__fat32_search_dir(current_directory_cluster, name83,
-                &found_cluster, &found_size,
-                &found_attr) == STATUS_ERROR) {
+                               &found_cluster, &found_size,
+                               &found_attr) == STATUS_ERROR) {
             ERROR("[FAT32][FIND_CLUSTER]: Unable to find the directory\n");
             return STATUS_ERROR;
         }

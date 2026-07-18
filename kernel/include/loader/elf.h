@@ -25,7 +25,7 @@ enum Elf_Type {
     ET_EXEC = 2  // Executable File
 };
 
-#define EM_386     (3) // x86 Machine Type
+#define EM_386 (3)     // x86 Machine Type
 #define EV_CURRENT (1) // ELF Current Version
 
 #define ELFMAG0 0x7F // e_ident[EI_MAG0]
@@ -39,7 +39,7 @@ enum Elf_Type {
 #define PF_R (1 << 2) // Read
 
 #define ELFDATA2LSB (1) // Little Endian
-#define ELFCLASS32  (1) // 32-bit Architecture
+#define ELFCLASS32 (1)  // 32-bit Architecture
 
 typedef uint16_t Elf32_Half; // Unsigned half int
 typedef uint32_t Elf32_Off;  // Unsigned offset

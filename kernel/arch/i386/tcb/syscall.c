@@ -306,9 +306,9 @@ static int32_t sys_mkdir(struct registers *r) {
 
 static int32_t sys_getdents(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_GETDENTS]\n");
-    char *buffer = (char *)r->ebx;
-    uint32_t len = r->ecx;
-    char *path   = (char *)r->edx;
+    char *buffer    = (char *)r->ebx;
+    uint32_t len    = r->ecx;
+    char *path      = (char *)r->edx;
 
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {

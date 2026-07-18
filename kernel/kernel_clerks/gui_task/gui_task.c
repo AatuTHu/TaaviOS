@@ -191,15 +191,15 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
-    entry->wid       = slot;
-    entry->owner_pid = owner_pid;
-    entry->width     = width;
-    entry->height    = height;
-    entry->x_offset  = DEFAULT_HORIZONTAL_PADDING;
-    entry->y_offset  = DEFAULT_VERTICAL_PADDING;
-    entry->z_index   = 1;
-    entry->fg_color  = fb_pack_color(255, 255, 255);
-    entry->bg_color  = fb_pack_color(0, 0, 0);
+    entry->wid           = slot;
+    entry->owner_pid     = owner_pid;
+    entry->width         = width;
+    entry->height        = height;
+    entry->x_offset      = DEFAULT_HORIZONTAL_PADDING;
+    entry->y_offset      = DEFAULT_VERTICAL_PADDING;
+    entry->z_index       = 1;
+    entry->fg_color      = fb_pack_color(255, 255, 255);
+    entry->bg_color      = fb_pack_color(0, 0, 0);
 
     uint32_t pixels_size = entry->width * entry->height * 4;
     entry->pixels        = (uint32_t *)kmalloc(pixels_size);

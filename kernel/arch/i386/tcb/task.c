@@ -14,8 +14,7 @@
 
 static task_t *task_table[MAX_TASKS];
 
-task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
-    page_directory_t *page_dir, uint8_t task_mode) {
+task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
 
     int slot = -1;
 
@@ -74,6 +73,7 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
     task->started  = 0;
 
     strncpy(task->name, name, sizeof(task->name));
+    task->name[TASK_NAME_LENGTH] = '\0';
     task->kernel_stack =
         phys_to_virt(kernel_stack) +
         KERNEL_STACK_SIZE; // kernel stack is bottom of stack so add the stack
@@ -93,7 +93,7 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
     task->context.eflags = EFLAGS_DEFAULT;
     task->task_mode      = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
 
-    task_table[slot] = task;
+    task_table[slot]     = task;
 
     return task;
 }

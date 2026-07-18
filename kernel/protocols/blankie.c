@@ -38,7 +38,7 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
     // achieve 0(1) ratio but as idle is pid 0 we have to do some voodoo to pid
     // to get the ratio
 
-    b_registry[pid - 1] = blankie_req;
+    b_registry[pid - 1]      = blankie_req;
 
     return STATUS_OK;
 }
@@ -57,7 +57,9 @@ int blankie_activate(uint32_t pid) {
     task->state       = TASK_SLEEPING;
 
     DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save %s\n", task->name);
-    while (1) { __asm__ __volatile__("sti; hlt"); }
+    while (1) {
+        __asm__ __volatile__("sti; hlt");
+    }
 
     return STATUS_OK;
 }
