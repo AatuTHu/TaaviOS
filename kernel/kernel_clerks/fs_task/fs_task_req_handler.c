@@ -9,16 +9,18 @@ static tasks_dir_t virt_tasks_dir[MAX_TASKS];
  */
 
 /**
- * dir_traversal_mapper - short description on when to use.
+ * dir_traversal_mapper - creates an entry of the current and previous directory clusters.
  * @param owner_pid: short description.
  * @param current_cluster: short description.
  * @param prev_cluster: short description.
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function creates an entry of tasks current and previous directories, so that directory
+ * traversal dosn't have to go trough fat32. If there already is an existing entry for the owner pid
+ * the existing is wiped and the new one will be made in its place
+ * thus allowing a task to only ever have one directory traversal map entry
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, uint32_t prev_cluster) {
     int slot = -1;
@@ -71,14 +73,14 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
 }
 
 /**
- * dir_get_direction - short description on when to use.
+ * dir_get_direction - Fetches dir traversal entry.
  * @param owner_pid: short description.
  *
  * Description:
- * more lengthy description on what the function DOES
+ * Function searches for the dir traversal entry info of given owner_pid param.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Context: It is beneficial to what is the current working directory to navigate clusters more easily.
+ * Return: pointer to an dir_map entry || NULL
  */
 static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -94,7 +96,7 @@ static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
 }
 
 /**
- * fs_alloc_fd - short description on when to use.
+ * fs_alloc_fd - Creates an fd table entry of opened file.
  * @param owner_pid: short description.
  * @param file_cluster: short description.
  * @param dir_cluster: short description.
@@ -103,10 +105,9 @@ static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
  * @param file_attr: short description.
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function creates an entry of an opened file, filling it with metadata of the file.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: index of the entry || STATUS_ERROR
  */
 static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_cluster, uint32_t size,
                        uint32_t flags, uint8_t file_attr) {
@@ -152,14 +153,16 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_c
 }
 
 /**
- * read - short description on when to use.
- * @param req: short description.
+ * read - Reads opened file.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This file reads to a local buffer the contents of a file that is opened.
+ * should a file not be opened or allocating a local buffer fail the function aborts the request.
+ * if the read is succesfull the input stream is capped at the read size with '\0' and then
+ * copied to request_table req->buf buffer. Then the actual read size is saved to req-> buffer_size.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int read(request_table *req) {
 
@@ -195,14 +198,17 @@ static int read(request_table *req) {
 }
 
 /**
- * open - short description on when to use.
- * @param req: short description.
+ * open - Opens a file at the end of the given path.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function opens a file at the end of the given path that comes from request_table req->path field.
+ * before opening the file it tries to check if there is a directory_tarversal entry for the requester.
+ * If there is the starting cluster will be the one found from there. Otherwise it will use the root cluster.
+ * If the file is found the function creates an fd entry of it and places the fd number to req->fd field.
  *
  * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int open(request_table *req) {
     uint32_t file_cluster     = 0;
@@ -232,19 +238,19 @@ static int open(request_table *req) {
     }
 
     req->fd = fd;
-    memcpy(req->buf, filename, 8);
     return STATUS_OK;
 }
 
 /**
- * create - short description on when to use.
- * @param req: short description.
+ * create - Creates a directory entry.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function creates a directory entry. It decides between making one directory
+ * and making a chaing of directories by the buffer_size. As a path string comes from userspace
+ * if the path is longer than 8 chars (max lenght of the dir name) it makes a chain of directories
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int create(const request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
@@ -272,14 +278,16 @@ static int create(const request_table *req) {
 }
 
 /**
- * write - short description on when to use.
- * @param req: short description.
+ * write - Writes to a file.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function writes the contents of req->buf to an opened file.
+ * First it looks for the fd entry that holds the file metadata. If found
+ * it checks if the requester is allowed to write to the file. after that
+ * the contents are written. If succesfull then the directory metadata is updated
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int write(const request_table *req) {
     fd_entry_t *entry = fd_entry_table[req->fd];
@@ -315,14 +323,13 @@ static int write(const request_table *req) {
 }
 
 /**
- * close - short description on when to use.
- * @param req: short description.
+ * close - closes the opened file.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function closes and frees fd entry of opened file
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int close(const request_table *req) {
     fd_entry_t *entry = fd_entry_table[req->fd];
@@ -338,14 +345,15 @@ static int close(const request_table *req) {
 }
 
 /**
- * find - short description on when to use.
- * @param req: short description.
+ * find - finds a directory of the given path.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function tries to find the next file based on the current working directory
+ * either going backwards or going forwards
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Context: While name is missleading it is used by cd command.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int find(const request_table *req) {
     uint8_t direction         = forwards;
@@ -396,14 +404,13 @@ static int find(const request_table *req) {
 }
 
 /**
- * fs_return_vdir_tasks - short description on when to use.
- * @param req: short description.
+ * fs_return_vdir_tasks - Returns formated list of tasks.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function makes a directory looking lists of tasks currently created.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 int fs_return_vdir_tasks(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Returning vdir tasks\n");
@@ -453,14 +460,17 @@ int fs_return_vdir_tasks(request_table *req) {
 }
 
 /**
- * list - short description on when to use.
- * @param req: short description.
+ * list - Lists directory contents.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function lists the contents of the current directory. It checks if there is a
+ * directory_traversal entry for the requester to determine the starting cluster. Otherwise,
+ * it uses the root cluster. The directory contents are read into a local buffer, then
+ * copied to the request_table req->buf buffer, and the read size is updated.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Context: Used by the ls command to view contents of the current working directory.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int list(request_table *req) {
 
@@ -493,14 +503,16 @@ static int list(request_table *req) {
 }
 
 /**
- * free - short description on when to use.
- * @param req: short description.
+ * free - Frees resources allocated for a task.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function cleans up file system structures when a task exits. It iterates through the
+ * fd_entry_table and dir_map arrays, freeing every entry that matches the caller_pid of the request
+ * and clearing the slots back to NULL.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Context: Called during task cleanup to prevent memory leaks.
+ * Return: STATUS_OK || STATUS_ERROR
  */
 static int free(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->caller_pid);
@@ -527,14 +539,15 @@ static int free(request_table *req) {
 }
 
 /**
- * fs_handle_request - short description on when to use.
- * @param req: short description.
+ * fs_handle_request - Dispatches incoming file system requests.
+ * @param req: pointer to an request_table entry
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function processes requests sent to the file system task. It intercepts requests for
+ * virtual paths like SYS_INFO/TASKS first, then falls back to a switch-case structure to execute
+ * the appropriate file operation handler. It updates the request status and wakes up the caller.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Context: The main entry point for the file system server task loop.
  */
 void fs_handle_request(request_table *req) {
     task_t *fs_task = task_get_by_pid(fs_task_pid);
@@ -597,13 +610,14 @@ void fs_handle_request(request_table *req) {
 }
 
 /**
- * fs_maintain_virt_dir - short description on when to use.
+ * fs_maintain_virt_dir - Updates the virtual task directory listing.
  *
  * Description:
- * more lengthy description on what the function DOES
+ * This function clears the virt_tasks_dir array and rebuilds it by polling the active task list.
+ * It skips kernel tasks and dead tasks, copying the PID and name of active user tasks into the
+ * virtual directory table so they can be exposed to userspace.
  *
- * Context: Why was it made, when to call it.
- * Return: what if successful, what if unsuccessful.
+ * Context: Called to keep the virtual task path up to date with the system state.
  */
 void fs_maintain_virt_dir() {
 
