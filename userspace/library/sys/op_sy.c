@@ -8,7 +8,7 @@ int set_operator_task() {
 }
 
 int ch_act_window(int target_pid) {
-    return sys_caw(target_pid);
+    return sys_conwi(4, target_pid, 0, 0, 0);
 }
 
 int get_ac_tasks(char *buf, int len) {

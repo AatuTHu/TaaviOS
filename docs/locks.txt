@@ -1,0 +1,3 @@
+1. cli and sti at 
+    vmm.c -> vmm_free_user_space(page_directory_t *dir) 
+    note: second lowest level of call chain. One time the system interrupted while the physical memory was being freed.

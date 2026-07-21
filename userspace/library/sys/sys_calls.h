@@ -27,8 +27,6 @@ int sys_exec(const char *filename);
 
 int sys_getdirents(const char *buf, const char *path, uint32_t len);
 
-int sys_conwi(int operation, int width, int height, int x, int y);
-
-int sys_caw(int target_pid);
+int sys_conwi(int operation, int p1, int p2, int p3, int p4);
 
 #endif

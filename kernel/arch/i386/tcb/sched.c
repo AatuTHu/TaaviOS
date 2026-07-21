@@ -221,8 +221,7 @@ void scheduler_remove_task() {
     int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
 
     if (delete_candidate == -1) {
-        //    DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
-
+        DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
         return;
     }
 
@@ -240,6 +239,16 @@ void scheduler_remove_task() {
     tasks[task_count - 1] = NULL;
     task_count--;
     dead_task_count--;
+
+    if (task_count == 0) {
+        current_idx = -1;
+    } else if (delete_candidate < current_idx) {
+        current_idx--;
+    } else if (delete_candidate == current_idx) {
+        if (current_idx >= task_count) {
+            current_idx = 0;
+        }
+    }
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Remove complite\n");
 }

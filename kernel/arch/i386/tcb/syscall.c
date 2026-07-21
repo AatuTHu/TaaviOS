@@ -336,6 +336,39 @@ static int32_t sys_yield(struct registers *r) {
 }
 
 /**
+* change_keyboard_focus - when user task wishes to switch to another task.
+
+* Description:
+* This functions routes the keyboard to be directed to window that the user wants to be "active"
+* creating the illusion of switching active windows. But in reality all windows are active and only the
+* tasks that gets keyboard access if switched
+*
+* Context: Function was made so I could change between operator task and other tasks
+* Return: status_ok || status_error.
+*/
+static int change_keyboard_focus(uint32_t target_pid) {
+    DEBUG_SYSCALL("[SYSCALL][CKF]\n");
+    task_t *current = scheduler_get_current_task();
+
+    if (target_pid < CLERK_COUNT || target_pid >= MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+
+    if (current == NULL) {
+        return STATUS_ERROR;
+    }
+
+    if (keyboard_replace_cur_foreground_pid(target_pid) == STATUS_ERROR) {
+        DEBUG_SYSCALL("[SYS_CKF]: Could not replace current foreground pid. Aborting.\n");
+        return STATUS_ERROR;
+    }
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_wake_task(target_pid);
+
+    return STATUS_OK;
+}
+
+/**
  * sys_configure_window - When userspace task wants to make changes to their window.
  *
  * Description:
@@ -386,44 +419,13 @@ static int32_t sys_configure_window(struct registers *r) {
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case 3:
         return keyboard_set_operator_pid(current->pid);
+    case 4:
+        return change_keyboard_focus(r->ecx);
     default:
         current->state = TASK_RUNNING;
         break;
     }
     return STATUS_ERROR;
-}
-
-/**
-* sys_change_active-window - when user task wishes to switch to another task.
-
-* Description:
-* This functions routes the keyboard to be directed to window that the user wants to be "active"
-* creating the illusion of switching active windows. But in reality all windows are active.
-*
-* Context: Function was made so I could change between operator task and other tasks
-* Return: status_ok || status_error.
-*/
-static int32_t sys_change_active_window(struct registers *r) {
-    DEBUG_SYSCALL("[SYSCALL][SYS_CAW]\n");
-    int target_pid  = r->ebx;
-    task_t *current = scheduler_get_current_task();
-
-    if (target_pid < CLERK_COUNT || target_pid >= MAX_TASKS) {
-        return STATUS_ERROR;
-    }
-
-    if (current == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (keyboard_replace_cur_foreground_pid(target_pid) == STATUS_ERROR) {
-        DEBUG_SYSCALL("[SYS_CAW]: Could not replace current foreground pid. Aborting.\n");
-        return STATUS_ERROR;
-    }
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_wake_task(target_pid);
-
-    return STATUS_OK;
 }
 
 void syscall_dispatch(struct registers *r) {
@@ -449,5 +451,4 @@ void syscall_init() {
     syscall_table[SYS_CHDIR]    = sys_chdir;
     syscall_table[SYS_GETDENTS] = sys_getdents;
     syscall_table[SYS_CONWI]    = sys_configure_window;
-    syscall_table[SYS_CAW]      = sys_change_active_window;
 }

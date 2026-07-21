@@ -34,15 +34,9 @@ int sys_chdir(const char *path, uint32_t len) {
     return result;
 }
 
-int sys_conwi(int operation, int width, int height, int x, int y) {
+int sys_conwi(int operation, int p1, int p2, int p3, int p4) {
     int result = -1;
-    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(250), "b"(operation), "c"(width), "d"(height), "S"(x), "D"(y));
-    return result;
-}
-
-int sys_caw(int target_pid) {
-    int result = -1;
-    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(251), "b"(target_pid));
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(250), "b"(operation), "c"(p1), "d"(p2), "S"(p3), "D"(p4));
     return result;
 }
 
