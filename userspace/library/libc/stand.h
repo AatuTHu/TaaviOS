@@ -1,16 +1,9 @@
 #ifndef STAND_H
 #define STAND_H
 
+#include "defines.h"
 #include <stddef.h>
 #include <stdint.h>
-
-#define O_RDONLY 0x01
-#define O_WRONLY 0x02
-#define O_RDWR 0x04
-#define O_CREAT 0x08
-
-#define STATUS_OK 0
-#define STATUS_ERROR -1
 
 void print(const char *msg);
 void error(const char *msg);
@@ -24,13 +17,7 @@ int mkdir(const char *path);
 int change_directory(const char *path, char *directory_name);
 int list_dirents(char *buf, int buffer_size);
 
-int exec(const char *filename);
 void idle(void);
 int get_pid();
-void terminate_program();
 
-int configurate_task_window(int width, int height, int x, int y);
-int create_task_window(int width, int height, int x, int y);
-int move_task_window(int x, int y);
-int memcmp(const void *s1, const void *s2, size_t n);
 #endif

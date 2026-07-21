@@ -99,38 +99,18 @@ void write(int fd, const char *msg) {
     sys_write(fd, msg, strlen(msg));
 }
 
+int read(int fd, char *buf, int buffer_size) {
+    return sys_read(fd, buf, buffer_size);
+}
+
 int mkdir(const char *path) {
     int len      = strnlen(path, 128);
     int response = sys_mkdir(path, len);
     return response;
 }
 
-int read(int fd, char *buf, int buffer_size) {
-    return sys_read(fd, buf, buffer_size);
-}
-
-void terminate_program() {
-    sys_exit();
-}
-
-int exec(const char *filename) {
-    return sys_exec(filename);
-}
-
 void idle(void) {
     sys_idle();
-}
-
-int create_task_window(int width, int height, int x, int y) {
-    return sys_conwi(0, width, height, x, y);
-}
-
-int configurate_task_window(int width, int height, int x, int y) {
-    return sys_conwi(1, width, height, x, y);
-}
-
-int move_task_window(int x, int y) {
-    return sys_conwi(2, 0, 0, x, y);
 }
 
 int get_pid() {

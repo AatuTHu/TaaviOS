@@ -109,7 +109,7 @@ int ledger_remove_request() {
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *buf, uint32_t buffer_size) {
+int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *buf, uint32_t buffer_size, uint32_t color) {
     clerk_queue *q = ledger_get_queue(gui_task_pid);
     if (q == NULL) {
         ERROR("[LEDGER][ADD_GUI_REQUEST]: clerk pid is invalid\n");
@@ -133,6 +133,7 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     new_request->x            = x;
     new_request->y            = y;
     new_request->buffer_size  = buffer_size;
+    new_request->color        = color;
 
     if (type == WRITE) {
         strncpy(new_request->buf, buf, sizeof(new_request->buf));
@@ -157,13 +158,13 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
 
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     wake_clerk(new_request->clerk_pid);
     return STATUS_OK;
@@ -247,11 +248,11 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
 
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request added to index %d\n", found);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
+    // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 
     wake_clerk(new_request->clerk_pid);
     return STATUS_OK;

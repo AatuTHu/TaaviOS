@@ -56,6 +56,8 @@ typedef enum {
     O_R, // Open and read
     PAINT_WINDOW,
     MOVE,
+    BG_COLOR,
+    FG_COLOR,
 } operations_t;
 
 #define O_RDONLY 0x01

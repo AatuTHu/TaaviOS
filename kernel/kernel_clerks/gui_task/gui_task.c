@@ -21,12 +21,17 @@ static uint32_t fg_color       = 0;
 static int hail_mary_act_count = 0;
 
 static int copy_pixels_to_screen(window_t *entry) {
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
+
     for (uint32_t row = 0; row < entry->height; row++) {
         memcpy(
             (uint32_t *)fb.virt_addr + (compositor[entry->wid].screen_y + row) * (fb.pitch / 4) + compositor[entry->wid].screen_x, // dst
             entry->pixels + row * entry->width,                                                                                    // src
             entry->width * 4);                                                                                                     // len
     }
+
     return STATUS_OK;
 }
 
@@ -66,7 +71,9 @@ static int gui_draw_string(const char *str, uint32_t caller_pid) {
             entry->x_offset = x_pos;
             entry->y_offset = y_pos;
 
-            copy_pixels_to_screen(entry);
+            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
 
             break;
         }
@@ -118,7 +125,9 @@ static int gui_delete_window(uint32_t owner_pid) {
                 return STATUS_ERROR;
             }
 
-            copy_pixels_to_screen(entry);
+            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
 
             compositor[entry->wid].entry    = NULL;
             compositor[entry->wid].screen_x = 0;
@@ -220,24 +229,27 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     return STATUS_OK;
 }
 
-static int gui_paint_window_to_screen(uint32_t owner_pid) {
+static int gui_paint_window_to_screen(request_table *req) {
 
-    /*
-    DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window for %d to screen!\n", owner_pid);
-        for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
+    DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window for %d to screen!\n", req->caller_pid);
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
             window_t *entry = program_windows[i];
 
             if (entry->pixels == NULL) {
+                return STATUS_ERROR;
             }
 
-            fb_fill_rect(entry->pixels, 0, 0, entry->width, entry->height, entry->bg_color);
+            fb_fill_rect(entry->pixels, req->x, req->y, req->width, req->height, entry->width, entry->height, entry->bg_color);
+
+            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
 
             DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Window painted successfully to screen!\n");
             return STATUS_OK;
         }
     }
-    */
 
     return STATUS_OK;
 }
@@ -265,11 +277,20 @@ static int gui_handle_request(request_table *req) {
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
-        req->status        = (gui_paint_window_to_screen(req->caller_pid) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status        = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : TERMINATED;
         gui_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         return STATUS_OK;
-
+    case FG_COLOR:
+        req->status        = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
+    case BG_COLOR:
+        req->status        = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     default:
 
         req->status = TERMINATED;
@@ -307,6 +328,25 @@ void gui_init(task_t *gui_task) {
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
 
     fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, fg_color);
+
+    /*uint32_t palette[] = {
+        fb_pack_color(0, 0, 0),
+        fb_pack_color(255, 0, 0),
+    };
+
+    int x     = 20;
+    int y     = 20;
+    int scale = 4;
+
+    for (int row = 0; row < 32; row++) {
+        for (int col = 0; col < 32; col++) {
+            fb_fill_rect((uint32_t *)fb.virt_addr,
+                         x + col * scale, y + row * scale,
+                         scale, scale,
+                         fb.width, fb.height,
+                         sprite[row][col]);
+        }
+    }*/
 
     memset(compositor, 0, sizeof(compositor));
 

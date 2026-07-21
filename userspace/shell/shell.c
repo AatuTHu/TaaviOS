@@ -103,9 +103,25 @@ void main(void) {
         return;
     }
 
-    if (create_task_window(600, 200, 20, 780) == -1) {
+    if (create_task_window(600, 200, 20, 780) == STATUS_ERROR) {
         return;
     }
+
+    if (ch_bg_color(COLOR_SKY_BLUE) == STATUS_ERROR) {
+        print("changing background color failed\n");
+    }
+
+    if (paint_window(590, 190, 5, 5) == STATUS_ERROR) {
+        print("painting window failed");
+    }
+
+    if (ch_fg_color(COLOR_BLACK) == STATUS_ERROR) {
+        print("changing foreground color failed\n");
+    }
+
+    /*if (paint_window(50, 50, 5 * 8, 3 * 16) == -1) {
+        print("Print failed\n");
+    }*/
 
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
     // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
@@ -178,6 +194,7 @@ void main(void) {
                         print("\b");
                     }
                 } else {
+
                     buf[pos++] = c;
                     char tmp[2];
                     tmp[0] = c;

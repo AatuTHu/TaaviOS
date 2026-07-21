@@ -1,3 +1,4 @@
+#include "op_sy.h"
 #include "stand.h"
 #include <stddef.h>
 #include <stdint.h>

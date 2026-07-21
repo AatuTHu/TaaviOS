@@ -2,6 +2,7 @@
 #include "config.h"
 #include "klog.h"
 #include "kmalloc.h"
+#include "sched.h"
 #include "task.h"
 
 /*
@@ -55,11 +56,5 @@ int blankie_activate(uint32_t pid) {
     task->context.ebp = b_registry[pid - 1]->stack_top;
     task->started     = 0;
     task->state       = TASK_SLEEPING;
-
-    DEBUG("[BLANKIE][ACTIVATE]: Waiting for pit to save %s\n", task->name);
-    while (1) {
-        __asm__ __volatile__("sti; hlt");
-    }
-
-    return STATUS_OK;
+    scheduler_yield(&task->context);
 }

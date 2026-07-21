@@ -3,6 +3,16 @@
 #include "idt.h"
 #include <stdint.h>
 
+typedef enum {
+    W_CREATE,
+    W_PAINT,
+    W_MOVE,
+    W_SET_OPERATOR,
+    W_CH_ACT_W,
+    W_CH_BG_COLOR,
+    W_CH_FG_COLOR,
+} window_operations;
+
 #define MAX_SYSCALLS 256
 
 #define SYS_EXIT 1
