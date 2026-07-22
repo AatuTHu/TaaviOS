@@ -40,7 +40,7 @@ static int32_t sys_exit(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting fs_task release allocated memory\n");
     ledger_add_fs_req(current->pid, FREE, 0, NULL, NULL, 0, 0);
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting gui_task to release allocated memory\n");
-    ledger_add_gui_req(current->pid, DELETE, 0, 0, 0, 0, NULL, 0, 0);
+    ledger_add_gui_req(current->pid, DELETE, 0, 0, 0, 0, NULL, 0, 0, NULL);
 
     scheduler_set_task_state(TASK_DEAD);
     scheduler_yield(r);
@@ -107,7 +107,7 @@ static int32_t sys_write(struct registers *r) {
     case 1:
 
         // vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-        ledger_add_gui_req(current->pid, WRITE, 0, 0, 0, 0, buf, len, 0);
+        ledger_add_gui_req(current->pid, WRITE, 0, 0, 0, 0, buf, len, 0, NULL);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
 
@@ -398,7 +398,7 @@ static int32_t sys_configure_window(struct registers *r) {
         x              = r->esi;
         y              = r->edi;
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, CREATE, width, height, x, y, NULL, 0, 0);
+        ledger_add_gui_req(current->pid, CREATE, width, height, x, y, NULL, 0, 0, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case W_PAINT:
@@ -407,14 +407,14 @@ static int32_t sys_configure_window(struct registers *r) {
         x              = r->esi;
         y              = r->edi;
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, x, y, NULL, 0, 0);
+        ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, x, y, NULL, 0, 0, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case W_MOVE:
         x              = r->ecx;
         y              = r->edx;
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, MOVE, 0, 0, x, y, NULL, 0, 0);
+        ledger_add_gui_req(current->pid, MOVE, 0, 0, x, y, NULL, 0, 0, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case W_SET_OPERATOR:
@@ -422,11 +422,11 @@ static int32_t sys_configure_window(struct registers *r) {
     case W_CH_ACT_W:
         return change_keyboard_focus(r->ecx);
     case W_CH_BG_COLOR:
-        ledger_add_gui_req(current->pid, BG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx);
+        ledger_add_gui_req(current->pid, BG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case W_CH_FG_COLOR:
-        ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx);
+        ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     default:

@@ -7,13 +7,19 @@
 - [x] GUI
 - [x] Draw "vuokaavio" to your own notepad
 - [x] Gui master window management table.
+- [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
+- [x] sys_caw and sys_conwi merged into single syscall (sys_cowni)
+- [ ] sys_cowni operation to draw image/sprite from ring 3 (blit userspace buffer to window)
+- [ ] Userspace needs malloc/alloc
 - [ ] Gui scroll screen up and down
-- [ ] Shell arrow drawersal
+- [ ] Shell arrow traversal
+- [ ] Blinking cursor
 - [ ] fs_int more complex filesystem management.
 - [ ] First real text editor
 - [ ] Keyboard routing fixes
-- [ ] fs task to create the virtual directory
-- [ ] Userspace needs malloc/alloc
+
+**Concurrency / Locks**
+- Add a locking mechanism in which interruptsa are disabled but only can be active at one place at a time. To prevent deadlocks
 
 **Fs_task**
 - if closing a file fails we set the req as failed but dont do anything to it after that -> continue.
@@ -21,6 +27,7 @@
 **Kernel / Syscall**
 - O_CREAT for files -> not started.
 - Flag constants not in a shared userspace-visible header yet
+- getticks/getuptime syscall not started (needed for cursor blink)
 
 **Filesystem**
 - curr_offset open behavior not finalized
@@ -31,11 +38,8 @@
 - VGA/FB mapped directly in paging -> should go through VMM like all other memory
 - VGA driver poorly written -> scroll maybe broken
 - Scroll up/down on arrow key press
+- fb_fill_rect bounds check now against buffer dimensions, not screen (fixed)
 
 **Memory**
-- Look in to how we can allocate more heap if it is at the end' <- Was able to build this. however
-  It can allocate more space for heap. But if the space if deallocated it should be returned? That is the whole point to not have huge amount of heap at the start?
-
-**GUI_TASK**
-- Calculate how many lines there can be at a window and do the scrolling by that count instead of offset at a height - padding. 
-  height/16 = lines in window. Each x > width or \n adds to y a one. Might aswell divide the window to x slots.
+- Look into how we can allocate more heap if it is at the end <- Was able to build this. However
+  it can allocate more space for heap. But if the space is deallocated it should be returned? That is the whole point to not have huge amount of heap at the start?
