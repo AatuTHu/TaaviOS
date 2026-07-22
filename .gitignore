@@ -10,3 +10,5 @@
 .editorconfig
 docs/x86_inline_assembly_cheatcheet.txt
 docs/envi_inst_cmd.txt
+compile_commands.json
+compile_flags.txt

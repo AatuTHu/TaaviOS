@@ -134,33 +134,13 @@ void fb_draw_string(uint32_t *pixel_buffer, uint32_t *x, uint32_t *y, uint32_t w
     }
 }
 
-// Workaround
-void __fb_map_page() {
-    DEBUG_FB("[FB][MAP_FB_PAGE]: Mapping framebuffer\n");
-    for (uint32_t i = 0; i < page_count; i++) {
-        paging_map(&kernel_page_dir, FB_VIRTUAL_BASE + i * PAGE_SIZE, fb.phys_addr + i * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
-    }
-    DEBUG_FB("[FB][MAP_FB_PAGE]: Mapping successfull\n");
-}
-
 int fb_init(const struct multiboot_info *mbi) {
     DEBUG_FB("[FB] INITIALIZING FRAMEBUFFER GRAPHICS\n");
     if (!(mbi->flags & (1 << 12))) {
         ERROR("[FB] Invalid flags\n");
         return STATUS_ERROR;
     }
-    DEBUG_FB("[FB] Mapping page for framebuffer\n");
-    DEBUG_FB("[FB]: mbi framebuffer addr: 0x%x\n", mbi->framebuffer_addr);
 
-    fb_size    = mbi->framebuffer_pitch * mbi->framebuffer_height;
-    page_count = (fb_size + PAGE_SIZE - 1) / PAGE_SIZE;
-
-    DEBUG_FB("[FB]: framebuffer flags: %d\n", mbi->flags);
-    DEBUG_FB("[FB]: fb_size: %d\n", fb_size);
-    DEBUG_FB("[FB]: page_count: %d\n", page_count);
-    /*for (uint32_t i = 0; i < page_count; i++) {
-        paging_map(&kernel_page_dir, FB_VIRTUAL_BASE + i * PAGE_SIZE, (uint32_t)mbi->framebuffer_addr + i * PAGE_SIZE, PAGE_PRESENT | PAGE_RW);
-    }*/
     fb.phys_addr  = mbi->framebuffer_addr;
     fb.width      = mbi->framebuffer_width;
     fb.height     = mbi->framebuffer_height;
@@ -176,6 +156,9 @@ int fb_init(const struct multiboot_info *mbi) {
     fb.red_size   = mbi->framebuffer_red_mask_size;
     fb.green_size = mbi->framebuffer_green_mask_size;
 
+    fb_size       = mbi->framebuffer_pitch * mbi->framebuffer_height;
+    page_count    = (fb_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    paging_add_deferred_mapping(&kernel_page_dir, FB_VIRTUAL_BASE, fb.phys_addr, PAGE_PRESENT | PAGE_RW, page_count);
     DEBUG_FB("[FB]: framebuffer type: %d\n", mbi->framebuffer_type);
     DEBUG_FB("[FB]: framebuffer width: %d\n", fb.width);
     DEBUG_FB("[FB]: framebuffer height: %d\n", fb.height);

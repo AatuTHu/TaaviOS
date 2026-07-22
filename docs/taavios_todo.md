@@ -8,8 +8,8 @@
 - [x] Draw "vuokaavio" to your own notepad
 - [x] Gui master window management table.
 - [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
-- [x] sys_caw and sys_conwi merged into single syscall (sys_cowni)
-- [ ] sys_cowni operation to draw image/sprite from ring 3 (blit userspace buffer to window)
+- [x] sys_caw and sys_conwi merged into single syscall (sys_wi)
+- [ ] sys_wi operation to draw image/sprite from ring 3 (blit userspace buffer to window)
 - [ ] Userspace needs malloc/alloc
 - [ ] Gui scroll screen up and down
 - [ ] Shell arrow traversal
@@ -26,7 +26,6 @@
 
 **Kernel / Syscall**
 - O_CREAT for files -> not started.
-- Flag constants not in a shared userspace-visible header yet
 - getticks/getuptime syscall not started (needed for cursor blink)
 
 **Filesystem**
@@ -35,11 +34,10 @@
 - update dir -> not working. if used the sysbin folder that is created with make
 
 **VGA / FB**
-- VGA/FB mapped directly in paging -> should go through VMM like all other memory
+- VGA/FB mapped directly in paging -> should go through VMM like all other memory <- deferred mapping function added to vmm. fb goes throught this. VGA  still dosnt, but it is not used anyways atm.
 - VGA driver poorly written -> scroll maybe broken
 - Scroll up/down on arrow key press
-- fb_fill_rect bounds check now against buffer dimensions, not screen (fixed)
 
 **Memory**
 - Look into how we can allocate more heap if it is at the end <- Was able to build this. However
-  it can allocate more space for heap. But if the space is deallocated it should be returned? That is the whole point to not have huge amount of heap at the start?
+  it can allocate more space for heap. But if the space is deallocated it should be returned? That is the whole point to not have huge amount of heap at the start? <- idea cooking

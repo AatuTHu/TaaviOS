@@ -21,7 +21,16 @@ typedef uint32_t page_directory_t[1024];
 typedef uint32_t page_table_t[1024];
 extern page_directory_t kernel_page_dir;
 
+typedef struct deferred_map_entry {
+    page_directory_t *dir;
+    uint32_t virt;
+    uint32_t phys;
+    uint32_t flags;
+    uint32_t page_count;
+} deferred_map_entry_t;
+
 extern int switch_page_dir(uint32_t addr);
+int paging_add_deferred_mapping(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t flags, uint32_t page_count);
 void paging_init(void);
 int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
                uint32_t flags);
