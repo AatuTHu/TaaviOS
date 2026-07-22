@@ -9,7 +9,7 @@ LIBDIR   = $(BUILD)/lib
 
 CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -O0 \
          -fno-pic -fno-pie -mno-accumulate-outgoing-args -mregparm=0 \
-         -fno-stack-protector -Wall -Wextra \
+         -fno-stack-protector -Wall -Wextra -I../kernel/include/shared\
          -I$(LIBC_DIR) \
          -I$(SYS_DIR)
 

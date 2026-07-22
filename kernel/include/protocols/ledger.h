@@ -5,6 +5,7 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "sched.h"
+#include "shared.h"
 
 typedef enum {
     PENDING,

@@ -1,17 +1,7 @@
 #ifndef OP_SY_H
 #define OP_SY_H
 
-#include "defines.h"
-
-typedef enum {
-    W_CREATE,
-    W_PAINT,
-    W_MOVE,
-    W_SET_OPERATOR,
-    W_CH_ACT_W,
-    W_CH_BG_COLOR,
-    W_CH_FG_COLOR,
-} window_operations;
+#include "shared.h"
 
 int set_operator_task();
 int ch_act_window(int target_pid);

@@ -42,29 +42,6 @@
 #define INVALID_PHYSICAL_PAGE 0xFFFFFFFF
 #define INVALID_BUFFER 0
 
-typedef enum {
-    WRITE,
-    READ,
-    UPDATE, // write at offset?
-    DELETE,
-    FREE,
-    OPEN,
-    CLOSE,
-    CREATE,
-    FIND,
-    LIST,
-    O_R, // Open and read
-    PAINT_WINDOW,
-    MOVE,
-    BG_COLOR,
-    FG_COLOR,
-} operations_t;
-
-#define O_RDONLY 0x01
-#define O_WRONLY 0x02
-#define O_RDWR 0x04
-#define O_CREAT 0x08
-
 #define DEFAULT_HORIZONTAL_PADDING 5
 #define DEFAULT_VERTICAL_PADDING 5
 

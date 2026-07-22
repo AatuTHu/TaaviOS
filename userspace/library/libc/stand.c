@@ -1,4 +1,5 @@
 #include "stand.h"
+#include "shared.h"
 #include "string.h"
 #include "sys_calls.h"
 

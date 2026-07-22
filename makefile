@@ -7,7 +7,7 @@ CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
 		 -Ikernel/include/mm -Ikernel/include/tcb -Ikernel/include/loader -Ikernel \
 		 -Ikernel/include/usermode -Ikernel/include/fs -Ikernel/include/kernel_clerks \
-		 -Ikernel/include/protocols \
+		 -Ikernel/include/protocols -Ikernel/include/shared\
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
 		 -mno-sse -mno-sse2 -mno-mmx \

@@ -1,9 +1,11 @@
 #ifndef STAND_H
 #define STAND_H
 
-#include "defines.h"
 #include <stddef.h>
 #include <stdint.h>
+
+#define STATUS_ERROR -1
+#define STATUS_OK 0
 
 void print(const char *msg);
 void error(const char *msg);

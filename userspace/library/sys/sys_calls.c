@@ -1,4 +1,5 @@
 #include "sys_calls.h"
+#include "shared.h"
 
 void sys_write(int fd, const char *msg, int len) {
     int retval;

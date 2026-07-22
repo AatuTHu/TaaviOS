@@ -422,10 +422,12 @@ static int32_t sys_configure_window(struct registers *r) {
     case W_CH_ACT_W:
         return change_keyboard_focus(r->ecx);
     case W_CH_BG_COLOR:
+        current->state = TASK_BLOCKED;
         ledger_add_gui_req(current->pid, BG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
     case W_CH_FG_COLOR:
+        current->state = TASK_BLOCKED;
         ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);

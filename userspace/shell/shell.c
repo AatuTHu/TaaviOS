@@ -112,7 +112,7 @@ void main(void) {
     }
 
     if (paint_window(590, 190, 5, 5) == STATUS_ERROR) {
-        print("painting window failed");
+        print("painting window failed\n");
     }
 
     if (ch_fg_color(COLOR_BLACK) == STATUS_ERROR) {
