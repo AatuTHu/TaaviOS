@@ -105,15 +105,11 @@ static int32_t sys_write(struct registers *r) {
 
     switch (fd) {
     case 1:
-
         // vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
         ledger_add_gui_req(current->pid, WRITE, 0, 0, 0, 0, buf, len, 0, NULL);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
-
-        r->eax = STATUS_OK;
-        ledger_collect(current->pid, gui_task_pid, NULL);
-        break;
+        return ledger_collect(current->pid, gui_task_pid, NULL);
     case 2:
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         ERROR(buf);

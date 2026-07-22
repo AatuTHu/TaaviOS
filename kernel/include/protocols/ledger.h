@@ -51,6 +51,7 @@ void ledger_init();
 int ledger_remove_request();
 int ledger_count_clerk_reqs(uint32_t clerk_pid);
 int ledger_count_active_reqs();
+int ledger_has_killable_reqs();
 int ledger_enqueue(uint32_t clerk_pid, request_table *req);
 
 #endif

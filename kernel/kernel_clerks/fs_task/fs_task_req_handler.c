@@ -557,56 +557,47 @@ void fs_handle_request(request_table *req) {
     }
 
     if (req->request_type == LIST && strncmp(req->path, "SYS_INFO/TASKS", sizeof(req->path)) == 0) {
-        req->status       = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? COMPLETE : FAILED;
+        goto on_success;
     }
 
     switch (req->request_type) {
     case OPEN:
-        req->status       = (open(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (open(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto on_success;
     case READ:
-        req->status       = (read(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (read(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto on_success;
     case WRITE:
-        req->status       = (write(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (write(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto on_success;
     case CLOSE:
-        req->status = (close(req) == STATUS_ERROR) ? TERMINATED : CLOSE;
+        req->status = (close(req) == STATUS_OK) ? TERMINATED : CLOSE;
         return;
     case CREATE:
-        req->status       = (create(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (create(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto on_success;
     case FIND:
-        req->status       = (find(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (find(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto on_success;
     case LIST:
-        req->status       = (list(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
-        fs_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        req->status = (list(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto on_success;
     case FREE:
-        req->status       = (free(req) == STATUS_ERROR) ? TERMINATED : FAILED;
+        req->status       = (free(req) == STATUS_OK) ? COMPLETE : FAILED;
         fs_task->priority = PRIORITY_NORMAL;
         return;
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
-        req->status = TERMINATED;
+        req->status = FAILED;
         scheduler_wake_task(req->caller_pid);
         return;
     }
+
+on_success:
+    fs_task->priority = PRIORITY_NORMAL;
+    scheduler_wake_task(req->caller_pid);
+    return;
 }
 
 /**

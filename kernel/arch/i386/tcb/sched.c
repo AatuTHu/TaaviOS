@@ -73,7 +73,7 @@ static void scheduler_check_clerks() {
         return;
     }
 
-    if (dead_task_count > 0) {
+    if (dead_task_count > 0 || ledger_has_killable_reqs() > 0) {
         clerk = tasks[reaper_task_pid];
         if (clerk == NULL || clerk->task_mode == USER_TASK) {
             DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
@@ -82,7 +82,7 @@ static void scheduler_check_clerks() {
         if (clerk->state == TASK_SLEEPING) {
             DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
             clerk->state    = TASK_READY;
-            clerk->priority = PRIORITY_LOW;
+            clerk->priority = PRIORITY_HIGH;
         }
         return;
     }
@@ -163,7 +163,7 @@ static void scheduler_switch(struct registers *r) {
         }
     }
 
-    if (scheduler_has_runnable_task() == 0 || dead_task_count > 0 || ledger_count_active_reqs() > 0) {
+    if (scheduler_has_runnable_task() == 0 || dead_task_count > 0 || ledger_count_active_reqs() > 0 || ledger_has_killable_reqs() > 0) {
         // DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
         scheduler_check_clerks();
     }

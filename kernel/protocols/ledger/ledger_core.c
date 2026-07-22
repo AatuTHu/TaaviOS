@@ -83,7 +83,7 @@ int ledger_remove_request() {
         }
 
         for (int i = 0; i < q->max_entries; i++) {
-            if (q->table[i] != NULL && q->table[i]->status == TERMINATED) {
+            if (q->table[i] != NULL && (q->table[i]->status == TERMINATED || q->table[i]->status == FAILED)) {
                 DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper came to reap clerk %d, slot %d\n", c, i);
 
                 if (q->table[i]->pixels != NULL) {
@@ -167,13 +167,10 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                 break;
             }
 
-            req->status = TERMINATED;
-            DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %d. With req.type: %d\n", caller_pid, req->request_type);
+            task_t *current = scheduler_get_current_task();
+            req->status     = TERMINATED;
+            DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %s. at index: %d\n", current->name, i);
             return STATUS_OK;
-        }
-
-        if (req->status == TERMINATED) {
-            wake_clerk(reaper_task_pid);
         }
     }
 
@@ -221,14 +218,14 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
         }
     }
 
-    for (int i = 0; i < q->max_entries; i++) {
+    /*for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] != NULL && q->table[i]->status == FAILED) {
             *q->last_idx = i;
             DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND AT %d\n", i);
             q->table[i]->status = IN_PROGRESS;
             return q->table[i];
         }
-    }
+    }*/
 
     DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: No tasks found for :%d\n", clerk_pid);
     return NULL;
@@ -274,6 +271,22 @@ int ledger_count_active_reqs() {
     }
 
     return req_count;
+}
+
+int ledger_has_killable_reqs() {
+    for (uint32_t clerk_pid = 0; clerk_pid < CLERK_COUNT; clerk_pid++) {
+        clerk_queue *q = ledger_get_queue(clerk_pid);
+        if (q == NULL) {
+            continue;
+        }
+        for (int i = 0; i < q->max_entries; i++) {
+            if (q->table[i] != NULL && (q->table[i]->status == FAILED || q->table[i]->status == TERMINATED)) {
+                return 1;
+            }
+        }
+    }
+
+    return 0;
 }
 
 void ledger_init() {

@@ -183,6 +183,11 @@ void main(void) {
         while (1) {
             int n = scan(&c);
             if (n > 0) {
+
+                if (pos >= 255) {
+                    pos--;
+                }
+
                 if (c == '\n') {
                     buf[pos] = 0;
                     exec_cmd(buf);

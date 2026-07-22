@@ -291,29 +291,29 @@ static int gui_handle_request(request_table *req) {
 
     switch (req->request_type) {
     case WRITE:
-        req->status = (gui_draw_string(req->buf, req->caller_pid) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status = (gui_draw_string(req->buf, req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     case CREATE:
-        req->status = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     case DELETE:
         req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : FAILED;
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
-        req->status = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     case FG_COLOR:
-        req->status = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     case BG_COLOR:
-        req->status = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     case DRAW:
-        req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : TERMINATED;
+        req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     default:
-        req->status = TERMINATED;
+        req->status = FAILED;
         scheduler_wake_task(req->caller_pid);
         return STATUS_ERROR;
     }
