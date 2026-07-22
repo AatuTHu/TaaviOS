@@ -254,6 +254,35 @@ static int gui_paint_window_to_screen(request_table *req) {
     return STATUS_OK;
 }
 
+static int gui_draw_sprite(request_table *req) {
+
+    int scale = 4;
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
+            window_t *entry = program_windows[i];
+            for (int row = 0; row < 32; row++) {
+                for (int col = 0; col < 32; col++) {
+                    fb_fill_rect((uint32_t *)entry->pixels,
+                                 req->x + col * scale, req->y + row * scale,
+                                 scale, scale,
+                                 entry->width, entry->height,
+                                 req->pixels[row * req->width + col]);
+                }
+            }
+
+            entry->y_offset = req->y + (req->height * scale);
+            entry->x_offset = DEFAULT_HORIZONTAL_PADDING;
+
+            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
+        }
+    }
+
+    return STATUS_OK;
+}
+
 static int gui_handle_request(request_table *req) {
     task_t *gui_task = task_get_by_pid(gui_task_pid);
 
@@ -262,41 +291,37 @@ static int gui_handle_request(request_table *req) {
 
     switch (req->request_type) {
     case WRITE:
-        req->status        = (gui_draw_string(req->buf, req->caller_pid) == STATUS_OK) ? COMPLETE : TERMINATED;
-        gui_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return STATUS_OK;
-
+        req->status = (gui_draw_string(req->buf, req->caller_pid) == STATUS_OK) ? COMPLETE : TERMINATED;
+        goto on_success;
     case CREATE:
-        req->status        = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : TERMINATED;
-        gui_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return STATUS_OK;
+        req->status = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : TERMINATED;
+        goto on_success;
     case DELETE:
         req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : FAILED;
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
-        req->status        = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : TERMINATED;
-        gui_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return STATUS_OK;
+        req->status = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : TERMINATED;
+        goto on_success;
     case FG_COLOR:
-        req->status        = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
-        gui_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return STATUS_OK;
+        req->status = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
+        goto on_success;
     case BG_COLOR:
-        req->status        = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
-        gui_task->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
-        return STATUS_OK;
+        req->status = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : TERMINATED;
+        goto on_success;
+    case DRAW:
+        req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : TERMINATED;
+        goto on_success;
     default:
-
         req->status = TERMINATED;
         scheduler_wake_task(req->caller_pid);
         return STATUS_ERROR;
     }
+
+on_success:
+    gui_task->priority = PRIORITY_NORMAL;
+    scheduler_wake_task(req->caller_pid);
+    return STATUS_OK;
 }
 
 void gui_task_loop() {

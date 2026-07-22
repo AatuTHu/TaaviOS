@@ -17,7 +17,7 @@
 #define SYS_IDLE 112
 #define SYS_GETDENTS 141
 #define SYS_YIELD 158
-#define SYS_CONWI 250
+#define SYS_WI 250
 
 typedef struct {
     uint32_t width;
@@ -26,7 +26,7 @@ typedef struct {
     uint32_t y;
     uint32_t color;
     uint32_t *pixels;
-} gui_calls_t;
+} gui_params_pack;
 
 typedef enum {
     W_CREATE,

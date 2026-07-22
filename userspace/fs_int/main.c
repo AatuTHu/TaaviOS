@@ -1,3 +1,4 @@
+#include "folder.h"
 #include "op_sy.h"
 #include "stand.h"
 #include "string.h"
@@ -31,7 +32,7 @@ void command_write(const char *buf) {
 void command_open(const char *filename) {
     fd = open(filename, O_RDONLY | O_WRONLY);
 
-    if (fd != -1) {
+    if (fd != STATUS_ERROR) {
         print("\n");
         print("Succesfully opened the file\n");
         print("\n");
@@ -47,7 +48,7 @@ void command_read() {
     char buf[512] = {0};
     int nread     = read(fd, buf, sizeof(buf));
 
-    if (nread != -1) {
+    if (nread != STATUS_ERROR) {
         print(buf);
         print("\n");
     } else {
@@ -59,7 +60,7 @@ void command_read() {
 void command_close() {
     print("closing file\n");
     close(fd);
-    fd = -1;
+    fd = STATUS_ERROR;
 }
 
 void command_mkdir(const char *directory_name) {
@@ -119,8 +120,12 @@ void exec_cmd(char *buf) {
 }
 
 void main(void) {
-    if (create_task_window(800, 600, 20, 20) == -1) {
+    if (create_task_window(800, 600, 20, 20) == STATUS_ERROR) {
         return;
+    }
+
+    if (draw_buffer(32, 32, 10, 10, 0, (uint32_t *)folder) == STATUS_ERROR) {
+        print("Drawing img failed\n");
     }
 
     print("filesystem interface\n");

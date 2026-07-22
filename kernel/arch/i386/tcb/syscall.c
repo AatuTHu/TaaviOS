@@ -380,7 +380,7 @@ static int change_keyboard_focus(uint32_t target_pid) {
  *
  * Return: STATUS_OK || STATUS_ERROR.
  */
-static int32_t sys_configure_window(struct registers *r) {
+static int32_t sys_window(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
     uint32_t operation = r->ebx;
     task_t *current    = scheduler_get_current_task();
@@ -431,6 +431,17 @@ static int32_t sys_configure_window(struct registers *r) {
         ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
+    case W_DRAW_BUFFER:
+        gui_params_pack *params = (gui_params_pack *)r->ecx;
+
+        if (params == NULL) {
+            return STATUS_ERROR;
+        }
+
+        ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x, params->y, NULL, 0, params->color, params->pixels);
+        current->state = TASK_BLOCKED;
+        scheduler_yield(r);
+        return ledger_collect(current->pid, gui_task_pid, NULL);
     default:
         current->state = TASK_RUNNING;
         break;
@@ -460,5 +471,5 @@ void syscall_init() {
     syscall_table[SYS_MKDIR]    = sys_mkdir;
     syscall_table[SYS_CHDIR]    = sys_chdir;
     syscall_table[SYS_GETDENTS] = sys_getdents;
-    syscall_table[SYS_CONWI]    = sys_configure_window;
+    syscall_table[SYS_WI]       = sys_window;
 }
