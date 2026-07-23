@@ -1,5 +1,4 @@
 #include "pit.h"
-#include "config.h"
 #include "io.h"
 #include "isr.h"
 #include "klog.h"

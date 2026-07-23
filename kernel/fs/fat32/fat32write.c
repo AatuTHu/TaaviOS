@@ -107,7 +107,7 @@ int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
     }
 
     kfree(tmp_buf);
-    return STATUS_ERROR;
+    return STATUS_OK;
 }
 
 /**

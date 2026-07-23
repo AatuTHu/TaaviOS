@@ -69,7 +69,7 @@ void fat32_list_dir(uint32_t cluster, uint8_t *out_buf, uint32_t *out_size) {
  * Description:
  * This function makes a chain of directories as long as the path is
  * Before making a new directory it check if on with the same name exsist
- * thus preventing a dublication.
+ * thus preventing a duplication.
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */

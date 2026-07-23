@@ -4,10 +4,10 @@
 #include "kstring.h"
 #include "mm.h"
 #include "pmm.h"
+#include <stdint.h>
 
 #define MAX_DEFERRED_MAPPINGS 2
 page_directory_t kernel_page_dir __attribute__((aligned(PAGE_SIZE_BYTES)));
-static int mappings_added = 0;
 deferred_map_entry_t deferred_mappings[MAX_DEFERRED_MAPPINGS];
 
 int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
@@ -82,20 +82,22 @@ void paging_switch(page_directory_t *dir) {
 
 int paging_add_deferred_mapping(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t flags, uint32_t page_count) {
 
-    if (mappings_added == 0) {
-        memset(&deferred_mappings, 0, sizeof(deferred_mappings));
-    }
-
-    if (mappings_added == MAX_DEFERRED_MAPPINGS) {
+    if (page_count <= 0) {
         return STATUS_ERROR;
     }
-    deferred_mappings[mappings_added].dir        = dir;
-    deferred_mappings[mappings_added].virt       = virt;
-    deferred_mappings[mappings_added].phys       = phys;
-    deferred_mappings[mappings_added].flags      = flags;
-    deferred_mappings[mappings_added].page_count = page_count;
-    mappings_added++;
-    return STATUS_OK;
+
+    for (uint8_t i = 0; i < MAX_DEFERRED_MAPPINGS; i++) {
+        if (deferred_mappings[i].taken == 0) {
+            deferred_mappings[i].dir        = dir;
+            deferred_mappings[i].virt       = virt;
+            deferred_mappings[i].phys       = phys;
+            deferred_mappings[i].flags      = flags;
+            deferred_mappings[i].page_count = page_count;
+            deferred_mappings[i].taken      = 1;
+            return STATUS_OK;
+        }
+    }
+    return STATUS_ERROR;
 }
 
 void paging_init() {
@@ -115,14 +117,15 @@ void paging_init() {
                PAGE_PRESENT | PAGE_RW);
 
     DEBUG_FB("[FB][MAP_FB_PAGE]: Mapping framebuffer\n");
-    for (int j = 0; j < mappings_added; j++) {
-        if (deferred_mappings[j].flags != 0) {
+    for (uint8_t j = 0; j < MAX_DEFERRED_MAPPINGS; j++) {
+        if (deferred_mappings[j].taken == 1) {
             for (uint32_t i = 0; i < deferred_mappings[j].page_count; i++) {
                 paging_map(deferred_mappings[j].dir,
                            deferred_mappings[j].virt + i * PAGE_SIZE,
                            deferred_mappings[j].phys + i * PAGE_SIZE,
                            deferred_mappings[j].flags);
             }
+            deferred_mappings[j].taken = 0;
         }
     }
     DEBUG_FB("[FB][MAP_FB_PAGE]: Mapping successfull\n");
@@ -135,13 +138,9 @@ void paging_init() {
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt) {
     if (!dir) {
         ERROR("[PAGING] No directory given, cant give physical page\n");
-        return INVALID_PHYSICAL_PAGE; // Kinda not the right word. But if
-                                      // directory missing we cant give a valid
-                                      // page? I think this is right.
+        return INVALID_PHYSICAL_PAGE;
     }
-    DEBUG_CORE_MM("[PAGING]: getting physical location for page directory: %x, with "
-                  "virt: %d\n",
-                  (uint32_t)dir, virt);
+    DEBUG_CORE_MM("[PAGING]: getting physical location for page directory: %x, with virt: %d\n", (uint32_t)dir, virt);
     uint32_t pd_index = virt >> PD_INDEX_SHIFT;
     DEBUG_CORE_MM("[PAGING]: page directory index: %d\n", pd_index);
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {

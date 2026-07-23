@@ -2,7 +2,6 @@
 #include "config.h"
 #include "elf.h"
 #include "fat32.h"
-#include "gui_task.h"
 #include "keyboard.h"
 #include "klog.h"
 #include "ledger.h"
@@ -162,16 +161,11 @@ static int32_t sys_close(struct registers *r) {
     int fd                = r->ebx;
     const task_t *current = scheduler_get_current_task();
 
-    if (fd >= 3 && fd <= MAX_FD_ENTRIES) {
-        return STATUS_ERROR;
-    }
-
-    if (current == NULL) {
+    if (fd < 3 || fd > MAX_FD_ENTRIES || current == NULL) {
         return STATUS_ERROR;
     }
 
     ledger_add_fs_req(current->pid, CLOSE, fd, NULL, NULL, 0, 0);
-
     return STATUS_OK;
 }
 
@@ -427,7 +421,7 @@ static int32_t sys_window(struct registers *r) {
         ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
-    case W_DRAW_BUFFER:
+    case W_DRAW_BUFFER: {
         gui_params_pack *params = (gui_params_pack *)r->ecx;
 
         if (params == NULL) {
@@ -438,6 +432,7 @@ static int32_t sys_window(struct registers *r) {
         current->state = TASK_BLOCKED;
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
+    }
     default:
         current->state = TASK_RUNNING;
         break;

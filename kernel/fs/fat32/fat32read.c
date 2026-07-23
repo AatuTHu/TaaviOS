@@ -45,8 +45,7 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
 
         if (bytes_read >= size) {
             DEBUG_FAT32("[FAT32][READ_FILE]: Bytes read higher or equal to size now.\n");
-            kfree(temp_buf);
-            return STATUS_OK;
+            break;
         }
 
         uint32_t next = __fat32_next_cluster(current_cluster);

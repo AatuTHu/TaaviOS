@@ -42,7 +42,7 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
         }
         virt += PAGE_SIZE;
     }
-    // DEBUG_CORE_MM("[VMM]: ALLOCATION SUCCESSFULL\n");
+    // DEBUG_CORE_MM("[VMM]: ALLOCATION SUCCESSFUL\n");
     return STATUS_OK;
 }
 

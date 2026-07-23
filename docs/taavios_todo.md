@@ -9,7 +9,7 @@
 - [x] Gui master window management table.
 - [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
 - [x] sys_caw and sys_conwi merged into single syscall (sys_wi)
-- [ ] sys_wi operation to draw image/sprite from ring 3 (blit userspace buffer to window)
+- [x] sys_wi operation to draw image/sprite from ring 3 (blit userspace buffer to window)
 - [ ] Userspace needs malloc/alloc
 - [ ] Gui scroll screen up and down
 - [ ] Shell arrow traversal

@@ -11,7 +11,7 @@
  * @flags:       open/access flags
  *
  * Description:
- * Validates params, allocates a new request_table entry, places it in
+ * Validates parameters, allocates a new request_table entry, places it in
  * the correct clerk's queue and wakes that clerk.
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
@@ -51,7 +51,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     }
 
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
     DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
     // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);

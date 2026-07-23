@@ -3,7 +3,6 @@
 #include "klog.h"
 #include "kstring.h"
 #include "mm.h"
-#include "pmm.h"
 #include "vmm.h"
 
 static bool elf_check_file(const Elf32_Ehdr *hdr) {

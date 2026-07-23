@@ -1,5 +1,6 @@
 #include "fat32.h"
 #include "fs_task.h"
+#include "ledger.h"
 
 static dir_traversal_t *dir_map[MAX_TASKS];
 static tasks_dir_t virt_tasks_dir[MAX_TASKS];
@@ -432,7 +433,7 @@ int fs_return_vdir_tasks(request_table *req) {
             int name_len       = strlen(virt_tasks_dir[i].name);
             int required_space = spid_len + 1 + name_len + 1;
 
-            if (read_size + required_space > req->buffer_size) {
+            if (read_size + required_space > (int)req->buffer_size) {
                 break;
             }
 
@@ -572,7 +573,7 @@ void fs_handle_request(request_table *req) {
         req->status = (write(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     case CLOSE:
-        req->status = (close(req) == STATUS_OK) ? TERMINATED : CLOSE;
+        req->status = (close(req) == STATUS_OK) ? TERMINATED : FAILED;
         return;
     case CREATE:
         req->status = (create(req) == STATUS_OK) ? COMPLETE : FAILED;

@@ -3,17 +3,13 @@
 #include "font.h"
 #include "klog.h"
 #include "kstring.h"
-#include "mm.h"
 #include "paging.h"
-#include "vmm.h"
+#include <stdint.h>
 
 fb_t fb;
-static uint32_t fb_size    = 0;
-static uint32_t page_count = 0;
 
 static void fb_put_pixel(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t color) {
     uint32_t *position = (uint32_t *)(pixel_buffer + y * width + x);
-    // DEBUG_FB("[FB][PUT_PIXEL]: position: %d\n", *position);
     *position          = color;
 }
 
@@ -141,23 +137,23 @@ int fb_init(const struct multiboot_info *mbi) {
         return STATUS_ERROR;
     }
 
-    fb.phys_addr  = mbi->framebuffer_addr;
-    fb.width      = mbi->framebuffer_width;
-    fb.height     = mbi->framebuffer_height;
-    fb.pitch      = mbi->framebuffer_pitch;
-    fb.bpp        = mbi->framebuffer_bpp;
-    fb.virt_addr  = FB_VIRTUAL_BASE;
+    fb.phys_addr        = mbi->framebuffer_addr;
+    fb.width            = mbi->framebuffer_width;
+    fb.height           = mbi->framebuffer_height;
+    fb.pitch            = mbi->framebuffer_pitch;
+    fb.bpp              = mbi->framebuffer_bpp;
+    fb.virt_addr        = FB_VIRTUAL_BASE;
 
-    fb.blue_pos   = mbi->framebuffer_blue_field_position;
-    fb.red_pos    = mbi->framebuffer_red_field_position;
-    fb.green_pos  = mbi->framebuffer_green_field_position;
+    fb.blue_pos         = mbi->framebuffer_blue_field_position;
+    fb.red_pos          = mbi->framebuffer_red_field_position;
+    fb.green_pos        = mbi->framebuffer_green_field_position;
 
-    fb.blue_size  = mbi->framebuffer_blue_mask_size;
-    fb.red_size   = mbi->framebuffer_red_mask_size;
-    fb.green_size = mbi->framebuffer_green_mask_size;
+    fb.blue_size        = mbi->framebuffer_blue_mask_size;
+    fb.red_size         = mbi->framebuffer_red_mask_size;
+    fb.green_size       = mbi->framebuffer_green_mask_size;
 
-    fb_size       = mbi->framebuffer_pitch * mbi->framebuffer_height;
-    page_count    = (fb_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    uint32_t fb_size    = mbi->framebuffer_pitch * mbi->framebuffer_height;
+    uint32_t page_count = (fb_size + PAGE_SIZE - 1) / PAGE_SIZE;
     paging_add_deferred_mapping(&kernel_page_dir, FB_VIRTUAL_BASE, fb.phys_addr, PAGE_PRESENT | PAGE_RW, page_count);
     DEBUG_FB("[FB]: framebuffer type: %d\n", mbi->framebuffer_type);
     DEBUG_FB("[FB]: framebuffer width: %d\n", fb.width);

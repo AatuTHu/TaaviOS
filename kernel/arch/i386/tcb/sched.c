@@ -1,7 +1,6 @@
 #include "sched.h"
 #include "config.h"
 #include "klog.h"
-#include "kstring.h"
 #include "ledger.h"
 #include "task.h"
 #include "tss.h"
@@ -141,7 +140,7 @@ static int scheduler_find_next_task() {
 static int scheduler_find_first_task_based_on_state(task_state_t state) {
     for (int i = 1; i <= task_count; i++) {
         int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->state == state) {
+        if (tasks[next_idx] != NULL && tasks[next_idx]->state == state) {
             return next_idx;
         }
     }

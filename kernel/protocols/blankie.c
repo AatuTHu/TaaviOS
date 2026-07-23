@@ -4,6 +4,7 @@
 #include "kmalloc.h"
 #include "sched.h"
 #include "task.h"
+#include <stdint.h>
 
 /*
  * Blankie protocol
@@ -20,41 +21,42 @@
 static blankie_registry_t *b_registry[CLERK_COUNT];
 
 int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
-    blankie_registry_t *blankie_req =
-        (blankie_registry_t *)kmalloc(sizeof(blankie_registry_t));
+    for (uint8_t i = 0; i < CLERK_COUNT; i++) {
+        if (b_registry[i] == NULL) {
+            blankie_registry_t *blankie_req =
+                (blankie_registry_t *)kmalloc(sizeof(blankie_registry_t));
 
-    if (blankie_req == NULL) {
-        DEBUG("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
-        return STATUS_ERROR;
+            if (blankie_req == NULL) {
+                DEBUG("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
+                return STATUS_ERROR;
+            }
+
+            blankie_req->pid         = pid;
+            blankie_req->entry_point = entry_point;
+            blankie_req->stack_top   = stack_top;
+            b_registry[i]            = blankie_req;
+            // DEBUG("[BLANKIE][REGISTER]: Current esp 0x%x\n", stack_top);
+            // DEBUG("[BLANKIE][REGISTER]: Current eip 0x%x\n", stack_top);
+            return STATUS_OK;
+        }
     }
 
-    blankie_req->pid         = pid;
-    blankie_req->entry_point = entry_point;
-    blankie_req->stack_top   = stack_top;
-
-    // DEBUG("[BLANKIE][REGISTER]: Current esp 0x%x\n", stack_top);
-    // DEBUG("[BLANKIE][REGISTER]: Current eip 0x%x\n", stack_top);
-
-    // as only kernel clerks get this protocol we can use their pid as index. to
-    // achieve 0(1) ratio but as idle is pid 0 we have to do some voodoo to pid
-    // to get the ratio
-
-    b_registry[pid - 1]      = blankie_req;
-
-    return STATUS_OK;
+    return STATUS_ERROR;
 }
 
 int blankie_activate(uint32_t pid) {
-    task_t *task = task_get_by_pid(pid);
-
-    if (task == NULL) {
-        return STATUS_ERROR;
+    for (uint8_t i = 0; i < CLERK_COUNT; i++) {
+        if (b_registry[i] != NULL && b_registry[i]->pid == pid) {
+            task_t *task      = task_get_by_pid(pid);
+            task->context.eip = b_registry[i]->entry_point;
+            task->context.esp = b_registry[i]->stack_top;
+            task->context.ebp = b_registry[i]->stack_top;
+            task->started     = 0;
+            task->state       = TASK_SLEEPING;
+            scheduler_yield(&task->context);
+            break;
+        }
     }
 
-    task->context.eip = b_registry[pid - 1]->entry_point;
-    task->context.esp = b_registry[pid - 1]->stack_top;
-    task->context.ebp = b_registry[pid - 1]->stack_top;
-    task->started     = 0;
-    task->state       = TASK_SLEEPING;
-    scheduler_yield(&task->context);
+    return STATUS_ERROR;
 }

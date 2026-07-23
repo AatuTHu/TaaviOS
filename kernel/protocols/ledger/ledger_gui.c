@@ -1,3 +1,4 @@
+#include "config.h"
 #include "ledger.h"
 
 /**
@@ -65,11 +66,11 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
     // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
-    if (ledger_enqueue(gui_task_pid, new_request) == STATUS_OK) {
-        return STATUS_OK;
+    if (ledger_enqueue(gui_task_pid, new_request) == STATUS_ERROR) {
+        kfree(new_request);
+        return STATUS_ERROR;
     }
 
-    kfree(new_request);
     return STATUS_OK;
 
 case_error:

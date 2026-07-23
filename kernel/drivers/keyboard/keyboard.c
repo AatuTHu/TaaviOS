@@ -3,9 +3,7 @@
 #include "io.h"
 #include "isr.h"
 #include "klog.h"
-#include "kstring.h"
 #include "sched.h"
-#include "vga.h"
 
 /**
  * Keyboard driver & routing

@@ -27,6 +27,7 @@ typedef struct deferred_map_entry {
     uint32_t phys;
     uint32_t flags;
     uint32_t page_count;
+    uint8_t taken;
 } deferred_map_entry_t;
 
 extern int switch_page_dir(uint32_t addr);

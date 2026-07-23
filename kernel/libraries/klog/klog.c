@@ -7,16 +7,8 @@
  * Good enough
  */
 
-// start from zero dunno where go. Zero is the level where write to both vga and
-// serial. Level one is for serial only
-uint8_t PRINT_LEVEL = 0;
-uint8_t debug_mode  = 0; // 0 = false, 1 = true;
-
 static void kputchar(char c) {
-    if (PRINT_LEVEL == 0 || PRINT_LEVEL == 2)
-        vga_putchar(c);
-    if (PRINT_LEVEL != 2)
-        serial_putchar(c);
+    serial_putchar(c);
 }
 
 static void kputs(const char *s) {
@@ -125,8 +117,7 @@ void klog(const char *fmt, ...) {
 }
 
 void klog_debug(const char *fmt, ...) {
-    uint8_t last_level = PRINT_LEVEL;
-    set_print_level(1);
+
     va_list args;        // not important
     va_start(args, fmt); // not important
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
@@ -134,12 +125,10 @@ void klog_debug(const char *fmt, ...) {
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt, args); // main writer function call ->
     va_end(args);      // not important
-    set_print_level(last_level);
 }
 
 void klog_error(const char *fmt, ...) {
-    uint8_t last_level = PRINT_LEVEL;
-    set_print_level(0);
+
     va_list args;        // not important
     va_start(args, fmt); // not important
     vga_set_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
@@ -148,10 +137,4 @@ void klog_error(const char *fmt, ...) {
     kwrite(fmt, args); // main writer function call ->
     kputs("\n");
     va_end(args); // not important
-    set_print_level(last_level);
-}
-
-// level 0 for vga and serial, level 1 for only serial, level 2 for only vga
-void set_print_level(uint8_t level) {
-    PRINT_LEVEL = level;
 }

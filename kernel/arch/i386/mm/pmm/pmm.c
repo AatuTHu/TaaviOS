@@ -1,8 +1,8 @@
 #include "pmm.h"
 #include "config.h"
 #include "klog.h"
-#include "kstring.h"
 #include "mm.h"
+#include <kstring.h>
 
 static uint32_t bitmap[MAX_PAGES / 32];
 static uint32_t used_pages = 0;
@@ -45,7 +45,6 @@ static int __pmm_test_bit(uint32_t page) {
  * and marks available slots of the bitmap as free to use. Leaving reserved spaces such as bios as used.
  *
  * And finally it reserves slots for kernel
- *
  *
  */
 void pmm_init(const struct multiboot_info *mboot) {

@@ -1,6 +1,4 @@
 #include "isr.h"
-#include "config.h"
-#include "hail_mary.h"
 #include "io.h"
 #include "klog.h"
 #include "sched.h"

@@ -6,7 +6,7 @@
 /**
  * Heap allocator
  * Design & Implementation:
- * Inspiration from osdev & countles other osdev projects
+ * Inspiration from osdev & countless other osdev projects
  * @author: A.H, 2026
  */
 
@@ -75,10 +75,10 @@ void *kmalloc(uint32_t size) {
             current = current->next;
         }
         if (size > remaining_heap_size) {
-            // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. drying to allocate more heap\n");
+            // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
             int addition_size = HEAP_PAGES * PAGE_SIZE;
             if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
-                // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Heap ceiling achivced. No more memory left to allocate.\n");
+                // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
                 break;
             }
 
@@ -87,7 +87,7 @@ void *kmalloc(uint32_t size) {
                 break;
             }
 
-            // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successfull\n");
+            // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
             block_header_t *new_block = (block_header_t *)current_heap_ceiling;
             new_block->size           = addition_size - sizeof(block_header_t);
             new_block->magic          = HEAP_MAGIC;

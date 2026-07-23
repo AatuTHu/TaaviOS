@@ -1,4 +1,3 @@
-#include "blankie.h"
 #include "ledger.h"
 
 /*
@@ -56,7 +55,7 @@ static clerk_queue *ledger_get_queue(uint32_t clerk_pid) {
  *
  * Description:
  * In case of fault this function is called clerks recovery function. It marks
- * the faulty request as termianted and wakes the caller.
+ * the faulty request as terminated and wakes the caller.
  *
  */
 void ledger_check_request(uint32_t clerk_pid) {
@@ -73,7 +72,7 @@ void ledger_check_request(uint32_t clerk_pid) {
 }
 
 int ledger_remove_request() {
-    // DEBUG_LEDGER("[LEDGER][REMOVE]: Dont fear the reaper\n");
+    // DEBUG_LEDGER("[LEDGER][REMOVE]: Don't fear the reaper\n");
     int kill_count = 0;
 
     for (int c = 0; c < CLERK_COUNT; c++) {
@@ -124,12 +123,12 @@ int ledger_enqueue(uint32_t clerk_pid, request_table *req) {
  *
  * Description:
  * Scans the clerk's queue for a COMPLETE request owned by caller_pid.
- * OPEN requests return the allocated fd directly. READ requests copy
+ * OPEN requests return the allocated FD directly. READ requests copy
  * their buffer into out. All other types fall through to the shared
  * completion path. Any matching TERMINATED entries also trigger the
  * reaper so stale requests don't linger.
  *
- * Return: STATUS_OK / fd on success, STATUS_ERROR if nothing found.
+ * Return: STATUS_OK / FD on success, STATUS_ERROR if nothing found.
  */
 int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
     clerk_queue *q = ledger_get_queue(clerk_pid);

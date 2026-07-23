@@ -1,9 +1,7 @@
 #include "idt.h"
-#include "config.h"
 #include "io.h"
 #include "isr.h"
 #include "klog.h"
-#include "sched.h"
 
 struct idt_entry idt[256];
 struct idt_ptr idt_pointer;

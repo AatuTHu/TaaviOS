@@ -143,7 +143,7 @@ int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent) {
             return STATUS_ERROR;
         }
 
-        next = current_directory_cluster;
+        current_directory_cluster = next;
     }
 }
 

@@ -142,8 +142,6 @@ static void init_microlithic() {
 
 void kernel_main(const uint32_t *mboot_info) {
 
-    set_print_level(2);
-
     init_serial_and_vga();
 
     init_mm(mboot_info);
