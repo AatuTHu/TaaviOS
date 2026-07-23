@@ -3,7 +3,7 @@ CC = i686-elf-gcc
 LD = i686-elf-ld
 ASFLAGS = -f elf32
 LOG_LEVEL ?= 2
-CFLAGS = -ffreestanding -O2 -nostdlib -Wall -Wextra \
+CFLAGS = -g -ffreestanding -O2 -nostdlib -Wall -Wextra \
          -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
 		 -Ikernel/include/mm -Ikernel/include/tcb -Ikernel/include/loader -Ikernel \
 		 -Ikernel/include/usermode -Ikernel/include/fs -Ikernel/include/kernel_clerks \
@@ -39,6 +39,12 @@ iso: $(BUILD)/taavi.bin $(BUILD)/taavi.elf
 	cp userspace/build/bin/*.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/taavi.iso isodir
+
+debug: iso
+	qemu-system-i386 \
+		-drive file=$(BUILD)/taavi.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
+		-drive file=fat.img,format=raw,if=ide,bus=0,unit=1,media=disk \
+		-boot d -serial stdio -no-reboot -no-shutdown -s -S
 
 run: iso
 	qemu-system-i386 \
@@ -93,3 +99,6 @@ format:
 	@echo "Formatting kernel source files..."
 	@find $(KERNEL_DIR) -name "*.c" -o -name "*.h" | xargs clang-format -i
 	@echo "Kernel formatting complete."
+
+gdb: $(BUILD)/taavi.elf
+	gdb -ex "file $(BUILD)/taavi.elf" -ex "target remote localhost:1234"

@@ -1,6 +1,5 @@
 #include "fat32.h"
 #include "fs_task.h"
-#include "ledger.h"
 
 static dir_traversal_t *dir_map[MAX_TASKS];
 static tasks_dir_t virt_tasks_dir[MAX_TASKS];
@@ -558,7 +557,7 @@ void fs_handle_request(request_table *req) {
     }
 
     if (req->request_type == LIST && strncmp(req->path, "SYS_INFO/TASKS", sizeof(req->path)) == 0) {
-        req->status = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? COMPLETE : FAILED;
+        req->status = (fs_return_vdir_tasks(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto on_success;
     }
 

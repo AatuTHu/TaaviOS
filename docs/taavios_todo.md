@@ -6,35 +6,35 @@
 - [x] test functions? (cppcheck for now).
 - [x] GUI
 - [x] Draw "vuokaavio" to your own notepad
-- [x] Gui master window management table.
+- [x] GUI master window management table.
 - [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
-- [x] sys_caw and sys_conwi merged into single syscall (sys_wi)
-- [x] sys_wi operation to draw image/sprite from ring 3 (blit userspace buffer to window)
-- [ ] Userspace needs malloc/alloc
-- [ ] Gui scroll screen up and down
+- [x] sys_caw and sys_conwi merged into single system call (sys_wi)
+- [x] sys_wi operation to draw image/sprite from ring 3 (blit user space buffer to window)
+- [ ] User space needs malloc/alloc
+- [ ] GUI scroll screen up and down
 - [ ] Shell arrow traversal
 - [ ] Blinking cursor
-- [ ] fs_int more complex filesystem management.
+- [ ] fs_int more complex file system management.
 - [ ] First real text editor
 - [ ] Keyboard routing fixes
 
 **Concurrency / Locks**
-- Add a locking mechanism in which interruptsa are disabled but only can be active at one place at a time. To prevent deadlocks
+- Add a locking mechanism in which interrupts are disabled but only can be active at one place at a time. To prevent deadlocks
 
 **Fs_task**
-- if closing a file fails we set the req as failed but dont do anything to it after that -> continue.
+- if closing a file fails we set the req as failed but don't do anything to it after that -> continue.
 
-**Kernel / Syscall**
+**Kernel / System calls**
 - O_CREAT for files -> not started.
-- getticks/getuptime syscall not started (needed for cursor blink)
+- get ticks/get uptime system call not started (needed for cursor blink)
 
-**Filesystem**
+**File system**
 - curr_offset open behavior not finalized
 - sys_delete -> not started
-- update dir -> not working. if used the sysbin folder that is created with make
+- update dir -> not working. If used the sysbin folder that is created with make
 
 **VGA / FB**
-- VGA/FB mapped directly in paging -> should go through VMM like all other memory <- deferred mapping function added to vmm. fb goes throught this. VGA  still dosnt, but it is not used anyways atm.
+- VGA/FB mapped directly in paging -> should go through VMM like all other memory <- deferred mapping function added to vmm. fb goes through this. VGA  still doesn't, but it is not used anyways at the moment.
 - VGA driver poorly written -> scroll maybe broken
 - Scroll up/down on arrow key press
 
