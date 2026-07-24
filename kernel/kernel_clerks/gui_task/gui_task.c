@@ -49,7 +49,7 @@ static int copy_pixels_to_screen(window_t *entry) {
  * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
  */
 static int gui_draw_string(const char *str, uint32_t caller_pid) {
-    DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
+    // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == caller_pid) {
             // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s for %d\n", str, caller_pid);
@@ -111,7 +111,7 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
  *
  * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
  */
-static void gui_delete_window(uint32_t owner_pid) {
+static int gui_delete_window(uint32_t owner_pid) {
     DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
 
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -121,12 +121,12 @@ static void gui_delete_window(uint32_t owner_pid) {
 
             if (fb_clear(entry->pixels, entry->width, entry->height, fg_color) == STATUS_ERROR) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
-                return;
+                return STATUS_ERROR;
             }
 
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Failed the copy pixels to screen\n");
-                return;
+                return STATUS_ERROR;
             }
 
             compositor[entry->wid].entry    = NULL;
@@ -141,12 +141,12 @@ static void gui_delete_window(uint32_t owner_pid) {
             program_windows[i] = NULL;
 
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: deletion succesfull\n");
-            return;
+            return STATUS_OK;
         }
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", owner_pid);
-    return;
+    return STATUS_OK;
 }
 
 /**
@@ -300,9 +300,7 @@ static int gui_handle_request(request_table *req) {
         return STATUS_OK;
     case DELETE:
         __asm__ __volatile__("cli");
-        gui_delete_window(req->caller_pid);
-        __asm__ __volatile__("sti");
-        req->status        = TERMINATED;
+        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:

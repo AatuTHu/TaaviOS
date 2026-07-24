@@ -1,5 +1,9 @@
+#include "config.h"
 #include "fat32.h"
 #include "fs_task.h"
+#include "ledger.h"
+#include "sched.h"
+#include "task.h"
 
 static dir_traversal_t *dir_map[MAX_TASKS];
 static tasks_dir_t virt_tasks_dir[MAX_TASKS];
@@ -514,7 +518,7 @@ static int list(request_table *req) {
  * Context: Called during task cleanup to prevent memory leaks.
  * Return: STATUS_OK || STATUS_ERROR
  */
-static void free(request_table *req) {
+static int free(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->caller_pid);
 
     for (int i = 0; i < MAX_FD_ENTRIES; i++) {
@@ -535,6 +539,7 @@ static void free(request_table *req) {
     }
 
     DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing succesfull\n");
+    return STATUS_OK;
 }
 
 /**
@@ -579,7 +584,9 @@ void fs_handle_request(request_table *req) {
         scheduler_wake_task(req->caller_pid);
         return;
     case CLOSE:
-        req->status = (close(req) == STATUS_ERROR) ? TERMINATED : FAILED;
+        req->status       = (close(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         return;
     case CREATE:
         req->status       = (create(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
@@ -597,11 +604,9 @@ void fs_handle_request(request_table *req) {
         scheduler_wake_task(req->caller_pid);
         return;
     case FREE:
-        __asm__ __volatile__("cli");
-        free(req);
-        __asm__ __volatile__("sti");
-        req->status       = TERMINATED;
+        req->status       = (free(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         return;
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
