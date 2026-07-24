@@ -20,14 +20,12 @@
  */
 
 void reaper_task_loop() {
-    while (1) {
-        DEBUG("[REAPER][LOOP]: Killing tasks\n");
-        scheduler_remove_task();
-        DEBUG("[REAPER][LOOP]: Killing requests\n");
-        ledger_remove_request();
-        DEBUG("[REAPER][LOOP]: Going to sleep\n");
-        blankie_activate(reaper_task_pid);
-    }
+    // DEBUG("[REAPER][LOOP]: Killing tasks\n");
+    scheduler_remove_task();
+    // DEBUG("[REAPER][LOOP]: Killing requests\n");
+    ledger_remove_request();
+    // DEBUG("[REAPER][LOOP]: Going to sleep\n");
+    blankie_activate(reaper_task_pid);
 }
 
 static void reaper_recovery() {

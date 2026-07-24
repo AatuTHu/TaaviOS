@@ -24,7 +24,7 @@ typedef struct {
     uint32_t height;
     uint32_t x;
     uint32_t y;
-    uint32_t color;
+    uint32_t scale;
     uint32_t *pixels;
 } gui_params_pack;
 

@@ -273,6 +273,12 @@ task_t *scheduler_get_current_task() {
 
 void scheduler_set_task_state(task_state_t state) {
     task_t *current = tasks[current_idx];
+
+    if (current == NULL) {
+        ERROR("[SCHEDULER][STATE_SETTER]: Could not set state as current task was invalid\n");
+        return;
+    }
+
     if (current->state == state) {
         DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
         return;

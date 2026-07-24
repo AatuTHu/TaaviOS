@@ -15,7 +15,7 @@
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
 int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height,
-                       uint32_t x, uint32_t y, const char *buf, uint32_t buffer_size, uint32_t color,
+                       uint32_t x, uint32_t y, const char *buf, uint32_t scale, uint32_t color,
                        const uint32_t *user_pixels) {
 
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
@@ -28,14 +28,14 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     new_request->caller_pid   = caller_pid;
     new_request->clerk_pid    = gui_task_pid;
     new_request->request_type = type;
-    new_request->flags        = 0;
+
     new_request->status       = PENDING;
-    new_request->fd           = 0;
+
     new_request->width        = width;
     new_request->height       = height;
     new_request->x            = x;
     new_request->y            = y;
-    new_request->buffer_size  = buffer_size;
+    new_request->scale        = scale;
     new_request->color        = color;
 
     if (user_pixels != NULL) {
@@ -56,18 +56,19 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
         //     new_request->buf, buffer_size);
     }
 
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added to index %d\n", found);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added\n");
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
+    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
+    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     if (ledger_enqueue(gui_task_pid, new_request) == STATUS_ERROR) {
         kfree(new_request);
+        ERROR("[LEDGER][ADD_GUI_REQUEST]: Failed to add to req queue\n");
         return STATUS_ERROR;
     }
 

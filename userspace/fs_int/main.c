@@ -20,13 +20,10 @@ void command_help() {
     print("- read               'Reads the opened file'     \n");
     print("- close              'Close opened file'         \n");
     print("- exit               'Close fs_interface'        \n");
-    print("\n");
 }
 
 void command_write(const char *buf) {
-    print("\n");
     write(fd, buf);
-    print("\n");
 }
 
 void command_open(const char *filename) {
@@ -35,11 +32,9 @@ void command_open(const char *filename) {
     if (fd != STATUS_ERROR) {
         print("\n");
         print("Succesfully opened the file\n");
-        print("\n");
     } else {
         print("\n");
         error("Error on opening the file\n");
-        print("\n");
     }
 }
 
@@ -50,10 +45,8 @@ void command_read() {
 
     if (nread != STATUS_ERROR) {
         print(buf);
-        print("\n");
     } else {
-        error("Read failed or file empty\n");
-        print("\n");
+        error("Read failed or file empty");
     }
 }
 
@@ -64,7 +57,6 @@ void command_close() {
 }
 
 void command_mkdir(const char *directory_name) {
-    mkdir(directory_name);
 }
 
 void command_cd(const char *path) {
@@ -124,7 +116,7 @@ void main(void) {
         return;
     }
 
-    if (draw_buffer(32, 32, 10, 10, 0, (uint32_t *)folder) == STATUS_ERROR) {
+    if (draw_buffer(32, 32, 10, 10, 4, (uint32_t *)folder) == STATUS_ERROR) {
         print("Drawing img failed\n");
     }
 

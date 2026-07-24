@@ -1,4 +1,5 @@
 #include "isr.h"
+#include "hail_mary.h"
 #include "io.h"
 #include "klog.h"
 #include "sched.h"
@@ -31,11 +32,12 @@ void isr_handler(struct registers *r) {
         return;
     }*/
 
-    klog("\n");
-    ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    ERROR("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     ERROR("                     KERNEL PANIC                           \n");
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    ERROR("Scheduler was running task %s\n", current->name);
+    if (current != NULL) {
+        ERROR("Scheduler was running task %s\n", current->name);
+    }
     ERROR("REASON: ");
     if (r->int_no == 14) {
         ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",

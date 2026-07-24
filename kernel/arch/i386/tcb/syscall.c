@@ -161,7 +161,8 @@ static int32_t sys_close(struct registers *r) {
     int fd                = r->ebx;
     const task_t *current = scheduler_get_current_task();
 
-    if (fd < 3 || fd > MAX_FD_ENTRIES || current == NULL) {
+    if (fd <= 2 || fd > MAX_FD_ENTRIES || current == NULL) {
+        ERROR("[SYSCALL][SYS_CLOSE]: fd %d provided was invalid\n", fd);
         return STATUS_ERROR;
     }
 
@@ -428,7 +429,7 @@ static int32_t sys_window(struct registers *r) {
             return STATUS_ERROR;
         }
 
-        ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x, params->y, NULL, 0, params->color, params->pixels);
+        ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x, params->y, NULL, params->scale, 0, params->pixels);
         current->state = TASK_BLOCKED;
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);

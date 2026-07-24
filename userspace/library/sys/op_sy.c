@@ -33,14 +33,14 @@ int ch_fg_color(int color) {
     return sys_conwi(W_CH_FG_COLOR, color, 0, 0, 0);
 }
 
-int draw_buffer(int width, int height, int x, int y, uint32_t color, uint32_t *sprite) {
+int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *sprite) {
     gui_params_pack params;
 
     params.width  = width;
     params.height = height;
     params.x      = x;
     params.y      = y;
-    params.color  = color;
+    params.scale  = scale;
     params.pixels = sprite;
 
     return sys_drwi(W_DRAW_BUFFER, &params);

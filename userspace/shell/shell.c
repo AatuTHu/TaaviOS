@@ -4,73 +4,59 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void command_help() {
+static void command_help() {
     print("\n------------------------------------------------------------\n");
     print("Available commands                                            \n");
     print("- help                'Prints this list'                      \n");
-    print("- lista               'Lists active tasks'                    \n");
-    print("- about               'Useless function'                      \n");
-    print("- get my pid          'Shells pid'                            \n");
+    print("- get pid             'Shells pid'                            \n");
     print("- exec [task]         'Executes a task'                       \n");
     print("- caw  [pid]          'Changes active window to provided pit' \n");
     print("- tasks               'Lists are active tasks with their pids'\n");
     print("- exit                'Exits and kills shell'                 \n");
 }
 
-void command_about() {
-    print("\n-------------------------------------------------------\n");
-    print("TaaviOS v0.0.0 - Author: Aatu H\n");
-}
-
-void command_get_pid() {
+static void command_get_pid() {
     int pid = get_pid();
     char msg[10];
     itoa(pid, msg);
     print("\n");
     print("Shells pid is: ");
     print(msg);
-    print("\n");
 }
 
-void command_exit() {
+static void command_exit() {
     terminate_program();
 }
 
-void command_exec(const char *path) {
+static void command_exec(const char *path) {
     exec(path);
 }
 
-void command_caw(const char *target) {
+static void command_caw(const char *target) {
     int target_pid = atoi(target);
     if (target_pid == 0 || ch_act_window(target_pid) == -1) {
-        print("\nWindow change did not succeed\n");
+        print("\nWindow change did not succeed");
     }
 }
 
-void command_lista() {
+static void command_tasks() {
     char tasks[512] = {0};
     int result      = get_ac_tasks(tasks, sizeof(tasks));
     print("\n");
     if (result > 0) {
         print(tasks);
     } else {
-        print("Failed to get tasks\n");
+        print("Failed to get tasks");
     }
 }
 
 void exec_cmd(char *buf) {
     if (str_eq(buf, "help") == 1) {
         command_help();
-        print("\n");
         return;
     }
-    if (str_eq(buf, "about") == 1) {
-        command_about();
-        print("\n");
-        return;
-    }
-    if (str_eq(buf, "lista") == 1) {
-        command_lista();
+    if (str_eq(buf, "tasks") == 1) {
+        command_tasks();
         print("\n");
         return;
     }

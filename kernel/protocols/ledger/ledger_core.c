@@ -18,7 +18,7 @@ clerk_queue clerk_queues[CLERK_COUNT] = {
 
 static void wake_clerk(uint32_t clerk_pid) {
     task_t *clerk = task_get_by_pid(clerk_pid);
-    if (clerk_pid != reaper_task_pid) {
+    if (clerk != NULL && clerk_pid != reaper_task_pid) {
         clerk->priority = PRIORITY_HIGH;
     }
     scheduler_wake_task(clerk_pid);
@@ -84,6 +84,10 @@ int ledger_remove_request() {
         for (int i = 0; i < q->max_entries; i++) {
             if (q->table[i] != NULL && (q->table[i]->status == TERMINATED || q->table[i]->status == FAILED)) {
                 DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper came to reap clerk %d, slot %d\n", c, i);
+
+                if (q->table[i]->status == FAILED) {
+                    ERROR("[LEDGER][REMOVE]: Reaper removing a failed request!\n");
+                }
 
                 if (q->table[i]->pixels != NULL) {
                     kfree(q->table[i]->pixels);

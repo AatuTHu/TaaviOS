@@ -514,7 +514,7 @@ static int list(request_table *req) {
  * Context: Called during task cleanup to prevent memory leaks.
  * Return: STATUS_OK || STATUS_ERROR
  */
-static int free(request_table *req) {
+static void free(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->caller_pid);
 
     for (int i = 0; i < MAX_FD_ENTRIES; i++) {
@@ -535,7 +535,6 @@ static int free(request_table *req) {
     }
 
     DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing succesfull\n");
-    return STATUS_OK;
 }
 
 /**
@@ -557,47 +556,59 @@ void fs_handle_request(request_table *req) {
     }
 
     if (req->request_type == LIST && strncmp(req->path, "SYS_INFO/TASKS", sizeof(req->path)) == 0) {
-        req->status = (fs_return_vdir_tasks(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    }
-
-    switch (req->request_type) {
-    case OPEN:
-        req->status = (open(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    case READ:
-        req->status = (read(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    case WRITE:
-        req->status = (write(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    case CLOSE:
-        req->status = (close(req) == STATUS_OK) ? TERMINATED : FAILED;
-        return;
-    case CREATE:
-        req->status = (create(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    case FIND:
-        req->status = (find(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    case LIST:
-        req->status = (list(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
-    case FREE:
-        req->status       = (free(req) == STATUS_OK) ? COMPLETE : FAILED;
+        req->status       = (fs_return_vdir_tasks(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
         fs_task->priority = PRIORITY_NORMAL;
-        return;
-    default:
-        ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
-        req->status = FAILED;
         scheduler_wake_task(req->caller_pid);
         return;
     }
 
-on_success:
-    fs_task->priority = PRIORITY_NORMAL;
-    scheduler_wake_task(req->caller_pid);
-    return;
+    switch (req->request_type) {
+    case OPEN:
+        req->status       = (open(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case READ:
+        req->status       = (read(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case WRITE:
+        req->status       = (write(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case CLOSE:
+        req->status = (close(req) == STATUS_ERROR) ? TERMINATED : FAILED;
+        return;
+    case CREATE:
+        req->status       = (create(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case FIND:
+        req->status       = (find(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case LIST:
+        req->status       = (list(req) == STATUS_ERROR) ? TERMINATED : COMPLETE;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    case FREE:
+        __asm__ __volatile__("cli");
+        free(req);
+        __asm__ __volatile__("sti");
+        req->status       = TERMINATED;
+        fs_task->priority = PRIORITY_NORMAL;
+        return;
+    default:
+        ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
+        req->status = TERMINATED;
+        scheduler_wake_task(req->caller_pid);
+        return;
+    }
 }
 
 /**

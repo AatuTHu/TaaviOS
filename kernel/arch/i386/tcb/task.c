@@ -73,7 +73,7 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
     task->started  = 0;
 
     strncpy(task->name, name, sizeof(task->name));
-    task->name[TASK_NAME_LENGTH] = '\0';
+    task->name[TASK_NAME_LENGTH - 1] = '\0';
     task->kernel_stack =
         phys_to_virt(kernel_stack) +
         KERNEL_STACK_SIZE; // kernel stack is bottom of stack so add the stack
@@ -138,8 +138,8 @@ task_t *task_get_by_pid(uint32_t pid) {
 }
 
 task_t *task_get_by_index(uint32_t index) {
-    if (task_table[index] != NULL) {
-        return task_table[index];
+    if (index >= MAX_TASKS) {
+        return NULL;
     }
-    return NULL;
+    return task_table[index];
 }

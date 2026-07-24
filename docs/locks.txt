@@ -1,3 +1,15 @@
-1. cli and sti at 
-    vmm.c -> vmm_free_user_space(page_directory_t *dir) 
+1. cli and sti at
+    vmm.c -> vmm_free_user_space(page_directory_t *dir)
     note: second lowest level of call chain. One time the system interrupted while the physical memory was being freed.
+
+2. cli and sti at
+    fb.c -> fb_scroll_text
+    note: last call of chain. Intensive memory operation. If operation divides to multiple quantums it can cause stack corruption?
+
+3. cli and sti at
+    fs_task_req_handler.c -> fs_handle_request
+    note: freeing a fd/dirmap
+
+4. cli and sti at
+    gui_task.c -> gui_handle_request
+    note: deleting window

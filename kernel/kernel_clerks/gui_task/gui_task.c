@@ -111,22 +111,22 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
  *
  * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
  */
-static int gui_delete_window(uint32_t owner_pid) {
-    // DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
+static void gui_delete_window(uint32_t owner_pid) {
+    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
 
     for (int i = 0; i < MAX_TASKS; i++) {
-        __asm__ __volatile__("cli");
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
-            //  DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
+            DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
             window_t *entry = program_windows[i];
 
             if (fb_clear(entry->pixels, entry->width, entry->height, fg_color) == STATUS_ERROR) {
-                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
-                return STATUS_ERROR;
+                ERROR("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
+                return;
             }
 
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-                return STATUS_ERROR;
+                ERROR("[GUI_TASK][DELETE_WINDOW]: Failed the copy pixels to screen\n");
+                return;
             }
 
             compositor[entry->wid].entry    = NULL;
@@ -134,19 +134,19 @@ static int gui_delete_window(uint32_t owner_pid) {
             compositor[entry->wid].screen_y = 0;
 
             if (entry->pixels != NULL) {
-                //         DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
+                DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
                 kfree(entry->pixels);
             }
             kfree(entry);
             program_windows[i] = NULL;
 
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: deletion succesfull\n");
-            return STATUS_OK;
+            return;
         }
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", owner_pid);
-    return STATUS_ERROR;
+    return;
 }
 
 /**
@@ -256,22 +256,20 @@ static int gui_paint_window_to_screen(request_table *req) {
 
 static int gui_draw_sprite(request_table *req) {
 
-    int scale = 4;
-
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
             window_t *entry = program_windows[i];
             for (int row = 0; row < 32; row++) {
                 for (int col = 0; col < 32; col++) {
                     fb_fill_rect((uint32_t *)entry->pixels,
-                                 req->x + col * scale, req->y + row * scale,
-                                 scale, scale,
+                                 req->x + col * req->scale, req->y + row * req->scale,
+                                 req->scale, req->scale,
                                  entry->width, entry->height,
                                  req->pixels[row * req->width + col]);
                 }
             }
 
-            entry->y_offset = req->y + (req->height * scale);
+            entry->y_offset = req->y + (req->height * req->scale);
             entry->x_offset = DEFAULT_HORIZONTAL_PADDING;
 
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
@@ -291,37 +289,47 @@ static int gui_handle_request(request_table *req) {
 
     switch (req->request_type) {
     case WRITE:
-        req->status = (gui_draw_string(req->buf, req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
+        req->status        = (gui_draw_string(req->buf, req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     case CREATE:
-        req->status = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
+        req->status        = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : FAILED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     case DELETE:
-        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? TERMINATED : FAILED;
+        __asm__ __volatile__("cli");
+        gui_delete_window(req->caller_pid);
+        __asm__ __volatile__("sti");
+        req->status        = TERMINATED;
         gui_task->priority = PRIORITY_NORMAL;
         return STATUS_OK;
     case PAINT_WINDOW:
-        req->status = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
+        req->status        = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     case FG_COLOR:
-        req->status = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
+        req->status        = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     case BG_COLOR:
-        req->status = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
+        req->status        = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     case DRAW:
-        req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto on_success;
+        req->status        = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
+        gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return STATUS_OK;
     default:
         req->status = FAILED;
         scheduler_wake_task(req->caller_pid);
         return STATUS_ERROR;
     }
-
-on_success:
-    gui_task->priority = PRIORITY_NORMAL;
-    scheduler_wake_task(req->caller_pid);
-    return STATUS_OK;
 }
 
 void gui_task_loop() {

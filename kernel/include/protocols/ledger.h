@@ -6,6 +6,7 @@
 #include "kstring.h"
 #include "sched.h"
 #include "shared.h"
+#include <stdint.h>
 
 typedef enum {
     PENDING,
@@ -29,6 +30,7 @@ typedef struct request_table {
     uint32_t x;
     uint32_t y;
     uint32_t color;
+    uint32_t scale;
     reqistry_status status;
     uint32_t *pixels;
 } request_table;
@@ -45,7 +47,7 @@ int ledger_add_fs_req(uint32_t caller_pid,
                       operations_t type, uint32_t fd, const char *path,
                       const char *buf, uint32_t buffer_size, uint32_t flags);
 int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height,
-                       uint32_t x, uint32_t y, const char *buf, uint32_t buffer_size, uint32_t color, const uint32_t *user_pixels);
+                       uint32_t x, uint32_t y, const char *buf, uint32_t scale, uint32_t color, const uint32_t *user_pixels);
 request_table *ledger_fetch_next_req(uint32_t clerk_pid);
 void ledger_init();
 int ledger_remove_request();

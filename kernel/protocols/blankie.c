@@ -27,7 +27,7 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
                 (blankie_registry_t *)kmalloc(sizeof(blankie_registry_t));
 
             if (blankie_req == NULL) {
-                DEBUG("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
+                ERROR("[BLANKIE][REGISTER]: Heap allocation failed, aborting\n");
                 return STATUS_ERROR;
             }
 
@@ -35,8 +35,8 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
             blankie_req->entry_point = entry_point;
             blankie_req->stack_top   = stack_top;
             b_registry[i]            = blankie_req;
-            // DEBUG("[BLANKIE][REGISTER]: Current esp 0x%x\n", stack_top);
-            // DEBUG("[BLANKIE][REGISTER]: Current eip 0x%x\n", stack_top);
+            DEBUG("[BLANKIE][REGISTER]: Current esp 0x%x\n", stack_top);
+            DEBUG("[BLANKIE][REGISTER]: Current eip 0x%x\n", stack_top);
             return STATUS_OK;
         }
     }
@@ -45,18 +45,32 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
 }
 
 int blankie_activate(uint32_t pid) {
-    for (uint8_t i = 0; i < CLERK_COUNT; i++) {
+
+    task_t *task = task_get_by_pid(pid);
+
+    if (task == NULL) {
+        ERROR("[BLANKIE][activate]: did not find a task with the given pid\n");
+        return STATUS_ERROR;
+    }
+    int slot = -1;
+    for (int i = 0; i < CLERK_COUNT; i++) {
         if (b_registry[i] != NULL && b_registry[i]->pid == pid) {
-            task_t *task      = task_get_by_pid(pid);
-            task->context.eip = b_registry[i]->entry_point;
-            task->context.esp = b_registry[i]->stack_top;
-            task->context.ebp = b_registry[i]->stack_top;
-            task->started     = 0;
-            task->state       = TASK_SLEEPING;
-            scheduler_yield(&task->context);
+            slot = i;
             break;
         }
     }
 
-    return STATUS_ERROR;
+    if (slot == -1) {
+        ERROR("[BLANKIE][activate]: No registered blankie for the given pid\n");
+        return STATUS_ERROR;
+    }
+
+    task->context.eip = b_registry[slot]->entry_point;
+    task->context.esp = b_registry[slot]->stack_top;
+    task->context.ebp = b_registry[slot]->stack_top;
+    task->started     = 0;
+    task->state       = TASK_SLEEPING;
+    DEBUG("[BLANKIE][activate]: %s yielding\n", task->name);
+    scheduler_yield(&task->context);
+    return STATUS_OK;
 }
