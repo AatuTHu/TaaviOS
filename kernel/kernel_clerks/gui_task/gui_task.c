@@ -7,6 +7,8 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "ledger.h"
+#include "sched.h"
+#include "shared.h"
 
 /**
  * Gui_task
@@ -298,10 +300,10 @@ static int gui_handle_request(request_table *req) {
         gui_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         return STATUS_OK;
-    case DELETE:
-        __asm__ __volatile__("cli");
+    case FREE:
         req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
         gui_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         return STATUS_OK;
     case PAINT_WINDOW:
         req->status        = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
