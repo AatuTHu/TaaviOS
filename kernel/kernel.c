@@ -185,12 +185,12 @@ void kernel_main(const uint32_t *mboot_info) {
     if (first_task != NULL) {
         DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         scheduler_set_current_task(first_task->pid);
-        _set_scheduler_on();
-        vmm_switch(first_task->page_dir);
         first_task->started = 1;
         DEBUG("[KERNEL]: Jumping with EIP: %x, USERESP: %x, NAME: %s\n",
               first_task->context.eip, first_task->context.useresp,
               first_task->name);
+        _set_scheduler_on();
+        vmm_switch(first_task->page_dir);
 
         jump_to_usermode(first_task->context.eip, first_task->context.useresp, first_task->kernel_stack);
     }

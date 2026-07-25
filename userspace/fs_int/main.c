@@ -57,6 +57,7 @@ void command_close() {
 }
 
 void command_mkdir(const char *directory_name) {
+    mkdir(directory_name);
 }
 
 void command_cd(const char *path) {

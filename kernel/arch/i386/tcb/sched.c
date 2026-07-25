@@ -314,6 +314,11 @@ void scheduler_wake_task(uint32_t pid) {
 
 int scheduler_add(task_t *task) {
 
+    if (task == NULL) {
+        ERROR("[SCHEDULER][ADD]: Task given was NULL\n");
+        return STATUS_ERROR;
+    }
+
     if (task_count >= MAX_TASKS) {
         ERROR("[SCHEDULER][ADD]: Too many tasks added to scheduler\n");
         return STATUS_ERROR;

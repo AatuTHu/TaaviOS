@@ -9,6 +9,8 @@
 #include "ledger.h"
 #include "sched.h"
 #include "shared.h"
+#include "taavi.h"
+#include <stdint.h>
 
 /**
  * Gui_task
@@ -261,8 +263,8 @@ static int gui_draw_sprite(request_table *req) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
             window_t *entry = program_windows[i];
-            for (int row = 0; row < 32; row++) {
-                for (int col = 0; col < 32; col++) {
+            for (uint32_t row = 0; row < req->height; row++) {
+                for (uint32_t col = 0; col < req->width; col++) {
                     fb_fill_rect((uint32_t *)entry->pixels,
                                  req->x + col * req->scale, req->y + row * req->scale,
                                  req->scale, req->scale,
@@ -362,24 +364,18 @@ void gui_init(task_t *gui_task) {
 
     fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, fg_color);
 
-    /*uint32_t palette[] = {
-        fb_pack_color(0, 0, 0),
-        fb_pack_color(255, 0, 0),
-    };
-
-    int x     = 20;
-    int y     = 20;
-    int scale = 4;
+    int y = 5;
+    int x = fb.width - 133;
 
     for (int row = 0; row < 32; row++) {
         for (int col = 0; col < 32; col++) {
             fb_fill_rect((uint32_t *)fb.virt_addr,
-                         x + col * scale, y + row * scale,
-                         scale, scale,
+                         x + col * 4, y + row * 4,
+                         4, 4,
                          fb.width, fb.height,
-                         sprite[row][col]);
+                         taavi[row][col]);
         }
-    }*/
+    }
 
     memset(compositor, 0, sizeof(compositor));
 

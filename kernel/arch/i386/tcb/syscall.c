@@ -9,6 +9,7 @@
 #include "task.h"
 #include "vga.h"
 #include "vmm.h"
+#include <stdint.h>
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
@@ -224,8 +225,9 @@ static int32_t sys_exec(struct registers *r) {
     task_t *current      = scheduler_get_current_task();
     const char *filename = (char *)r->ecx;
 
-    if (current == NULL || filename == NULL)
+    if (current == NULL || filename == NULL) {
         return STATUS_ERROR;
+    }
 
     uint32_t file_cluster      = 0;
     uint32_t dir_cluster       = 0;
@@ -244,10 +246,15 @@ static int32_t sys_exec(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: continuing to read file with name %s\n", task_name);
 
     uint8_t *binary_buffer = (uint8_t *)kmalloc(file_size);
+
+    if (binary_buffer == NULL) {
+        ERROR("[SYSCALL][SYS_EXEC]: Was not able to allocate buffer for file read\n");
+        return STATUS_ERROR;
+    }
+
     if (fat32_read_file(file_cluster, file_size, binary_buffer) == STATUS_ERROR) {
         ERROR("[SYS_EXEC]: Could not read the file\n");
-        kfree(binary_buffer);
-        return STATUS_ERROR;
+        goto failure;
     }
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: creating the task\n");
@@ -256,7 +263,7 @@ static int32_t sys_exec(struct registers *r) {
 
     if (pd == NULL) {
         ERROR("[SYSCALL][SYS_EXEC]: Invalid page directory. Aborting\n");
-        return STATUS_ERROR;
+        goto failure;
     }
 
     int entry = elf_load(binary_buffer, pd);
@@ -264,18 +271,23 @@ static int32_t sys_exec(struct registers *r) {
     if (entry == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: elf load failed aborting.\n");
         vmm_free_user_space(pd);
-        return STATUS_ERROR;
+        goto failure;
     }
 
     kfree(binary_buffer);
+
     task_t *task = task_create(-1, entry, task_name, pd, USER_TASK);
     if (scheduler_add(task) == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: Failed to add task to scheduler\n");
-        return STATUS_ERROR;
+        goto failure;
     }
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Task created %d\n", task->pid);
     return STATUS_OK;
+
+failure:
+    kfree(binary_buffer);
+    return STATUS_ERROR;
 }
 
 /**

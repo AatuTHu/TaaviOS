@@ -77,7 +77,7 @@ int vmm_free_user_space(page_directory_t *dir) {
 
     DEBUG_CORE_MM("[VMM]: size: %d. \n", size);
     DEBUG_CORE_MM("[VMM]: entries per page: %d. \n", entries_per_page);
-    __asm__ __volatile__("cli");
+
     for (uint32_t i = 0; i < size; i++) {
         if (!((*dir)[i] & PAGE_PRESENT)) {
             continue;
@@ -93,7 +93,6 @@ int vmm_free_user_space(page_directory_t *dir) {
         pmm_free(pt_phys);
         (*dir)[i] = 0;
     }
-    __asm__ __volatile__("sti");
 
     DEBUG_CORE_MM("[VMM]: Userspace directory freed\n");
     return STATUS_OK;
