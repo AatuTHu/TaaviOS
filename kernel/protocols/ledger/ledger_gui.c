@@ -1,6 +1,5 @@
 #include "config.h"
 #include "ledger.h"
-
 /**
  * ledger_add_gui_req - makes a new entry req.
  * @caller_pid:  pid of the task making the request
@@ -56,7 +55,7 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
         //     new_request->buf, buffer_size);
     }
 
-    DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request added\n");
+    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
     // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
     //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);

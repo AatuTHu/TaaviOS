@@ -46,57 +46,42 @@ static void scheduler_check_clerks() {
 
     if (ledger_count_clerk_reqs(gui_task_pid) > 0) {
         clerk = tasks[gui_task_pid];
-        if (clerk == NULL || clerk->task_mode == USER_TASK) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
-            return;
+        if (clerk != NULL && clerk->task_mode != USER_TASK) {
+            if (clerk->state == TASK_SLEEPING) {
+                DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
+                clerk->state    = TASK_READY;
+                clerk->priority = PRIORITY_NORMAL;
+            }
         }
-        if (clerk->state == TASK_SLEEPING) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
-            clerk->state    = TASK_READY;
-            clerk->priority = PRIORITY_NORMAL;
-        }
-        return;
     }
     if (ledger_count_clerk_reqs(fs_task_pid) > 0) {
         clerk = tasks[fs_task_pid];
-        if (clerk == NULL || clerk->task_mode == USER_TASK) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
-            return;
+        if (clerk != NULL && clerk->task_mode != USER_TASK) {
+            if (clerk->state == TASK_SLEEPING) {
+                DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
+                clerk->state    = TASK_READY;
+                clerk->priority = PRIORITY_NORMAL;
+            }
         }
-
-        if (clerk->state == TASK_SLEEPING) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
-            clerk->state    = TASK_READY;
-            clerk->priority = PRIORITY_NORMAL;
-        }
-        return;
     }
 
     if (dead_task_count > 0 || ledger_has_killable_reqs() > 0) {
         clerk = tasks[reaper_task_pid];
-        if (clerk == NULL || clerk->task_mode == USER_TASK) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
-            return;
+        if (clerk != NULL && clerk->task_mode != USER_TASK) {
+            if (clerk->state == TASK_SLEEPING) {
+                DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
+                clerk->state    = TASK_READY;
+                clerk->priority = PRIORITY_LOW;
+            }
         }
-        if (clerk->state == TASK_SLEEPING) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
-            clerk->state    = TASK_READY;
-            clerk->priority = PRIORITY_HIGH;
-        }
-        return;
     }
 
     if (dead_task_count == 0 && scheduler_has_runnable_task() == 0) {
         clerk = tasks[idle_task_pid];
-        if (clerk == NULL || clerk->task_mode == USER_TASK) {
-            DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Invalid Clerk\n");
-            return;
+        if (clerk != NULL && clerk->task_mode != USER_TASK) {
+            clerk->state    = TASK_READY;
+            clerk->priority = PRIORITY_LOW;
         }
-
-        clerk->state    = TASK_READY;
-        clerk->priority = PRIORITY_LOW;
-
-        return;
     }
 }
 

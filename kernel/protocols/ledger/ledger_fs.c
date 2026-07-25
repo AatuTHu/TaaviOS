@@ -52,7 +52,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
         // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: path: %s and buf length: %d\n", new_request->path, buffer_size);
     }
 
-    DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST] Request added\n");
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST] Request added\n");
     // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
     //  DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
     // DEBUG_LEDGER("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);

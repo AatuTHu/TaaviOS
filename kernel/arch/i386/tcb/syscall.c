@@ -38,15 +38,15 @@ static int32_t sys_exit(struct registers *r) {
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting fs_task release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-
     ledger_add_fs_req(current->pid, FREE, 0, NULL, NULL, 0, 0);
     scheduler_yield(r);
+    ledger_collect(current->pid, fs_task_pid, NULL);
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting gui_task to release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-
     ledger_add_gui_req(current->pid, FREE, 0, 0, 0, 0, NULL, 0, 0, NULL);
     scheduler_yield(r);
+    ledger_collect(current->pid, fs_task_pid, NULL);
 
     scheduler_set_task_state(TASK_DEAD);
     scheduler_yield(r);
@@ -177,7 +177,7 @@ static int32_t sys_close(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return STATUS_OK;
+    return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
 static int32_t sys_getpid(struct registers *r) {
