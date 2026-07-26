@@ -11,5 +11,6 @@ void vmm_switch(page_directory_t *dir);
 uint32_t vmm_get_phys(page_directory_t *dir, uint32_t virt);
 page_directory_t *vmm_create_directory(void);
 int vmm_free_user_space(page_directory_t *dir);
+int vmm_alloc_kstack(uint32_t *stack_out);
 
 #endif

@@ -158,7 +158,7 @@ uint32_t pmm_alloc() {
 
 int pmm_free(uint32_t addr) {
     uint32_t page_index = addr / PAGE_SIZE;
-    DEBUG_CORE_MM("[PMM]: freeing page index: %d\n", page_index);
+    // DEBUG_CORE_MM("[PMM]: freeing page index: %d\n", page_index);
     if (!__pmm_test_bit(page_index)) {
         ERROR("[PMM]: No page at that index\n");
         return STATUS_ERROR;
@@ -166,7 +166,7 @@ int pmm_free(uint32_t addr) {
     __pmm_clear_bit(page_index);
     used_pages--;
     free_pages++;
-    DEBUG_CORE_MM("[PMM]: page freed\n");
+    // DEBUG_CORE_MM("[PMM]: page freed\n");
     return STATUS_OK;
 }
 

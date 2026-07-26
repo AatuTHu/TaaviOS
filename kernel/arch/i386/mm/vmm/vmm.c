@@ -3,6 +3,7 @@
 #include "klog.h"
 #include "mm.h"
 #include "pmm.h"
+#include <stdint.h>
 
 int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
               uint32_t flags) {
@@ -82,8 +83,8 @@ int vmm_free_user_space(page_directory_t *dir) {
         if (!((*dir)[i] & PAGE_PRESENT)) {
             continue;
         }
-        uint32_t pt_phys = (*dir)[i] & ~PAGE_FLAGS_MASK;
-        DEBUG_CORE_MM("[VMM]: pt_phys: %d. \n", pt_phys);
+        uint32_t pt_phys   = (*dir)[i] & ~PAGE_FLAGS_MASK;
+        // DEBUG_CORE_MM("[VMM]: pt_phys: %d. \n", pt_phys);
         const uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
         for (uint32_t j = 0; j < entries_per_page; j++) {
             if (pt[j] & PAGE_PRESENT) {
@@ -92,6 +93,12 @@ int vmm_free_user_space(page_directory_t *dir) {
         }
         pmm_free(pt_phys);
         (*dir)[i] = 0;
+    }
+
+    DEBUG_CORE_MM("[VMM]: Freeing physical page directory\n");
+    if (pmm_free(virt_to_phys((uint32_t)dir)) == STATUS_ERROR) {
+        ERROR("[VMM]: Failed to free physical page directory\n");
+        return STATUS_ERROR;
     }
 
     DEBUG_CORE_MM("[VMM]: Userspace directory freed\n");
@@ -108,4 +115,14 @@ page_directory_t *vmm_create_directory(void) {
 
 uint32_t vmm_get_phys(page_directory_t *dir, uint32_t virt) {
     return paging_get_phys(dir, virt);
+}
+
+int vmm_alloc_kstack(uint32_t *stack_out) {
+    uint32_t temp_stack = pmm_alloc(); // allocate a physical page so that it is reality
+    if (temp_stack == 0) {
+        return STATUS_ERROR;
+    }
+
+    *stack_out = phys_to_virt(temp_stack) + KERNEL_STACK_SIZE;
+    return STATUS_OK;
 }

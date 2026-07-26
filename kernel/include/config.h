@@ -55,4 +55,10 @@
 #define reaper_task_pid 2
 #define gui_task_pid 3
 
+#define EFLAGS_IF (1 << 9) // interrupts flag
+#define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
+#define KERNEL_STACK_SIZE 4096
+#define USER_STACK_SIZE (4096 * 4)
+#define USER_STACK_TOP 0x800000
+
 #endif

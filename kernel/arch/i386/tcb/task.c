@@ -16,6 +16,10 @@ static task_t *task_table[MAX_TASKS];
 
 task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
 
+    if (page_dir == NULL) {
+        return NULL;
+    }
+
     int slot = -1;
 
     if (reserved_pid != -1) {
@@ -37,30 +41,15 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
     if (task == NULL)
         return NULL;
 
-    page_directory_t *virt_dir = NULL;
-
-    if (page_dir == NULL) {
-        virt_dir = vmm_create_directory();
-    } else {
-        virt_dir = page_dir;
-    }
-
     if (task_mode == USER_TASK) {
-        if (vmm_alloc(virt_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW) == STATUS_ERROR) {
-            if (vmm_free_user_space(virt_dir) == STATUS_ERROR) {
-                ERROR("[TASK]: Failed to free virtual page directory\n");
-            }
-            DEBUG_TASK("[TASK]: Freeing physical page directory\n");
-            if (pmm_free(virt_to_phys((uint32_t)virt_dir)) == STATUS_ERROR) {
-                ERROR("[TASK]: Failed to free physical page directory\n");
-            }
+        if (vmm_alloc(page_dir, USER_STACK_TOP, USER_STACK_SIZE, PAGE_USER_RW) == STATUS_ERROR) {
+            kfree(task);
             return NULL;
         }
     }
 
-    uint32_t kernel_stack =
-        pmm_alloc(); // allocate a physical page so that it is reality
-    if (kernel_stack == 0) {
+    uint32_t kernel_stack = 0;
+    if (vmm_alloc_kstack(&kernel_stack) == STATUS_ERROR) {
         kfree(task);
         return NULL;
     }
@@ -69,31 +58,25 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
 
     task->pid      = slot;
     task->state    = task_mode == USER_TASK ? TASK_READY : TASK_SLEEPING;
-    task->page_dir = virt_dir;
+    task->page_dir = page_dir;
     task->started  = 0;
 
     strncpy(task->name, name, sizeof(task->name));
     task->name[TASK_NAME_LENGTH - 1] = '\0';
-    task->kernel_stack =
-        phys_to_virt(kernel_stack) +
-        KERNEL_STACK_SIZE; // kernel stack is bottom of stack so add the stack
-                           // on top of it. Convert it to virtual addr
+    task->kernel_stack               = kernel_stack;
+    task->context.eip                = entry; // Begining of the task like the main function
+    task->context.useresp            = task_mode == USER_TASK
+                                           ? USER_STACK_TOP + USER_STACK_SIZE
+                                           : task->kernel_stack; // stack pointer?
+    task->priority                   = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
+    task->context.cs                 = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
+    task->context.ss                 = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
+    task->context.ebp                = task->context.useresp; // stack bottom. Same as top in the begining. No
+    task->context.esp                = task->context.useresp;
+    task->context.eflags             = EFLAGS_DEFAULT;
+    task->task_mode                  = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
 
-    task->context.eip     = entry; // Begining of the task like the main function
-    task->context.useresp = task_mode == USER_TASK
-                                ? USER_STACK_TOP + USER_STACK_SIZE
-                                : task->kernel_stack; // stack pointer?
-    task->priority        = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
-    task->context.cs      = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
-    task->context.ss      = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
-    task->context.ebp =
-        task->context.useresp; // stack bottom. Same as top in the begining. No
-                               // plate you know
-    task->context.esp    = task->context.useresp;
-    task->context.eflags = EFLAGS_DEFAULT;
-    task->task_mode      = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
-
-    task_table[slot]     = task;
+    task_table[slot]                 = task;
 
     return task;
 }
@@ -112,11 +95,6 @@ void task_destroy(task_t *task, uint8_t task_mode) {
     uint32_t phys = virt_to_phys(task->kernel_stack - KERNEL_STACK_SIZE);
     if (pmm_free(phys) == STATUS_ERROR) {
         ERROR("[TASK]: Failed to free kernel stack\n");
-    }
-
-    DEBUG_TASK("[TASK]: Freeing physical page directory\n");
-    if (pmm_free(virt_to_phys((uint32_t)task->page_dir)) == STATUS_ERROR) {
-        ERROR("[TASK]: Failed to free physical page directory\n");
     }
 
     DEBUG_TASK("[TASK]: Destroyn task: %s \n", task->name);

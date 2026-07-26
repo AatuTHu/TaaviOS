@@ -254,7 +254,8 @@ static int32_t sys_exec(struct registers *r) {
 
     if (fat32_read_file(file_cluster, file_size, binary_buffer) == STATUS_ERROR) {
         ERROR("[SYS_EXEC]: Could not read the file\n");
-        goto failure;
+        kfree(binary_buffer);
+        return STATUS_ERROR;
     }
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: creating the task\n");
@@ -263,7 +264,8 @@ static int32_t sys_exec(struct registers *r) {
 
     if (pd == NULL) {
         ERROR("[SYSCALL][SYS_EXEC]: Invalid page directory. Aborting\n");
-        goto failure;
+        kfree(binary_buffer);
+        return STATUS_ERROR;
     }
 
     int entry = elf_load(binary_buffer, pd);
@@ -277,6 +279,11 @@ static int32_t sys_exec(struct registers *r) {
     kfree(binary_buffer);
 
     task_t *task = task_create(-1, entry, task_name, pd, USER_TASK);
+
+    if (task == NULL) {
+        goto failure;
+    }
+
     if (scheduler_add(task) == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: Failed to add task to scheduler\n");
         goto failure;
@@ -286,6 +293,7 @@ static int32_t sys_exec(struct registers *r) {
     return STATUS_OK;
 
 failure:
+    vmm_free_user_space(pd);
     kfree(binary_buffer);
     return STATUS_ERROR;
 }

@@ -167,14 +167,20 @@ void kernel_main(const uint32_t *mboot_info) {
         page_directory_t *init_pd = vmm_create_directory();
         uint32_t init_phys        = module_starts[0];
         uint32_t entry            = elf_load((void *)phys_to_virt(init_phys), init_pd);
-        if (entry != ET_NONE) {
-            DEBUG("[KERNEL]: ELF loaded.\n");
-            DEBUG("[KERNEL]: Creating init task\n");
-            first_task = task_create(-1, entry, "init", init_pd, USER_TASK);
-            // first_task->priority = PRIORITY_HIGH;
-            scheduler_add(first_task);
-        } else {
+        if (entry == ET_NONE) {
             DEBUG("[KERNEL]: ELF load failed!\n");
+        }
+        DEBUG("[KERNEL]: ELF loaded.\n");
+        DEBUG("[KERNEL]: Creating init task\n");
+        first_task = task_create(-1, entry, "init", init_pd, USER_TASK);
+        // first_task->priority = PRIORITY_HIGH;
+
+        if (first_task == NULL) {
+            if (vmm_free_user_space(init_pd) == STATUS_ERROR) {
+                ERROR("[TASK]: Failed to free virtual page directory\n");
+            }
+        } else {
+            scheduler_add(first_task);
         }
     }
 
