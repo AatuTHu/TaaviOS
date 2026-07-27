@@ -1,4 +1,4 @@
-At the top of the function: 
+At the top of the function:
 
 /*
  * This file contains functions:
@@ -18,5 +18,5 @@ function blocks:
 * more lenghty desription on what the function DOES
 *
 * Context: Why was it made, when to call it.
-* Return: what if successfull, what if unsuffessfull.
+* Return: STATUS_OK || STATUS_ERROR.
 */
