@@ -92,8 +92,8 @@ void task_destroy(task_t *task, uint8_t task_mode) {
         }
 
     DEBUG_TASK("[TASK]: Freeing kernel_stack\n");
-    uint32_t phys = virt_to_phys(task->kernel_stack - KERNEL_STACK_SIZE);
-    if (pmm_free(phys) == STATUS_ERROR) {
+
+    if (vmm_free_kstack(task->kernel_stack) == STATUS_ERROR) {
         ERROR("[TASK]: Failed to free kernel stack\n");
     }
 

@@ -44,16 +44,21 @@ int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
     return STATUS_OK;
 }
 
-void paging_unmap(page_directory_t *dir, uint32_t virt) {
+int paging_unmap(page_directory_t *dir, uint32_t virt) {
     if (!dir)
-        return;
-    uint32_t pd_index    = virt >> PD_INDEX_SHIFT;
-    uint32_t pt_index    = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
+        return STATUS_ERROR;
+    uint32_t pd_index = virt >> PD_INDEX_SHIFT;
+    uint32_t pt_index = (virt >> PAGE_SHIFT) & PT_INDEX_MASK;
+
+    if (!((*dir)[pd_index] & PAGE_PRESENT)) {
+        return STATUS_ERROR;
+    }
+
     uint32_t pt_phys     = (*dir)[pd_index] & ~PAGE_FLAGS_MASK;
     uint32_t *page_table = (uint32_t *)(phys_to_virt(pt_phys));
     page_table[pt_index] = 0;
-
     __asm__ __volatile__("invlpg (%0)" ::"r"(virt) : "memory");
+    return STATUS_OK;
 }
 
 page_directory_t *paging_create_directory() {

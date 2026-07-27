@@ -35,7 +35,7 @@ int paging_add_deferred_mapping(page_directory_t *dir, uint32_t virt, uint32_t p
 void paging_init(void);
 int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
                uint32_t flags);
-void paging_unmap(page_directory_t *dir, uint32_t virt);
+int paging_unmap(page_directory_t *dir, uint32_t virt);
 void paging_switch(page_directory_t *dir);
 page_directory_t *paging_create_directory(void);
 uint32_t paging_get_phys(page_directory_t *dir, uint32_t virt);

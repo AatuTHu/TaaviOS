@@ -36,32 +36,43 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
             ERROR("[VMM]: ROLLBACK SUCCESSFUL\n");
             return STATUS_ERROR;
         }
-        if (paging_map(dir, virt, addr, flags) == STATUS_ERROR) {
-            ERROR("[VMM]: Failed mapping the page. Aborting\n");
-            pmm_free(paging_get_phys(dir, virt));
-            return STATUS_ERROR;
+
+        if (paging_map(dir, virt, addr, flags) == STATUS_OK) {
+            virt += PAGE_SIZE;
+            continue;
         }
-        virt += PAGE_SIZE;
+
+        ERROR("[VMM]: Failed mapping the page. Aborting\n");
+        if (pmm_free(paging_get_phys(dir, virt)) == STATUS_ERROR) {
+            ERROR("[VMM]: Failed to free page directory\n");
+        }
+
+        return STATUS_ERROR;
     }
     // DEBUG_CORE_MM("[VMM]: ALLOCATION SUCCESSFUL\n");
     return STATUS_OK;
 }
 
-void vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
+int vmm_free(page_directory_t *dir, uint32_t virt, uint32_t size) {
     if (!dir) {
         ERROR("[VMM]: DIRECTORY NOT GIVEN ABORTING\n");
-        return;
+        return STATUS_ERROR;
     }
 
     uint32_t n_pages = (size + PAGE_SIZE - 1) / PAGE_SIZE;
     // DEBUG_CORE_MM("[VMM]: Number of pages to be freed: %d\n", n_pages);
     for (uint32_t i = 0; i < n_pages; i++) {
         uint32_t phys_addr = paging_get_phys(dir, virt);
-        pmm_free(phys_addr);
-        paging_unmap(dir, virt);
+        if (pmm_free(phys_addr) == STATUS_ERROR) {
+            return STATUS_ERROR;
+        }
+        if (paging_unmap(dir, virt) == STATUS_ERROR) {
+            return STATUS_ERROR;
+        }
         virt += PAGE_SIZE;
     }
     // DEBUG_CORE_MM("[VMM]: Pages freed\n");
+    return STATUS_OK;
 }
 
 int vmm_free_user_space(page_directory_t *dir) {
@@ -88,10 +99,16 @@ int vmm_free_user_space(page_directory_t *dir) {
         const uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
         for (uint32_t j = 0; j < entries_per_page; j++) {
             if (pt[j] & PAGE_PRESENT) {
-                pmm_free(pt[j] & ~PAGE_FLAGS_MASK);
+                if (pmm_free(pt[j] & ~PAGE_FLAGS_MASK) == STATUS_ERROR) {
+                    ERROR("[VMM]: Could not free page tables index\n");
+                    continue;
+                }
             }
         }
-        pmm_free(pt_phys);
+        if (pmm_free(pt_phys) == STATUS_ERROR) {
+            ERROR("[VMM]: Could not free page table\n");
+            return STATUS_ERROR;
+        }
         (*dir)[i] = 0;
     }
 
@@ -124,5 +141,13 @@ int vmm_alloc_kstack(uint32_t *stack_out) {
     }
 
     *stack_out = phys_to_virt(temp_stack) + KERNEL_STACK_SIZE;
+    return STATUS_OK;
+}
+
+int vmm_free_kstack(uint32_t kernel_stack) {
+    uint32_t phys = virt_to_phys(kernel_stack - KERNEL_STACK_SIZE);
+    if (pmm_free(phys) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
     return STATUS_OK;
 }

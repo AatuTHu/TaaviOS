@@ -40,4 +40,6 @@
 
 **Memory**
 - Look into how we can allocate more heap if it is at the end <- Was able to build this. However
-  it can allocate more space for heap. But if the space is deallocated it should be returned? That is the whole point to not have huge amount of heap at the start? <- idea cooking
+  it can allocate more space for heap. But if the space is deallocated it should be returned?
+  That is the whole point to not have huge amount of heap at the start? <- idea cooking
+- On Task dead the VMM_FREE_USER_SPACE can make an early return. In that case parts of it is destroyed but not all. Ill cook something for this
