@@ -210,9 +210,13 @@ void scheduler_remove_task() {
     }
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Deleting task %s\n", tasks[delete_candidate]->name);
-
     vmm_switch(&kernel_page_dir);
-    task_destroy(tasks[delete_candidate], tasks[delete_candidate]->task_mode);
+
+    if (task_destroy(tasks[delete_candidate]) == STATUS_ERROR) {
+        ERROR("[SCHEDULER][REMOVE]: Failed to destroy task\n");
+        return;
+    }
+
     tasks[delete_candidate] = NULL;
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");

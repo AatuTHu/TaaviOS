@@ -3,8 +3,6 @@
 #include "klog.h"
 #include "kmalloc.h"
 #include "kstring.h"
-#include "mm.h"
-#include "pmm.h"
 #include "vmm.h"
 
 /*
@@ -81,27 +79,28 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
     return task;
 }
 
-void task_destroy(task_t *task, uint8_t task_mode) {
-    if (task == NULL)
-        return;
+int task_destroy(task_t *task) {
+    if (task == NULL) {
+        return STATUS_ERROR;
+    }
 
-    DEBUG_TASK("[TASK]: Freeing virtual memory \n");
-    if (task_mode == USER_TASK)
+    DEBUG_TASK("[TASK]: Atempting to destroy given task\n");
+    if (task->task_mode == USER_TASK) {
         if (vmm_free_user_space(task->page_dir) == STATUS_ERROR) {
             ERROR("[TASK]: Failed to free virtual page directory\n");
+            return STATUS_ERROR;
         }
-
-    DEBUG_TASK("[TASK]: Freeing kernel_stack\n");
+    }
 
     if (vmm_free_kstack(task->kernel_stack) == STATUS_ERROR) {
         ERROR("[TASK]: Failed to free kernel stack\n");
+        return STATUS_ERROR;
     }
 
-    DEBUG_TASK("[TASK]: Destroyn task: %s \n", task->name);
     task_table[task->pid] = NULL;
-    DEBUG_TASK("[TASK]: Freeing task\n");
     kfree(task);
     DEBUG_TASK("[TASK]: Task destroyed\n");
+    return STATUS_OK;
 }
 
 task_t *task_get_by_pid(uint32_t pid) {

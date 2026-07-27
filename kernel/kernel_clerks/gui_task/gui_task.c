@@ -265,11 +265,14 @@ static int gui_draw_sprite(request_table *req) {
             window_t *entry = program_windows[i];
             for (uint32_t row = 0; row < req->height; row++) {
                 for (uint32_t col = 0; col < req->width; col++) {
-                    fb_fill_rect((uint32_t *)entry->pixels,
-                                 req->x + col * req->scale, req->y + row * req->scale,
-                                 req->scale, req->scale,
-                                 entry->width, entry->height,
-                                 req->pixels[row * req->width + col]);
+                    uint32_t color = req->pixels[row * req->width + col];
+                    if (color == TRANSPARENT) {
+                        fb_fill_rect((uint32_t *)entry->pixels,
+                                     req->x + col * req->scale, req->y + row * req->scale,
+                                     req->scale, req->scale,
+                                     entry->width, entry->height,
+                                     color);
+                    }
                 }
             }
 
@@ -279,6 +282,7 @@ static int gui_draw_sprite(request_table *req) {
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
                 return STATUS_ERROR;
             }
+            break;
         }
     }
 
@@ -369,11 +373,13 @@ void gui_init(task_t *gui_task) {
 
     for (int row = 0; row < 32; row++) {
         for (int col = 0; col < 32; col++) {
-            fb_fill_rect((uint32_t *)fb.virt_addr,
-                         x + col * 4, y + row * 4,
-                         4, 4,
-                         fb.width, fb.height,
-                         taavi[row][col]);
+            if (taavi[row][col] != TRANSPARENT) {
+                fb_fill_rect((uint32_t *)fb.virt_addr,
+                             x + col * 4, y + row * 4,
+                             4, 4,
+                             fb.width, fb.height,
+                             taavi[row][col]);
+            }
         }
     }
 

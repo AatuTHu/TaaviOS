@@ -4,6 +4,7 @@
 #include "klog.h"
 #include "kstring.h"
 #include "paging.h"
+#include "shared.h"
 #include <stdint.h>
 
 fb_t fb;
@@ -37,6 +38,7 @@ int fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t rect_w
             fb_put_pixel(pixel_buffer, x + i, y + j, stride, color);
         }
     }
+
     return STATUS_OK;
 }
 
@@ -49,7 +51,7 @@ int fb_scroll_text(uint32_t *pixel_buffer, uint32_t *y_offset, uint32_t *x_offse
     if (width > fb.width || height > fb.height || pixel_buffer == NULL) {
         return STATUS_ERROR;
     }
-    __asm__ __volatile__("cli");
+
     uint32_t *buf = (uint32_t *)pixel_buffer;
     memmove(buf, buf + width * FONT_HEIGHT, (height - FONT_HEIGHT) * width * sizeof(uint32_t));
     for (uint32_t row = height - FONT_HEIGHT; row < height; row++)
@@ -57,7 +59,7 @@ int fb_scroll_text(uint32_t *pixel_buffer, uint32_t *y_offset, uint32_t *x_offse
             fb_put_pixel(pixel_buffer, col, row, width, color);
     *y_offset = height - FONT_HEIGHT;
     *x_offset = DEFAULT_HORIZONTAL_PADDING;
-    __asm__ __volatile__("sti");
+
     return STATUS_OK;
 }
 

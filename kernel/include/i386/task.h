@@ -35,6 +35,5 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
                     page_directory_t *page_dir, uint8_t task_mode);
 task_t *task_get_by_pid(uint32_t pid);
 task_t *task_get_by_index(uint32_t index);
-void task_destroy(task_t *task, uint8_t task_mode);
-
+int task_destroy(task_t *task);
 #endif

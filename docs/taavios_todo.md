@@ -18,15 +18,16 @@
 - [ ] First real text editor
 - [ ] Keyboard routing fixes
 
-**Concurrency / Locks**
+**Concurrency / Locks** <- Not too urgent
 - Add a locking mechanism in which interrupts are disabled but only can be active at one place at a time. To prevent deadlocks
 
 **Fs_task**
 - if closing a file fails we set the req as failed but don't do anything to it after that -> continue.
 
-**Kernel / System calls**
+**Kernel / System calls / sched**
 - O_CREAT for files -> not started.
 - get ticks/get uptime system call not started (needed for cursor blink)
+- Look in to how to get scheduler work with the task_table array already filled at task.c
 
 **File system**
 - curr_offset open behavior not finalized
@@ -37,9 +38,12 @@
 - VGA/FB mapped directly in paging -> should go through VMM like all other memory <- deferred mapping function added to vmm. fb goes through this. VGA  still doesn't, but it is not used anyways at the moment.
 - VGA driver poorly written -> scroll maybe broken
 - Scroll up/down on arrow key press
+- Black is not really a black. It is 0x010101 and 0x000000 is transparent. A hacky way but works for now.
+- gui draws mascot/logo, set the background at init.
 
 **Memory**
 - Look into how we can allocate more heap if it is at the end <- Was able to build this. However
   it can allocate more space for heap. But if the space is deallocated it should be returned?
   That is the whole point to not have huge amount of heap at the start? <- idea cooking
 - On Task dead the VMM_FREE_USER_SPACE can make an early return. In that case parts of it is destroyed but not all. Ill cook something for this
+
