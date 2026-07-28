@@ -458,7 +458,7 @@ static int32_t sys_window(struct registers *r) {
     uint32_t width, height, x, y = 0;
 
     switch (operation) {
-    case W_CREATE:
+    case CREATE:
         width          = r->ecx;
         height         = r->edx;
         x              = r->esi;
@@ -467,7 +467,7 @@ static int32_t sys_window(struct registers *r) {
         ledger_add_gui_req(current->pid, CREATE, width, height, x, y, NULL, 0, 0, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
-    case W_PAINT:
+    case PAINT_WINDOW:
         width          = r->ecx;
         height         = r->edx;
         x              = r->esi;
@@ -476,28 +476,28 @@ static int32_t sys_window(struct registers *r) {
         ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, x, y, NULL, 0, 0, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
-    case W_MOVE:
+    case MOVE:
         x              = r->ecx;
         y              = r->edx;
         current->state = TASK_BLOCKED;
         ledger_add_gui_req(current->pid, MOVE, 0, 0, x, y, NULL, 0, 0, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
-    case W_SET_OPERATOR:
+    case SET_OPERATOR:
         return keyboard_set_operator_pid(current->pid);
-    case W_CH_ACT_W:
+    case CH_ACT_W:
         return change_keyboard_focus(r->ecx);
-    case W_CH_BG_COLOR:
+    case BG_COLOR:
         current->state = TASK_BLOCKED;
         ledger_add_gui_req(current->pid, BG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
-    case W_CH_FG_COLOR:
+    case FG_COLOR:
         current->state = TASK_BLOCKED;
         ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
-    case W_DRAW_BUFFER: {
+    case DRAW: {
         gui_params_pack *params = (gui_params_pack *)r->ecx;
 
         if (params == NULL) {

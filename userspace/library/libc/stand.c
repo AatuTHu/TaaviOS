@@ -2,6 +2,7 @@
 #include "shared.h"
 #include "string.h"
 #include "sys_calls.h"
+#include <stdint.h>
 
 #define forward 0
 #define backward -1
@@ -78,6 +79,10 @@ int list_dirents(char *buf, int buffer_size) {
 
 void print(const char *msg) {
     sys_write(1, msg, strlen(msg));
+}
+
+void print_at(uint32_t x, uint32_t y, const char *msg) {
+    sys_wriat(WRITE_AT, x, y, strlen(msg), msg);
 }
 
 void error(const char *msg) {

@@ -1,4 +1,5 @@
 #include "op_sy.h"
+#include "shared.h"
 #include "sys_calls.h"
 #include <stdint.h>
 
@@ -7,29 +8,29 @@ int get_ac_tasks(char *buf, int len) {
 }
 
 int create_task_window(int width, int height, int x, int y) {
-    return sys_conwi(W_CREATE, width, height, x, y);
+    return sys_conwi(CREATE, width, height, x, y);
 }
 
 int paint_window(int width, int height, int x, int y) {
-    return sys_conwi(W_PAINT, width, height, x, y);
+    return sys_conwi(PAINT_WINDOW, width, height, x, y);
 }
 
 int move_task_window(int x, int y) {
-    return sys_conwi(W_MOVE, 0, 0, x, y);
+    return sys_conwi(MOVE, 0, 0, x, y);
 }
 int set_operator_task() {
-    return sys_conwi(W_SET_OPERATOR, 0, 0, 0, 0);
+    return sys_conwi(SET_OPERATOR, 0, 0, 0, 0);
 }
 
 int ch_act_window(int target_pid) {
-    return sys_conwi(W_CH_ACT_W, target_pid, 0, 0, 0);
+    return sys_conwi(CH_ACT_W, target_pid, 0, 0, 0);
 }
 
 int ch_bg_color(int color) {
-    return sys_conwi(W_CH_BG_COLOR, color, 0, 0, 0);
+    return sys_conwi(BG_COLOR, color, 0, 0, 0);
 }
 int ch_fg_color(int color) {
-    return sys_conwi(W_CH_FG_COLOR, color, 0, 0, 0);
+    return sys_conwi(FG_COLOR, color, 0, 0, 0);
 }
 
 int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *sprite) {
@@ -42,7 +43,7 @@ int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *s
     params.scale  = scale;
     params.pixels = sprite;
 
-    return sys_drwi(W_DRAW_BUFFER, &params);
+    return sys_drwi(DRAW, &params);
 }
 
 int exec(const char *filename) {

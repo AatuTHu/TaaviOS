@@ -30,20 +30,10 @@ typedef struct {
 } gui_params_pack;
 
 typedef enum {
-    W_CREATE,
-    W_PAINT,
-    W_MOVE,
-    W_SET_OPERATOR,
-    W_CH_ACT_W,
-    W_CH_BG_COLOR,
-    W_CH_FG_COLOR,
-    W_DRAW_BUFFER,
-} window_operations;
-
-typedef enum {
     WRITE,
+    WRITE_AT,
     READ,
-    UPDATE, // write at offset?
+    UPDATE,
     DELETE,
     FREE,
     OPEN,
@@ -51,12 +41,13 @@ typedef enum {
     CREATE,
     FIND,
     LIST,
-    O_R, // Open and read
     PAINT_WINDOW,
     MOVE,
     BG_COLOR,
     FG_COLOR,
-    DRAW
+    DRAW,
+    SET_OPERATOR,
+    CH_ACT_W,
 } operations_t;
 
 #define O_RDONLY 0x01

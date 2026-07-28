@@ -41,6 +41,12 @@ int sys_conwi(int operation, int p1, int p2, int p3, int p4) {
     return result;
 }
 
+int sys_wriat(int operation, int x, int y, int len, const char *msq) {
+    int result = -1;
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(operation), "c"(x), "d"(y), "S"(len), "D"(msq));
+    return result;
+}
+
 int sys_drwi(int operation, gui_params_pack *params) {
     int result = -1;
     __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(operation), "c"(params));

@@ -24,6 +24,10 @@
 **Fs_task**
 - if closing a file fails we set the req as failed but don't do anything to it after that -> continue.
 
+**Doctor_task**
+- Make a diagnostic tool that sends requests to other clerks and makes report to shell for now.
+- Make a diagnostics user app for this
+
 **Kernel / System calls / sched**
 - O_CREAT for files -> not started.
 - get ticks/get uptime system call not started (needed for cursor blink)
@@ -40,6 +44,7 @@
 - Scroll up/down on arrow key press
 - Black is not really a black. It is 0x010101 and 0x000000 is transparent. A hacky way but works for now.
 - gui draws mascot/logo, set the background at init.
+- Add print_at function that prints text to given x and y positions.
 
 **Memory**
 - Look into how we can allocate more heap if it is at the end <- Was able to build this. However
