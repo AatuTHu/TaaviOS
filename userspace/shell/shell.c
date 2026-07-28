@@ -1,4 +1,5 @@
 #include "op_sy.h"
+#include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include <stddef.h>
@@ -106,52 +107,17 @@ void main(void) {
         return;
     }
 
-    if (ch_bg_color(COLOR_SKY_BLUE) == STATUS_ERROR) {
-        print("changing background color failed\n");
-    }
+    // if (ch_bg_color(COLOR_BLUE) == STATUS_ERROR) {
+    //     print("changing background color failed\n");
+    // }
 
-    if (paint_window(590, 190, 5, 5) == STATUS_ERROR) {
-        print("painting window failed\n");
-    }
-
-    if (ch_fg_color(COLOR_BLACK) == STATUS_ERROR) {
+    if (ch_fg_color(COLOR_WHITE) == STATUS_ERROR) {
         print("changing foreground color failed\n");
     }
+    // if (paint_window(590, 190, 5, 5) == STATUS_ERROR) {
+    //     print("painting window failed\n");
+    // }
 
-    /*if (paint_window(50, 50, 5 * 8, 3 * 16) == -1) {
-        print("Print failed\n");
-    }*/
-
-    // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
-    // vga_set_color(VGA_COLOR_LIGHT_BROWN, VGA_COLOR_BLACK);
-    /* print("--------------------------------------------------------------------"
-           "--------\n");
-     // vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
-     print("|=======|  |====|    |====|   |=|     |=|  |=======|        |====|  "
-           "  |====|  \n");
-     print("   |=|    |=|  |=|  |=|  |=|  |=|     |=|     |=|          |=|  |=| "
-           " |=|  |=| \n");
-     print("   |=|    |=----=|  |=----=|  |=|     |=|     |=|          |=|  |=| "
-           "  |____   \n");
-     print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=| "
-           "       |=|\n");
-     print("   |=|    |=|  |=|  |=|  |=|   |=|   |=|      |=|          |=|  |=| "
-           " |=|  |=| \n");
-     print("   |=|    |=|  |=|  |_|  |_|     |===|     |=======|        |====|  "
-           "  |====|  \n");
-     print("\n");*/
-    // vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-    /*print("                                               |====|     |====|
-    \n"); print("                                              |=|  |=|   |=|
-    |=|           \n"); print("                                              |=|
-    |=|    |____             \n"); print(" |=|  |=|         |=|          \n");
-    print("                                              |=|  |=|   |=|  |=|
-    \n"); print("                                               |====| |====|
-    \n");*/
-    // vga_set_color(VGA_COLOR_LIGHT_BLUE, VGA_COLOR_BLACK);
-    // print("--------------------------------------------------------------------"
-    //      "-------\n");
-    // vga_set_color(VGA_COLOR_DARK_GREY, VGA_COLOR_BLACK);
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
@@ -159,22 +125,13 @@ void main(void) {
     int pos = 0;
     char c;
 
-    /*fd = open("hello.txt");
+    // for (int i = 0; i < 499; i++) {
+    //     print("a");
+    // }
 
+    // print("\n");
 
-     if(fd != -1) {
-         print("Reading the file\n");
-         int nread = read(fd, buf, 512);
-
-         if (nread != -1) {
-             print("File read succesfully\n");
-             print(buf);
-         } else {
-             print("Read failed or file empty\n");
-         }
-     } else {
-         print("Error on opening the file\n");
-     }*/
+    exec("sysbin/fs_int");
 
     while (1) {
         print(">> ");

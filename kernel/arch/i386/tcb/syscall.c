@@ -55,10 +55,12 @@ static int32_t sys_exit(struct registers *r) {
     ledger_collect(current->pid, gui_task_pid, NULL);
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting reaper to kill the task\n");
-    scheduler_set_task_state(TASK_DEAD);
+    scheduler_set_task_state(TASK_BLOCKED);
     ledger_add_reaper_req(current->pid, current->pid);
     scheduler_yield(r);
+    ledger_collect(current->pid, reaper_task_pid, NULL);
 
+    scheduler_set_task_state(TASK_DEAD);
     return STATUS_OK;
 }
 
@@ -414,7 +416,7 @@ static int change_keyboard_focus(uint32_t target_pid) {
     DEBUG_SYSCALL("[SYSCALL][CKF]\n");
     task_t *current = scheduler_get_current_task();
 
-    if (target_pid >= CLERK_COUNT || target_pid >= MAX_TASKS) {
+    if (!(target_pid >= CLERK_COUNT || target_pid >= MAX_TASKS)) {
         return STATUS_ERROR;
     }
 

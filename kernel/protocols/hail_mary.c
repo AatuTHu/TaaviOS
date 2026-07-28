@@ -23,13 +23,14 @@ void register_hail_mary_function(uint32_t pid, void (*cb)(void)) {
             entry->pid       = pid;
             entry->cb        = cb;
             gosling_table[i] = entry;
+            break;
         }
     }
 }
 void activate_hail_mary(uint32_t pid) {
     for (int i = 0; i < CLERK_COUNT; i++) {
         if (gosling_table[i] != NULL && gosling_table[i]->pid == pid) {
-            DEBUG("[HAILMARY][ACTIVATE]: activating hailmary!\n");
+            ERROR("[HAILMARY][ACTIVATE]: activating hailmary!\n");
             gosling_table[i]->cb();
             return;
         }

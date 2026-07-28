@@ -116,6 +116,12 @@ void *kmalloc(uint32_t size) {
 static void merge() {
     block_header_t *current = free_list;
     while (current != NULL && current->next != NULL) {
+        // Sanity check to avoid reading garbage/unmapped memory
+        if (current->next->magic != HEAP_MAGIC) {
+            ERROR("[KMALLOC][MERGE]: Corrupted block magic in free list at 0x%x\n", current->next);
+            break;
+        }
+
         if ((block_header_t *)((uint8_t *)current + sizeof(block_header_t) + current->size) == current->next) {
             //  DEBUG_KMALLOC("[KMALLOC][MERGE]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
             current->size += sizeof(block_header_t) + current->next->size;
@@ -130,6 +136,9 @@ static void merge() {
 }
 
 void kfree(void *ptr) {
+    if (!ptr)
+        return;
+
     // DEBUG_KMALLOC("[KMALLOC][FREE]: Freeing at 0x%x\n", ptr);
     block_header_t *addr =
         (block_header_t *)((uint8_t *)ptr - sizeof(block_header_t));
@@ -140,10 +149,16 @@ void kfree(void *ptr) {
     } else {
         block_header_t *prev    = NULL;
         block_header_t *current = free_list;
+
         while (current != NULL && current < addr) {
+            if (current == addr) {
+                ERROR("[KMALLOC][FREE]: Double free detected at 0x%x\n", ptr);
+                return;
+            }
             prev    = current;
             current = current->next;
         }
+
         addr->next = current;
         if (prev == NULL) {
             free_list = addr;

@@ -13,7 +13,7 @@
 
 static int reaper_kill_task(uint32_t target_pid) {
 
-    if (target_pid > MAX_TASKS) {
+    if (target_pid >= MAX_TASKS) {
         return STATUS_ERROR;
     }
 
@@ -48,7 +48,7 @@ void reaper_task_loop() {
 }
 
 static void reaper_recovery() {
-    DEBUG("[REAPER][RECOVERY]:\n");
+    ERROR("[REAPER][RECOVERY]:\n");
     ledger_check_request(reaper_task_pid);
     blankie_activate(reaper_task_pid);
 }

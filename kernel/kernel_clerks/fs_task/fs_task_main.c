@@ -53,7 +53,7 @@ void fs_task_loop() {
  * Context: to remove request and wake the caller.
  */
 static void fs_recovery() {
-    DEBUG_FS_TASK("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
+    ERROR("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
     ledger_check_request(fs_task_pid);
     blankie_activate(fs_task_pid);
 }

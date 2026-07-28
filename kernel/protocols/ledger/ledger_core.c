@@ -74,6 +74,7 @@ void ledger_check_request(uint32_t clerk_pid) {
 
     request_table *entry = q->table[*q->last_idx];
     if (entry != NULL) {
+        ERROR("[LEDGER][CHECK_REQUEST]: force terminating last request and waking caller\n");
         entry->status = TERMINATED;
         scheduler_wake_task(entry->caller_pid);
     }

@@ -25,12 +25,12 @@ void isr_handler(struct registers *r) {
     int is_user     = (r->cs & 0x3) == 3;
     task_t *current = scheduler_get_current_task();
 
-    /*if (current != NULL && current->task_mode == KERNEL_TASK) {
+    if (current != NULL && current->task_mode == KERNEL_TASK) {
         ERROR("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
         current->state = TASK_SLEEPING;
         activate_hail_mary(current->pid);
         return;
-    }*/
+    }
 
     ERROR("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     ERROR("                     KERNEL PANIC                           \n");

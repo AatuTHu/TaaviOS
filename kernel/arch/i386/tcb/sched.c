@@ -47,7 +47,7 @@ static void scheduler_check_clerks() {
         clerk = tasks[gui_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
-                DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
+                // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
                 clerk->state    = TASK_READY;
                 clerk->priority = PRIORITY_NORMAL;
             }
@@ -57,7 +57,7 @@ static void scheduler_check_clerks() {
         clerk = tasks[fs_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
-                DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
+                //  DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
                 clerk->state    = TASK_READY;
                 clerk->priority = PRIORITY_NORMAL;
             }
@@ -68,7 +68,7 @@ static void scheduler_check_clerks() {
         clerk = tasks[reaper_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
-                DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
+                //    DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
                 clerk->state    = TASK_READY;
                 clerk->priority = PRIORITY_LOW;
             }

@@ -351,7 +351,7 @@ void gui_task_loop() {
 }
 
 static void gui_recovery() {
-    DEBUG_GUI_TASK("[GUI_TASK][RECOVERY]: activated %d times\n", hail_mary_act_count);
+    ERROR("[GUI_TASK][RECOVERY]: activated %d times\n", hail_mary_act_count);
     hail_mary_act_count++;
     ledger_check_request(gui_task_pid);
     blankie_activate(gui_task_pid);

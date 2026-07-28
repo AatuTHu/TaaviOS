@@ -8,7 +8,7 @@
 
 int ledger_add_reaper_req(uint32_t caller_pid, uint32_t target_pid) {
 
-    if (caller_pid > MAX_TASKS || target_pid > MAX_TASKS) {
+    if (caller_pid >= MAX_TASKS || target_pid >= MAX_TASKS) {
         ERROR("[LEDGER][ADD_REAPER_REQUEST]: Callers pid or target pid was invalid. Aborting\n");
         return STATUS_ERROR;
     }
