@@ -46,7 +46,7 @@ int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
 
 int blankie_activate(uint32_t pid) {
 
-    task_t *task = task_get_by_pid(pid);
+    task_t *task = task_get(pid);
 
     if (task == NULL) {
         ERROR("[BLANKIE][activate]: did not find a task with the given pid\n");
@@ -70,7 +70,6 @@ int blankie_activate(uint32_t pid) {
     task->context.ebp = b_registry[slot]->stack_top;
     task->started     = 0;
     task->state       = TASK_SLEEPING;
-    DEBUG("[BLANKIE][activate]: %s yielding\n", task->name);
     scheduler_yield(&task->context);
     return STATUS_OK;
 }

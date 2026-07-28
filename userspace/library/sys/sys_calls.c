@@ -90,3 +90,11 @@ void sys_idle(void) {
 void sys_yield(void) {
     __asm__ __volatile__("int $0x80" : : "a"(SYS_YIELD));
 }
+
+int sys_kill(uint32_t target_pid) {
+    int result;
+    __asm__ __volatile__("int $0x80"
+                         : "=a"(result)
+                         : "a"(SYS_KILL), "b"(target_pid));
+    return result;
+}

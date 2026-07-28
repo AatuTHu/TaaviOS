@@ -10,9 +10,10 @@
 #define SYS_WRITE 4
 #define SYS_OPEN 5
 #define SYS_CLOSE 6
+#define SYS_EXEC 11
 #define SYS_CHDIR 12
 #define SYS_GETPID 20
-#define SYS_EXEC 11
+#define SYS_KILL 37
 #define SYS_MKDIR 39
 #define SYS_IDLE 112
 #define SYS_GETDENTS 141

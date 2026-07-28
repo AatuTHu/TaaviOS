@@ -48,6 +48,7 @@
 #define MAX_FD_ENTRIES 256
 #define MAX_FS_REQ_ENTRIES 50
 #define MAX_GUI_REQ_ENTRIES 500
+#define MAX_REAPER_REQ_ENTRIES 20
 
 #define CLERK_COUNT 4 // amount of clerks. Very important. hardcoded for now
 #define idle_task_pid 0

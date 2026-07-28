@@ -103,20 +103,9 @@ int task_destroy(task_t *task) {
     return STATUS_OK;
 }
 
-task_t *task_get_by_pid(uint32_t pid) {
-    if (pid < MAX_TASKS) {
-        for (int i = 0; i < MAX_TASKS; i++) {
-            if (task_table[i] != NULL && task_table[i]->pid == pid) {
-                return task_table[i];
-            }
-        }
-    }
-    return NULL;
-}
-
-task_t *task_get_by_index(uint32_t index) {
-    if (index >= MAX_TASKS) {
+task_t *task_get(uint32_t pid) {
+    if (pid >= MAX_TASKS) {
         return NULL;
     }
-    return task_table[index];
+    return task_table[pid];
 }

@@ -1,12 +1,12 @@
 #include "sched.h"
 #include "config.h"
 #include "klog.h"
+#include "kstring.h"
 #include "ledger.h"
 #include "task.h"
 #include "tss.h"
 #include "vmm.h"
 #include <stddef.h>
-
 /*
  * Scheduler
  * This code is a pile of sticks. 28.5.2026
@@ -26,7 +26,6 @@
 
 static task_t *tasks[MAX_TASKS];
 static int task_count                = 0;
-static int dead_task_count           = 0;
 static int current_idx               = -1;
 static volatile uint8_t scheduler_on = 0;
 
@@ -65,7 +64,7 @@ static void scheduler_check_clerks() {
         }
     }
 
-    if (dead_task_count > 0 || ledger_has_killable_reqs() > 0) {
+    if (ledger_has_killable_reqs() > 0) {
         clerk = tasks[reaper_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
@@ -76,7 +75,7 @@ static void scheduler_check_clerks() {
         }
     }
 
-    if (dead_task_count == 0 && scheduler_has_runnable_task() == 0) {
+    if (scheduler_has_runnable_task() == 0) {
         clerk = tasks[idle_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             clerk->state    = TASK_READY;
@@ -116,23 +115,6 @@ static int scheduler_find_next_task() {
     return STATUS_ERROR;
 }
 
-/*
- *   Scheduler finder func. Give it a state you want to find and id finds the
- * next one based from the current_idx IF candidate is not found it returns as
- * -1. Mainly used by reaper.
- */
-
-static int scheduler_find_first_task_based_on_state(task_state_t state) {
-    for (int i = 1; i <= task_count; i++) {
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx] != NULL && tasks[next_idx]->state == state) {
-            return next_idx;
-        }
-    }
-
-    return STATUS_ERROR;
-}
-
 // The core switching logic, shared by both
 static void scheduler_switch(struct registers *r) {
     task_t *current = scheduler_get_current_task();
@@ -147,7 +129,7 @@ static void scheduler_switch(struct registers *r) {
         }
     }
 
-    if (scheduler_has_runnable_task() == 0 || dead_task_count > 0 || ledger_count_active_reqs() > 0 || ledger_has_killable_reqs() > 0) {
+    if (scheduler_has_runnable_task() == 0 || ledger_count_active_reqs() > 0 || ledger_has_killable_reqs() > 0) {
         // DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
         scheduler_check_clerks();
     }
@@ -196,17 +178,25 @@ void scheduler_tick(struct registers *r) {
  * HELPER FUNCTIONS
  */
 
-int scheduler_get_dead_task_count() {
-    return dead_task_count;
-}
-
-void scheduler_remove_task() {
+int scheduler_remove_task(uint32_t target_pid) {
     //  DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
-    int delete_candidate = scheduler_find_first_task_based_on_state(TASK_DEAD);
+
+    if (target_pid > MAX_TASKS) {
+        DEBUG_SCHED("[SCHEDULER][REMOVE]: Invalid target pid.\n");
+        return STATUS_ERROR;
+    }
+
+    int delete_candidate = -1;
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (tasks[i] != NULL && tasks[i]->pid == target_pid) {
+            delete_candidate = i;
+            break;
+        }
+    }
 
     if (delete_candidate == -1) {
-        DEBUG_SCHED("[SCHEDULER][REMOVE]: No deletable task found.\n");
-        return;
+        DEBUG_SCHED("[SCHEDULER][REMOVE]: Could not find the target\n");
+        return STATUS_ERROR;
     }
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Deleting task %s\n", tasks[delete_candidate]->name);
@@ -214,7 +204,7 @@ void scheduler_remove_task() {
 
     if (task_destroy(tasks[delete_candidate]) == STATUS_ERROR) {
         ERROR("[SCHEDULER][REMOVE]: Failed to destroy task\n");
-        return;
+        return STATUS_ERROR;
     }
 
     tasks[delete_candidate] = NULL;
@@ -226,19 +216,13 @@ void scheduler_remove_task() {
 
     tasks[task_count - 1] = NULL;
     task_count--;
-    dead_task_count--;
 
     if (task_count == 0) {
         current_idx = -1;
-    } else if (delete_candidate < current_idx) {
-        current_idx--;
-    } else if (delete_candidate == current_idx) {
-        if (current_idx >= task_count) {
-            current_idx = 0;
-        }
     }
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Remove complite\n");
+    return STATUS_OK;
 }
 
 int scheduler_set_current_task(uint32_t pid) {
@@ -293,7 +277,6 @@ void scheduler_set_task_state(task_state_t state) {
     case TASK_DEAD:
         DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: killing task: %s\n", current->name);
         current->state = TASK_DEAD;
-        dead_task_count++;
         break;
 
     default:
@@ -343,16 +326,6 @@ int scheduler_add(task_t *task) {
     }
 
     return STATUS_OK;
-}
-
-int scheduler_get_idx_off_pid(uint32_t pid) {
-    for (int i = 1; i <= task_count; i++) {
-        int pids_idx = (current_idx + i) % task_count;
-        if (tasks[pids_idx]->pid == pid) {
-            return pids_idx;
-        }
-    }
-    return STATUS_ERROR;
 }
 
 void _set_scheduler_on() {

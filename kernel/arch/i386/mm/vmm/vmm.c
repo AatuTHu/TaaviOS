@@ -128,7 +128,13 @@ int vmm_free_user_space(page_directory_t *dir) {
         if (!((*dir)[i] & PAGE_PRESENT)) {
             continue;
         }
-        uint32_t pt_phys   = (*dir)[i] & ~PAGE_FLAGS_MASK;
+        uint32_t pt_phys = (*dir)[i] & ~PAGE_FLAGS_MASK;
+
+        if (pt_phys == 0) {
+            ERROR("[VMM]: PDE entry %d marked present but points to phys 0x0!\n", i);
+            (*dir)[i] = 0;
+            continue;
+        }
         // DEBUG_CORE_MM("[VMM]: pt_phys: %d. \n", pt_phys);
         const uint32_t *pt = (uint32_t *)phys_to_virt(pt_phys);
         for (uint32_t j = 0; j < pte_count; j++) {

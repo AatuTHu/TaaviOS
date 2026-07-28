@@ -1,5 +1,10 @@
 #include "config.h"
+#include "klog.h"
+#include "kmalloc.h"
+#include "kstring.h"
 #include "ledger.h"
+#include "sched.h"
+
 /**
  * ledger_add_gui_req - makes a new entry req.
  * @caller_pid:  pid of the task making the request
@@ -66,8 +71,9 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     if (ledger_enqueue(gui_task_pid, new_request) == STATUS_ERROR) {
-        kfree(new_request);
         ERROR("[LEDGER][ADD_GUI_REQUEST]: Failed to add to req queue\n");
+        kfree(new_request);
+        scheduler_wake_task(caller_pid);
         return STATUS_ERROR;
     }
 
@@ -76,4 +82,32 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
 case_error:
     scheduler_wake_task(caller_pid);
     return STATUS_ERROR;
+}
+
+int ledger_add_gui_free_req(uint32_t caller_pid, uint32_t target_pid) {
+    if (caller_pid > MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+
+    request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
+
+    if (new_request == NULL) {
+        ERROR("[LEDGER][ADD_GUI_FREE_REQ]: Could not allocate memory for the request\n");
+        return STATUS_ERROR;
+    }
+
+    memset(new_request, 0, sizeof(request_table));
+    new_request->caller_pid   = caller_pid;
+    new_request->target_pid   = target_pid;
+    new_request->request_type = FREE;
+    new_request->clerk_pid    = gui_task_pid;
+
+    if (ledger_enqueue(gui_task_pid, new_request) == STATUS_ERROR) {
+        ERROR("[LEDGER[ADD_GUI_FREE_REQUEST]: Failed to add req to queue\n");
+        kfree(new_request);
+        scheduler_wake_task(caller_pid);
+        return STATUS_ERROR;
+    }
+
+    return STATUS_OK;
 }

@@ -1,5 +1,9 @@
+#include "config.h"
+#include "klog.h"
+#include "kmalloc.h"
+#include "kstring.h"
 #include "ledger.h"
-
+#include "sched.h"
 /*
  * Ledger Protocol
  * Design & Implementation: A.H, 2026
@@ -9,15 +13,19 @@ request_table *fs_table[MAX_FS_REQ_ENTRIES];
 int last_fs_req_idx = -1;
 
 request_table *gui_table[MAX_GUI_REQ_ENTRIES];
-int last_gui_req_idx                  = -1;
+int last_gui_req_idx = -1;
+
+request_table *reaper_table[MAX_REAPER_REQ_ENTRIES];
+int last_reaper_req_idx               = -1;
 
 clerk_queue clerk_queues[CLERK_COUNT] = {
-    [fs_task_pid]  = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
-    [gui_task_pid] = {gui_table, MAX_GUI_REQ_ENTRIES, &last_gui_req_idx},
+    [fs_task_pid]     = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
+    [gui_task_pid]    = {gui_table, MAX_GUI_REQ_ENTRIES, &last_gui_req_idx},
+    [reaper_task_pid] = {reaper_table, MAX_REAPER_REQ_ENTRIES, &last_reaper_req_idx},
 };
 
 static void wake_clerk(uint32_t clerk_pid) {
-    task_t *clerk = task_get_by_pid(clerk_pid);
+    task_t *clerk = task_get(clerk_pid);
     if (clerk != NULL && clerk_pid != reaper_task_pid) {
         clerk->priority = PRIORITY_HIGH;
     }
@@ -71,12 +79,11 @@ void ledger_check_request(uint32_t clerk_pid) {
     }
 }
 
-int ledger_remove_request() {
-    int kill_count = 0;
+void ledger_remove_request() {
 
     for (int c = 0; c < CLERK_COUNT; c++) {
         clerk_queue *q = ledger_get_queue(c);
-        if (q == NULL) {
+        if (q == NULL || q->table == NULL) {
             continue;
         }
 
@@ -85,17 +92,15 @@ int ledger_remove_request() {
 
                 if (q->table[i]->pixels != NULL) {
                     kfree(q->table[i]->pixels);
+                    q->table[i]->pixels = NULL;
                 }
 
                 kfree(q->table[i]);
                 q->table[i] = NULL;
-                kill_count++;
+                return;
             }
         }
     }
-
-    DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper exiting with kill count of %d\n", kill_count);
-    return kill_count;
 }
 
 int ledger_enqueue(uint32_t clerk_pid, request_table *req) {
@@ -222,7 +227,7 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
         }
     }*/
 
-    DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: No tasks found for :%d\n", clerk_pid);
+    // DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: No tasks found for :%d\n", clerk_pid);
     return NULL;
 }
 
@@ -230,7 +235,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
 
     //    DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Counting for %d\n", clerk_pid);
 
-    if (clerk_pid > CLERK_COUNT) {
+    if (clerk_pid >= CLERK_COUNT) {
         return STATUS_ERROR;
     }
 
@@ -291,6 +296,12 @@ void ledger_init() {
     for (int i = 0; i < MAX_GUI_REQ_ENTRIES; i++) {
         gui_table[i] = NULL;
     }
-    last_gui_req_idx = -1;
-    last_fs_req_idx  = -1;
+
+    for (int i = 0; i < MAX_REAPER_REQ_ENTRIES; i++) {
+        reaper_table[i] = NULL;
+    }
+
+    last_gui_req_idx    = -1;
+    last_fs_req_idx     = -1;
+    last_reaper_req_idx = -1;
 }

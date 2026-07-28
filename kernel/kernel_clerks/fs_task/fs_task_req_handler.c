@@ -519,10 +519,10 @@ static int list(request_table *req) {
  * Return: STATUS_OK || STATUS_ERROR
  */
 static int free(request_table *req) {
-    DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->caller_pid);
+    DEBUG_FS_TASK("[FS_TASK][FREE]: Freeing allocated tables for %d\n", req->target_pid);
 
     for (int i = 0; i < MAX_FD_ENTRIES; i++) {
-        if (fd_entry_table[i] != NULL && fd_entry_table[i]->owner_pid == req->caller_pid) {
+        if (fd_entry_table[i] != NULL && fd_entry_table[i]->owner_pid == req->target_pid) {
             DEBUG_FS_TASK("[FS_TASK][FREE]: FD entry found, freeing\n");
             kfree(fd_entry_table[i]);
             fd_entry_table[i] = NULL;
@@ -530,7 +530,7 @@ static int free(request_table *req) {
     }
 
     for (int i = 0; i < MAX_TASKS; i++) {
-        if (dir_map[i] != NULL && dir_map[i]->owner_pid == req->caller_pid) {
+        if (dir_map[i] != NULL && dir_map[i]->owner_pid == req->target_pid) {
             DEBUG_FS_TASK("[FS_TASK][FREE]: directory map entry found, freeing\n");
             kfree(dir_map[i]);
             dir_map[i] = NULL;
@@ -554,7 +554,7 @@ static int free(request_table *req) {
  * Context: The main entry point for the file system server task loop.
  */
 void fs_handle_request(request_table *req) {
-    task_t *fs_task = task_get_by_pid(fs_task_pid);
+    task_t *fs_task = task_get(fs_task_pid);
 
     if (fs_task == NULL || req == NULL) {
         return;
@@ -632,7 +632,7 @@ void fs_maintain_virt_dir() {
     memset(virt_tasks_dir, 0, sizeof(virt_tasks_dir));
 
     for (int i = 0; i < MAX_TASKS; i++) {
-        task_t *temp_task = task_get_by_index(i);
+        task_t *temp_task = task_get(i);
 
         if (temp_task == NULL || temp_task->task_mode == KERNEL_TASK || temp_task->state == TASK_DEAD) {
             continue;

@@ -1,7 +1,6 @@
 #include "op_sy.h"
-#include "stand.h"
-#include "string.h"
 #include "sys_calls.h"
+#include <stdint.h>
 
 int get_ac_tasks(char *buf, int len) {
     return sys_getdirents(buf, "SYS_INFO/TASKS", len);
@@ -52,4 +51,8 @@ int exec(const char *filename) {
 
 void terminate_program() {
     sys_exit();
+}
+
+int kill_task(uint32_t target_pid) {
+    return sys_kill(target_pid);
 }

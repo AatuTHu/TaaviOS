@@ -6,6 +6,7 @@
 #include "klog.h"
 #include "ledger.h"
 #include "sched.h"
+#include "shared.h"
 #include "task.h"
 #include "vga.h"
 #include "vmm.h"
@@ -29,6 +30,10 @@ static int32_t sys_exit(struct registers *r) {
         return STATUS_ERROR;
     }
 
+    if (!(current->pid >= CLERK_COUNT)) {
+        return STATUS_ERROR;
+    }
+
     if (current->state == TASK_DEAD) {
         return STATUS_OK;
     }
@@ -39,17 +44,19 @@ static int32_t sys_exit(struct registers *r) {
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting fs_task release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_fs_req(current->pid, FREE, 0, NULL, NULL, 0, 0);
+    ledger_add_fs_free_req(current->pid, current->pid);
     scheduler_yield(r);
     ledger_collect(current->pid, fs_task_pid, NULL);
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting gui_task to release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_gui_req(current->pid, FREE, 0, 0, 0, 0, NULL, 0, 0, NULL);
+    ledger_add_gui_free_req(current->pid, current->pid);
     scheduler_yield(r);
-    ledger_collect(current->pid, fs_task_pid, NULL);
+    ledger_collect(current->pid, gui_task_pid, NULL);
 
+    DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting reaper to kill the task\n");
     scheduler_set_task_state(TASK_DEAD);
+    ledger_add_reaper_req(current->pid, current->pid);
     scheduler_yield(r);
 
     return STATUS_OK;
@@ -356,6 +363,42 @@ static int32_t sys_yield(struct registers *r) {
     return STATUS_OK;
 }
 
+static int32_t sys_kill(struct registers *r) {
+    task_t *current     = scheduler_get_current_task();
+    task_t *target_task = task_get((uint32_t)r->ebx);
+
+    if (current == NULL || target_task == NULL) {
+        ERROR("[SYSCALL][SYS_KILL]: Target was invalid or current task was not found\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Killing target: %s\n", target_task->name);
+
+    if (!(target_task->pid >= CLERK_COUNT)) {
+        return STATUS_ERROR;
+    }
+
+    target_task->state = TASK_DEAD;
+
+    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Requesting fs_task release allocated memory\n");
+    scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_fs_free_req(current->pid, target_task->pid);
+    scheduler_yield(r);
+    ledger_collect(current->pid, fs_task_pid, NULL);
+
+    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Requesting gui_task to release allocated memory\n");
+    scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_gui_free_req(current->pid, target_task->pid);
+    scheduler_yield(r);
+    ledger_collect(current->pid, gui_task_pid, NULL);
+
+    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Requesting reaper to kill the task\n");
+    scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_reaper_req(current->pid, target_task->pid);
+    scheduler_yield(r);
+    return ledger_collect(current->pid, reaper_task_pid, NULL);
+}
+
 /**
 * change_keyboard_focus - when user task wishes to switch to another task.
 
@@ -371,7 +414,7 @@ static int change_keyboard_focus(uint32_t target_pid) {
     DEBUG_SYSCALL("[SYSCALL][CKF]\n");
     task_t *current = scheduler_get_current_task();
 
-    if (target_pid < CLERK_COUNT || target_pid >= MAX_TASKS) {
+    if (target_pid >= CLERK_COUNT || target_pid >= MAX_TASKS) {
         return STATUS_ERROR;
     }
 
@@ -490,6 +533,7 @@ void syscall_init() {
     syscall_table[SYS_YIELD]    = sys_yield;
     syscall_table[SYS_OPEN]     = sys_open;
     syscall_table[SYS_CLOSE]    = sys_close;
+    syscall_table[SYS_KILL]     = sys_kill;
     syscall_table[SYS_MKDIR]    = sys_mkdir;
     syscall_table[SYS_CHDIR]    = sys_chdir;
     syscall_table[SYS_GETDENTS] = sys_getdents;

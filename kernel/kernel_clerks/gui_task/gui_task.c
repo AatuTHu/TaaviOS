@@ -115,11 +115,11 @@ static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
  *
  * Return: If successfull return STATUS_OK || if unsuffessfull return STATUS_ERROR.
  */
-static int gui_delete_window(uint32_t owner_pid) {
-    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", owner_pid);
+static int gui_delete_window(uint32_t target_pid) {
+    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Deleting %d window\n", target_pid);
 
     for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == target_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
             window_t *entry = program_windows[i];
 
@@ -149,7 +149,7 @@ static int gui_delete_window(uint32_t owner_pid) {
         }
     }
 
-    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", owner_pid);
+    DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", target_pid);
     return STATUS_OK;
 }
 
@@ -266,7 +266,7 @@ static int gui_draw_sprite(request_table *req) {
             for (uint32_t row = 0; row < req->height; row++) {
                 for (uint32_t col = 0; col < req->width; col++) {
                     uint32_t color = req->pixels[row * req->width + col];
-                    if (color == TRANSPARENT) {
+                    if (color != TRANSPARENT) {
                         fb_fill_rect((uint32_t *)entry->pixels,
                                      req->x + col * req->scale, req->y + row * req->scale,
                                      req->scale, req->scale,
@@ -290,7 +290,7 @@ static int gui_draw_sprite(request_table *req) {
 }
 
 static int gui_handle_request(request_table *req) {
-    task_t *gui_task = task_get_by_pid(gui_task_pid);
+    task_t *gui_task = task_get(gui_task_pid);
 
     if (gui_task == NULL || req == NULL)
         return STATUS_ERROR;
@@ -307,7 +307,7 @@ static int gui_handle_request(request_table *req) {
         scheduler_wake_task(req->caller_pid);
         return STATUS_OK;
     case FREE:
-        req->status        = (gui_delete_window(req->caller_pid) == STATUS_OK) ? COMPLETE : FAILED;
+        req->status        = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
         gui_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         return STATUS_OK;

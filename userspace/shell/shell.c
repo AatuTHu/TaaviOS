@@ -10,7 +10,8 @@ static void command_help() {
     print("- help                'Prints this list'                      \n");
     print("- get pid             'Shells pid'                            \n");
     print("- exec [task]         'Executes a task'                       \n");
-    print("- caw  [pid]          'Changes active window to provided pit' \n");
+    print("- caw  [pid]          'Changes active window to provided pid' \n");
+    print("- kill [pid]          'Kills task with the corresponding pid' \n");
     print("- tasks               'Lists are active tasks with their pids'\n");
     print("- exit                'Exits and kills shell'                 \n");
 }
@@ -50,6 +51,13 @@ static void command_tasks() {
     }
 }
 
+static void command_kill(const char *target) {
+    int target_pid = atoi(target);
+    if (target_pid == 0 || kill_task(target_pid) == -1) {
+        print("Failed to kill the task");
+    }
+}
+
 void exec_cmd(char *buf) {
     if (str_eq(buf, "help") == 1) {
         command_help();
@@ -77,6 +85,11 @@ void exec_cmd(char *buf) {
     }
     if (str_starts_with(buf, "caw ") == 1) {
         command_caw(buf + 4);
+        print("\n");
+        return;
+    }
+    if (str_starts_with(buf, "kill ") == 1) {
+        command_kill(buf + 5);
         print("\n");
         return;
     }

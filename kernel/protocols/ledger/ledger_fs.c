@@ -1,6 +1,12 @@
 #include "config.h"
 #include "klog.h"
+#include "kmalloc.h"
+#include "kstring.h"
 #include "ledger.h"
+#include "sched.h"
+#include "shared.h"
+#include <stddef.h>
+#include <stdint.h>
 
 /**
  * ledger_add_fs_req - makes a new entry req.
@@ -63,6 +69,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     if (ledger_enqueue(fs_task_pid, new_request) == STATUS_ERROR) {
         ERROR("[LEDGER][ADD_FS_REQUEST]: Failed to add to req queue\n");
         kfree(new_request);
+        scheduler_wake_task(caller_pid);
         return STATUS_ERROR;
     }
 
@@ -71,4 +78,32 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
 case_error:
     scheduler_wake_task(caller_pid);
     return STATUS_ERROR;
+}
+
+int ledger_add_fs_free_req(uint32_t caller_pid, uint32_t target_pid) {
+    if (caller_pid > MAX_TASKS) {
+        return STATUS_ERROR;
+    }
+
+    request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
+
+    if (new_request == NULL) {
+        ERROR("[LEDGER][FS_ADD_FREE_REQ]: Could not allocate memory for the request\n");
+        return STATUS_ERROR;
+    }
+
+    memset(new_request, 0, sizeof(request_table));
+    new_request->caller_pid   = caller_pid;
+    new_request->target_pid   = target_pid;
+    new_request->request_type = FREE;
+    new_request->clerk_pid    = fs_task_pid;
+
+    if (ledger_enqueue(fs_task_pid, new_request) == STATUS_ERROR) {
+        ERROR("[LEDGER[ADD_FS_FREE_REQUEST]: Failed to add req to queue\n");
+        kfree(new_request);
+        scheduler_wake_task(caller_pid);
+        return STATUS_ERROR;
+    }
+
+    return STATUS_OK;
 }
