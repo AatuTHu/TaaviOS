@@ -64,6 +64,33 @@ int str_starts_with(const char *str, const char *prefix) {
     return 1;
 }
 
+void trim(char *str) {
+    if (!str || *str == '\0') {
+        return;
+    }
+
+    char *start = str;
+    while (*start == ' ' || *start == '\t' || *start == '\n' || *start == '\r') {
+        start++;
+    }
+
+    if (*start == '\0') {
+        str[0] = '\0';
+        return;
+    }
+
+    char *end = start + strlen(start) - 1;
+    while (end > start && (*end == ' ' || *end == '\t' || *end == '\n' || *end == '\r')) {
+        end--;
+    }
+
+    char *dest = str;
+    while (start <= end) {
+        *dest++ = *start++;
+    }
+    *dest = '\0';
+}
+
 void itoa(int n, char *buf) {
     int i          = 0;
     int isNegative = 0;

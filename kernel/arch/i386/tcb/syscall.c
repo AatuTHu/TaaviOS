@@ -446,7 +446,7 @@ static int change_keyboard_focus(uint32_t target_pid) {
  * Return: STATUS_OK || STATUS_ERROR.
  */
 static int32_t sys_window(struct registers *r) {
-    DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
+    //    DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
     uint32_t operation = r->ebx;
     task_t *current    = scheduler_get_current_task();
 

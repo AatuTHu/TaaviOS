@@ -147,8 +147,6 @@ int main(void) {
         print("Failed to set foreground color\n");
     }
 
-    //  exec("sysbin/fs_int");
-
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 

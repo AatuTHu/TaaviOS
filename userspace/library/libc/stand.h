@@ -3,7 +3,6 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <sys/types.h>
 
 #define STATUS_ERROR -1
 #define STATUS_OK 0

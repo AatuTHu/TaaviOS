@@ -16,5 +16,5 @@ void itoa(int n, char *buf);
 int atoi(const char *str);
 int str_starts_with(const char *str, const char *prefix);
 int strcat(char *dst, const char *src, int n);
-
+void trim(char *str);
 #endif
