@@ -4,8 +4,13 @@
 #include "string.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #define BUF_SIZE 256
+#define padding_between_files 8
+#define line_height 16
+#define char_width 8;
+#define header_y 18;
 
 typedef void (*cmd_handler_t)(const char *arg);
 
@@ -106,22 +111,19 @@ static void command_ls(const char *arg) {
 
     print("\n");
 
-    int current_y   = 10;
-    int line_height = 12;
-    char *entry     = dirents;
+    int current_x      = padding_between_files;
+    int current_text_y = 35;
+    int folder_y       = 10 + header_y;
+    char *entry        = dirents;
 
     for (int i = 0; i < read_size; i++) {
         if (dirents[i] == '\n' || dirents[i] == '\0') {
             dirents[i] = '\0';
-
             if (entry[0] != '\0') {
-                // draw_buffer(32, 32, 10, current_y, 1, (uint32_t *)folder);
-                // print("   ");
-                print(entry);
-                print("\n");
-                current_y += line_height;
+                draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder);
+                print_at(current_x, current_text_y, entry);
+                current_x += padding_between_files + 32;
             }
-
             entry = &dirents[i + 1];
         }
     }
@@ -170,26 +172,42 @@ void exec_cmd(char *buf) {
     print("\nInvalid command");
 }
 
-static void print_char(char c) {
+static void print_char(int buffer_x_pos, int buffer_y_pos, char c) {
     char tmp[2] = {c, '\0'};
-    print(tmp);
+    print_at(buffer_x_pos, buffer_y_pos, tmp);
 }
 
 int main(void) {
-    if (create_task_window(800, 600, 20, 20) == STATUS_ERROR) {
+
+    int width    = 600;
+    int height   = 600;
+    int screen_x = 20;
+    int screen_y = 20;
+
+    if (create_task_window(width, height, screen_x, screen_y) == STATUS_ERROR) {
         return 1;
     }
 
-    print("filesystem interface\n");
+    print_at(10, 10, "filesystem interface");
 
     char buf[BUF_SIZE];
     int pos = 0;
     char c;
 
+    int buffer_y_pos      = height - line_height - 5;
+    int buffer_x_pos      = 5;
+
+    const char *art_start = "[ --> ";
+    const char *art_end   = " ] ";
+
     while (is_running) {
-        print("[ --> ");
-        print(dir_name);
-        print(" ] ");
+        print_at(buffer_x_pos, buffer_y_pos, art_start);
+        buffer_x_pos += strlen(art_start) * char_width;
+        print_at(buffer_x_pos, buffer_y_pos, dir_name);
+        buffer_x_pos += strlen(dir_name) * char_width;
+        print_at(buffer_x_pos, buffer_y_pos, art_end);
+        buffer_x_pos += strlen(art_end) * char_width;
+
         pos = 0;
 
         while (1) {
@@ -198,18 +216,27 @@ int main(void) {
             }
 
             if (c == '\n') {
-                buf[pos] = '\0';
-                print("\n");
+                int buffer_length = strlen(buf);
+                buf[pos]          = '\0';
+                // print("\n");
                 exec_cmd(buf);
+
+                for (int i = 0; i < buffer_length; i++) {
+                    print_at(buffer_x_pos, buffer_y_pos, "\b");
+                    buffer_x_pos -= char_width;
+                }
+                buffer_x_pos = 5;
                 break;
             } else if (c == '\b') {
                 if (pos > 0) {
                     pos--;
-                    print("\b");
+                    print_at(buffer_x_pos, buffer_y_pos, "\b");
+                    buffer_x_pos -= char_width;
                 }
             } else if (pos < BUF_SIZE - 1) {
                 buf[pos++] = c;
-                print_char(c);
+                print_char(buffer_x_pos, buffer_y_pos, c);
+                buffer_x_pos += char_width;
             }
         }
     }

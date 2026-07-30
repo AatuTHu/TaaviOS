@@ -99,6 +99,15 @@ void itoa(int n, char *buf) {
     buf[i] = '\0';
 }
 
+void strcpy(char *dest, const char *src) {
+    while (*src != '\0') {
+        *dest = *src;
+        src++;
+        dest++;
+    }
+    *dest = '\0';
+}
+
 int atoi(const char *str) {
     int res = 0;
     int i   = 0;

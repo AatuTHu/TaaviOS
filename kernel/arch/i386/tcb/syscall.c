@@ -121,8 +121,7 @@ static int32_t sys_write(struct registers *r) {
 
     switch (fd) {
     case 1:
-        // vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
-        ledger_add_gui_req(current->pid, WRITE, 0, 0, 0, 0, buf, len, 0, NULL);
+        ledger_add_gui_text(current->pid, WRITE, 0, 0, len, buf);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
         return ledger_collect(current->pid, gui_task_pid, NULL);
@@ -455,65 +454,55 @@ static int32_t sys_window(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    uint32_t width, height, x, y = 0;
-
     switch (operation) {
     case CREATE:
-        width          = r->ecx;
-        height         = r->edx;
-        x              = r->esi;
-        y              = r->edi;
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, CREATE, width, height, x, y, NULL, 0, 0, NULL);
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
+        ledger_add_gui_req(current->pid, CREATE, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
+        goto yield_collect;
     case PAINT_WINDOW:
-        width          = r->ecx;
-        height         = r->edx;
-        x              = r->esi;
-        y              = r->edi;
+    case SCROLL_DOWN:
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, PAINT_WINDOW, width, height, x, y, NULL, 0, 0, NULL);
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
+        ledger_add_gui_req(current->pid, operation, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
+        goto yield_collect;
     case MOVE:
-        x              = r->ecx;
-        y              = r->edx;
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, MOVE, 0, 0, x, y, NULL, 0, 0, NULL);
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
-    case SET_OPERATOR:
-        return keyboard_set_operator_pid(current->pid);
-    case CH_ACT_W:
-        return change_keyboard_focus(r->ecx);
+        ledger_add_gui_req(current->pid, MOVE, 0, 0, r->ecx, r->edx, 0, 0, NULL);
+        goto yield_collect;
     case BG_COLOR:
-        current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, BG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
     case FG_COLOR:
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, FG_COLOR, 0, 0, 0, 0, NULL, 0, r->ecx, NULL);
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
+        ledger_ch_gui_color(current->pid, operation, r->ecx);
+        goto yield_collect;
     case DRAW: {
+        current->state          = TASK_BLOCKED;
         gui_params_pack *params = (gui_params_pack *)r->ecx;
 
         if (params == NULL) {
             return STATUS_ERROR;
         }
 
-        ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x, params->y, NULL, params->scale, 0, params->pixels);
-        current->state = TASK_BLOCKED;
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
+        ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x,
+                           params->y, params->scale, 0, params->pixels);
+        goto yield_collect;
     }
+    case WRITE_AT:
+        current->state = TASK_BLOCKED;
+        ledger_add_gui_text(current->pid, WRITE_AT, r->ecx, r->edx, r->esi, (const char *)r->edi);
+        goto yield_collect;
+    case SET_OPERATOR:
+
+        return keyboard_set_operator_pid(current->pid);
+    case CH_ACT_W:
+        return change_keyboard_focus(r->ecx);
     default:
         current->state = TASK_RUNNING;
         break;
     }
     return STATUS_ERROR;
+
+yield_collect:
+    scheduler_yield(r);
+    return ledger_collect(current->pid, gui_task_pid, NULL);
 }
 
 void syscall_dispatch(struct registers *r) {

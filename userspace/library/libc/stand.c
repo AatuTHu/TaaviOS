@@ -1,4 +1,5 @@
 #include "stand.h"
+#include "render.h"
 #include "shared.h"
 #include "string.h"
 #include "sys_calls.h"
@@ -78,7 +79,7 @@ int list_dirents(char *buf, int buffer_size) {
 }
 
 void print(const char *msg) {
-    sys_write(1, msg, strlen(msg));
+    render(msg, strlen(msg));
 }
 
 void print_at(uint32_t x, uint32_t y, const char *msg) {

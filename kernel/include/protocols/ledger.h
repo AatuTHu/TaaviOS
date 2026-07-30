@@ -44,8 +44,10 @@ int ledger_add_fs_req(uint32_t caller_pid,
                       const char *buf, uint32_t buffer_size, uint32_t flags);
 int ledger_add_fs_free_req(uint32_t caller_pid, uint32_t target_pid);
 int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height,
-                       uint32_t x, uint32_t y, const char *buf, uint32_t scale, uint32_t color, const uint32_t *user_pixels);
+                       uint32_t x, uint32_t y, uint32_t scale, uint32_t color, const uint32_t *user_pixels);
 int ledger_add_gui_free_req(uint32_t caller_pid, uint32_t target_pid);
+int ledger_add_gui_text(uint32_t caller_pid, uint32_t type, uint32_t x, uint32_t y, uint32_t len, const char *buf);
+int ledger_ch_gui_color(uint32_t caller_pid, uint32_t type, uint32_t color);
 int ledger_add_reaper_req(uint32_t caller_pid, uint32_t target_pid);
 
 request_table *ledger_fetch_next_req(uint32_t clerk_pid);

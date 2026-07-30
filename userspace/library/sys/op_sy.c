@@ -1,4 +1,5 @@
 #include "op_sy.h"
+#include "render.h"
 #include "shared.h"
 #include "sys_calls.h"
 #include <stdint.h>
@@ -8,6 +9,7 @@ int get_ac_tasks(char *buf, int len) {
 }
 
 int create_task_window(int width, int height, int x, int y) {
+    init_renderer(width, height);
     return sys_conwi(CREATE, width, height, x, y);
 }
 

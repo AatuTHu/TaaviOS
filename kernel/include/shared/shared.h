@@ -48,6 +48,7 @@ typedef enum {
     DRAW,
     SET_OPERATOR,
     CH_ACT_W,
+    SCROLL_DOWN,
 } operations_t;
 
 #define O_RDONLY 0x01
