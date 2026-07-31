@@ -10,7 +10,7 @@
  * Design & Implementation: A.H, 2026
  */
 
-static task_t *task_table[MAX_TASKS];
+task_t *task_table[MAX_TASKS];
 
 task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
 
@@ -55,7 +55,7 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
     memset(&task->context, 0, sizeof(struct registers));
 
     task->pid      = slot;
-    task->state    = task_mode == USER_TASK ? TASK_READY : TASK_SLEEPING;
+    task->state    = task_mode == USER_TASK ? TASK_BLOCKED : TASK_SLEEPING;
     task->page_dir = page_dir;
     task->started  = 0;
 
@@ -103,9 +103,9 @@ int task_destroy(task_t *task) {
     return STATUS_OK;
 }
 
-task_t *task_get(uint32_t pid) {
-    if (pid >= MAX_TASKS) {
+task_t *task_get(uint32_t index) {
+    if (index >= MAX_TASKS) {
         return NULL;
     }
-    return task_table[pid];
+    return task_table[index];
 }

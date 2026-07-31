@@ -16,22 +16,20 @@
 /*
  * This file contains the implementation and design of an opportunistic
  * scheduler. This exceeds the very basic idea of a scheduler in a way that it
- * uses the "microlithic" kernel "clerks" or "tasks" as runnable tasks For
- * example the os has two userspace tasks. The init and the shell. Init starts
+ * uses the "microlithic" kernel "clerks" or "task_table" as runnable task_table For
+ * example the os has two userspace task_table. The init and the shell. Init starts
  * the shell and then kills itself via syscall exit the shell is the only one
  * that can be picked to run. But what if shell is blocked? What does the
  * scheduler do then? My asnwer is to activate kernel clerks like reaper_task,
  * fs_task or if there is literally nothing else to do then activate idle_task.
  */
 
-static task_t *tasks[MAX_TASKS];
-static int task_count                = 0;
-static int current_idx               = -1;
+static int current_pid               = -1;
 static volatile uint8_t scheduler_on = 0;
 
 static int scheduler_has_runnable_task() {
-    for (int i = 0; i < task_count; i++) {
-        if (tasks[i] != NULL && tasks[i]->state == TASK_READY) {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (task_table[i] != NULL && task_table[i]->state == TASK_READY) {
             return 1;
         }
     }
@@ -44,7 +42,7 @@ static void scheduler_check_clerks() {
     task_t *clerk = NULL;
 
     if (ledger_count_clerk_reqs(gui_task_pid) > 0) {
-        clerk = tasks[gui_task_pid];
+        clerk = task_table[gui_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
@@ -54,7 +52,7 @@ static void scheduler_check_clerks() {
         }
     }
     if (ledger_count_clerk_reqs(fs_task_pid) > 0) {
-        clerk = tasks[fs_task_pid];
+        clerk = task_table[fs_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //  DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
@@ -65,7 +63,7 @@ static void scheduler_check_clerks() {
     }
 
     if (ledger_has_killable_reqs() > 0) {
-        clerk = tasks[reaper_task_pid];
+        clerk = task_table[reaper_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //    DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
@@ -76,7 +74,7 @@ static void scheduler_check_clerks() {
     }
 
     if (scheduler_has_runnable_task() == 0) {
-        clerk = tasks[idle_task_pid];
+        clerk = task_table[idle_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             clerk->state    = TASK_READY;
             clerk->priority = PRIORITY_LOW;
@@ -85,29 +83,29 @@ static void scheduler_check_clerks() {
 }
 
 static int scheduler_find_next_task() {
-    for (int i = 1; i <= task_count; i++) {
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx] != NULL && tasks[next_idx]->priority == PRIORITY_HIGH &&
-            (tasks[next_idx]->state == TASK_READY ||
-             tasks[next_idx]->state == TASK_RUNNING)) {
+    for (int i = 1; i <= MAX_TASKS; i++) {
+        int next_idx = (current_pid + i) % MAX_TASKS;
+        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == PRIORITY_HIGH &&
+            (task_table[next_idx]->state == TASK_READY ||
+             task_table[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
         }
     }
 
-    for (int i = 1; i <= task_count; i++) {
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx] != NULL && tasks[next_idx]->priority == PRIORITY_NORMAL &&
-            (tasks[next_idx]->state == TASK_READY ||
-             tasks[next_idx]->state == TASK_RUNNING)) {
+    for (int i = 1; i <= MAX_TASKS; i++) {
+        int next_idx = (current_pid + i) % MAX_TASKS;
+        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == PRIORITY_NORMAL &&
+            (task_table[next_idx]->state == TASK_READY ||
+             task_table[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
         }
     }
 
-    for (int i = 1; i <= task_count; i++) {
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx] != NULL && tasks[next_idx]->priority == PRIORITY_LOW &&
-            (tasks[next_idx]->state == TASK_READY ||
-             tasks[next_idx]->state == TASK_RUNNING)) {
+    for (int i = 1; i <= MAX_TASKS; i++) {
+        int next_idx = (current_pid + i) % MAX_TASKS;
+        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == PRIORITY_LOW &&
+            (task_table[next_idx]->state == TASK_READY ||
+             task_table[next_idx]->state == TASK_RUNNING)) {
             return next_idx;
         }
     }
@@ -134,23 +132,23 @@ static void scheduler_switch(struct registers *r) {
         scheduler_check_clerks();
     }
 
-    int next_idx = scheduler_find_next_task();
+    int next_pid = scheduler_find_next_task();
 
-    if (next_idx == -1 || next_idx >= MAX_TASKS) {
+    if (next_pid == -1 || next_pid >= MAX_TASKS) {
         ERROR("[SCHEDULER][SWITCH]: Panic, no tasks available.\n");
         __asm__ __volatile__("sti; hlt");
     }
 
-    task_t *next = tasks[next_idx];
+    task_t *next = task_table[next_pid];
 
     if (next->state == TASK_READY) {
         next->state = TASK_RUNNING;
     }
     next->started = 1;
 
-    if (next_idx != current_idx) {
+    if (next_pid != current_pid) {
         // DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
-        current_idx = next_idx;
+        current_pid = next_pid;
 
         if (next->task_mode == USER_TASK) {
             vmm_switch(next->page_dir);
@@ -168,7 +166,7 @@ void scheduler_yield(struct registers *r) {
 }
 
 void scheduler_tick(struct registers *r) {
-    if (current_idx == -1 || task_count == 0 || scheduler_on == 0) {
+    if (current_pid == -1 || scheduler_on == 0) {
         return;
     }
     scheduler_switch(r);
@@ -181,44 +179,19 @@ void scheduler_tick(struct registers *r) {
 int scheduler_remove_task(uint32_t target_pid) {
     //  DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
 
-    if (target_pid > MAX_TASKS) {
+    if (target_pid >= MAX_TASKS) {
         DEBUG_SCHED("[SCHEDULER][REMOVE]: Invalid target pid.\n");
         return STATUS_ERROR;
     }
 
-    int delete_candidate = -1;
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (tasks[i] != NULL && tasks[i]->pid == target_pid) {
-            delete_candidate = i;
-            break;
-        }
-    }
+    task_t *target = task_get(target_pid);
 
-    if (delete_candidate == -1) {
-        DEBUG_SCHED("[SCHEDULER][REMOVE]: Could not find the target\n");
-        return STATUS_ERROR;
-    }
-
-    DEBUG_SCHED("[SCHEDULER][REMOVE]: Deleting task %s\n", tasks[delete_candidate]->name);
+    DEBUG_SCHED("[SCHEDULER][REMOVE]: Deleting task %s\n", target->name);
     vmm_switch(&kernel_page_dir);
 
-    if (task_destroy(tasks[delete_candidate]) == STATUS_ERROR) {
+    if (task_destroy(target) == STATUS_ERROR) {
         ERROR("[SCHEDULER][REMOVE]: Failed to destroy task\n");
         return STATUS_ERROR;
-    }
-
-    tasks[delete_candidate] = NULL;
-
-    DEBUG_SCHED("[SCHEDULER][REMOVE]: Shifting rest of the array to the left\n");
-    for (int i = delete_candidate; i < task_count - 1; i++) {
-        tasks[i] = tasks[i + 1];
-    }
-
-    tasks[task_count - 1] = NULL;
-    task_count--;
-
-    if (task_count == 0) {
-        current_idx = -1;
     }
 
     DEBUG_SCHED("[SCHEDULER][REMOVE]: Remove complite\n");
@@ -226,26 +199,25 @@ int scheduler_remove_task(uint32_t target_pid) {
 }
 
 int scheduler_set_current_task(uint32_t pid) {
-    for (int i = 1; i <= task_count; i++) {
-        int next_idx = (current_idx + i) % task_count;
-        if (tasks[next_idx]->pid == pid) {
-            current_idx = next_idx;
-            return STATUS_OK;
-        }
+
+    if (pid >= MAX_TASKS) {
+        return STATUS_ERROR;
     }
-    return STATUS_ERROR;
+
+    current_pid = pid;
+    return STATUS_OK;
 }
 
 task_t *scheduler_get_current_task() {
-    if (current_idx == -1) {
-        ERROR("[SCHEDULER]: no tasks added to scheduler yet\n");
+    if (current_pid == -1) {
+        ERROR("[SCHEDULER]: no task_table added to scheduler yet\n");
         return NULL;
     }
-    return tasks[current_idx];
+    return task_table[current_pid];
 }
 
 void scheduler_set_task_state(task_state_t state) {
-    task_t *current = tasks[current_idx];
+    task_t *current = task_table[current_pid];
 
     if (current == NULL) {
         ERROR("[SCHEDULER][STATE_SETTER]: Could not set state as current task was invalid\n");
@@ -253,7 +225,7 @@ void scheduler_set_task_state(task_state_t state) {
     }
 
     if (current->state == state) {
-        DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: No need to set tasks state as it already is the state\n");
+        DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: No need to set task_table state as it already is the state\n");
         return;
     }
 
@@ -284,19 +256,19 @@ void scheduler_set_task_state(task_state_t state) {
     }
 }
 
-int scheduler_get_task_count() {
-    return task_count;
-}
-
 void scheduler_wake_task(uint32_t pid) {
     // DEBUG_SCHED("[SCHEDULER][WAKE_TASK]: reveiced pid %d\n", pid);
-    for (int i = 0; i < task_count; i++) {
-        if (tasks[i] != NULL && tasks[i]->pid == pid) {
-            //    DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", tasks[i]->name, tasks[i]->pid, i);
-            tasks[i]->state = TASK_READY;
-            return;
-        }
+    if (pid >= MAX_TASKS) {
+        ERROR("[SCHEDULER][WAKE_TASK]: invalid pid\n");
+        return;
     }
+
+    task_t *waking_task = task_table[pid];
+    if (waking_task != NULL) {
+        waking_task->state = TASK_READY;
+    }
+    //    DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", task_table[i]->name, task_table[i]->pid, i);
+    return;
 }
 
 int scheduler_add(task_t *task) {
@@ -306,23 +278,12 @@ int scheduler_add(task_t *task) {
         return STATUS_ERROR;
     }
 
-    if (task_count >= MAX_TASKS) {
-        ERROR("[SCHEDULER][ADD]: Too many tasks added to scheduler\n");
-        return STATUS_ERROR;
+    if (task->task_mode == USER_TASK) {
+        task->state = TASK_READY;
     }
 
-    for (int i = 0; i < task_count; i++) {
-        if (tasks[i]->pid == task->pid) {
-            DEBUG_SCHED("[SCHEDULER][ADD]: Task exists\n");
-            return STATUS_ERROR;
-        }
-    }
-
-    tasks[task_count] = task;
-    task_count++;
-
-    if (current_idx == -1) {
-        current_idx = 0;
+    if (current_pid == -1) {
+        current_pid = 0;
     }
 
     return STATUS_OK;

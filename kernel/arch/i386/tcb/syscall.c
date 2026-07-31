@@ -421,9 +421,11 @@ static int change_keyboard_focus(uint32_t target_pid) {
     }
 
     if (current == NULL) {
+        ERROR("[SYSCALL][CKF]: could not find current task\n");
         return STATUS_ERROR;
     }
 
+    DEBUG_SYSCALL("[SYS_CKF]: Switcing to %d \n", target_pid);
     if (keyboard_replace_cur_foreground_pid(target_pid) == STATUS_ERROR) {
         DEBUG_SYSCALL("[SYS_CKF]: Could not replace current foreground pid. Aborting.\n");
         return STATUS_ERROR;
@@ -435,6 +437,7 @@ static int change_keyboard_focus(uint32_t target_pid) {
 }
 
 static int32_t sys_ioctl(struct registers *r) {
+    DEBUG_SYSCALL("[SYSCALL][IOCTL]\n");
     uint32_t opcode = r->ebx;
     task_t *current = scheduler_get_current_task();
     switch (opcode) {
@@ -445,6 +448,8 @@ static int32_t sys_ioctl(struct registers *r) {
     default:
         break;
     }
+
+    return STATUS_ERROR;
 }
 
 /**
