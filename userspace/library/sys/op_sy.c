@@ -3,9 +3,14 @@
 #include "shared.h"
 #include "sys_calls.h"
 #include <stdint.h>
+#include <string.h>
 
 int get_ac_tasks(char *buf, int len) {
-    return sys_getdirents(buf, "SYS_INFO/TASKS", len);
+    if (buf != NULL) {
+        memcpy(buf, "SYS_INFO/TASKS", len);
+        return sys_getdirents(buf, len);
+    }
+    return -1;
 }
 
 int create_task_window(int width, int height, int x, int y) {
@@ -13,8 +18,15 @@ int create_task_window(int width, int height, int x, int y) {
     return sys_conwi(CREATE, width, height, x, y);
 }
 
-int paint_window(int width, int height, int x, int y) {
-    return sys_conwi(PAINT_WINDOW, width, height, x, y);
+int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color) {
+    gui_params_pack params;
+    params.width  = width;
+    params.height = height;
+    params.x      = x;
+    params.y      = y;
+    params.color  = color;
+
+    return sys_wi_package(PAINT_WINDOW, &params);
 }
 
 int move_task_window(int x, int y) {
@@ -45,7 +57,7 @@ int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *s
     params.scale  = scale;
     params.pixels = sprite;
 
-    return sys_drwi(DRAW, &params);
+    return sys_wi_package(DRAW, &params);
 }
 
 int exec(const char *filename) {

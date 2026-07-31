@@ -91,8 +91,8 @@ static int32_t sys_read(struct registers *r) {
         return nread;
     }
 
-    ledger_add_fs_req(current->pid, READ, fd, NULL, NULL, buff_size, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_fs_req(current->pid, READ, fd, buf, buff_size, O_RDONLY);
     scheduler_yield(r);
 
     if (ledger_collect(current->pid, fs_task_pid, buf) == STATUS_ERROR)
@@ -132,7 +132,7 @@ static int32_t sys_write(struct registers *r) {
         break;
 
     default:
-        ledger_add_fs_req(current->pid, WRITE, fd, NULL, buf, len, O_WRONLY);
+        ledger_add_fs_req(current->pid, WRITE, fd, buf, len, O_WRONLY);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
         return ledger_collect(current->pid, fs_task_pid, NULL);
@@ -151,13 +151,14 @@ static int32_t sys_write(struct registers *r) {
  */
 static int32_t sys_open(struct registers *r) {
     const char *path      = (char *)r->ebx;
-    uint32_t flags        = r->ecx;
+    uint32_t len          = r->ecx;
+    uint32_t flags        = r->edx;
     const task_t *current = scheduler_get_current_task();
 
     if (current == NULL)
         return STATUS_ERROR;
 
-    ledger_add_fs_req(current->pid, OPEN, 0, path, NULL, 0, flags);
+    ledger_add_fs_req(current->pid, OPEN, 0, path, len, flags);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -182,7 +183,7 @@ static int32_t sys_close(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(current->pid, CLOSE, fd, NULL, NULL, 0, 0);
+    ledger_add_fs_req(current->pid, CLOSE, fd, NULL, 0, 0);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -212,7 +213,7 @@ static int32_t sys_chdir(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(current->pid, FIND, 0, path, NULL, len, 0);
+    ledger_add_fs_req(current->pid, FIND, 0, path, len, 0);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -326,7 +327,7 @@ static int32_t sys_mkdir(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(current->pid, CREATE, 0, path, NULL, len, O_CREAT);
+    ledger_add_fs_req(current->pid, CREATE, 0, path, len, O_CREAT);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -337,7 +338,6 @@ static int32_t sys_getdents(struct registers *r) {
     DEBUG_SYSCALL("[SYSCALL][SYS_GETDENTS]\n");
     char *buffer    = (char *)r->ebx;
     uint32_t len    = r->ecx;
-    char *path      = (char *)r->edx;
 
     task_t *current = scheduler_get_current_task();
     if (current == NULL) {
@@ -345,7 +345,7 @@ static int32_t sys_getdents(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(current->pid, LIST, 0, path, buffer, len, O_RDONLY);
+    ledger_add_fs_req(current->pid, LIST, 0, buffer, len, O_RDONLY);
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
@@ -460,9 +460,18 @@ static int32_t sys_window(struct registers *r) {
         ledger_add_gui_req(current->pid, CREATE, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
         goto yield_collect;
     case PAINT_WINDOW:
+        current->state          = TASK_BLOCKED;
+        gui_params_pack *params = (gui_params_pack *)r->ecx;
+
+        if (params == NULL) {
+            return STATUS_ERROR;
+        }
+
+        ledger_add_gui_req(current->pid, PAINT_WINDOW, params->width, params->height, params->x, params->y, 0, params->color, NULL);
+        goto yield_collect;
     case SCROLL_DOWN:
         current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, operation, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
+        ledger_add_gui_req(current->pid, SCROLL_DOWN, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
         goto yield_collect;
     case MOVE:
         current->state = TASK_BLOCKED;
@@ -481,13 +490,18 @@ static int32_t sys_window(struct registers *r) {
             return STATUS_ERROR;
         }
 
-        ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x,
-                           params->y, params->scale, 0, params->pixels);
+        if (ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x,
+                               params->y, params->scale, 0, params->pixels) == STATUS_ERROR) {
+            return STATUS_ERROR;
+        }
         goto yield_collect;
     }
     case WRITE_AT:
         current->state = TASK_BLOCKED;
-        ledger_add_gui_text(current->pid, WRITE_AT, r->ecx, r->edx, r->esi, (const char *)r->edi);
+        if (ledger_add_gui_text(current->pid, WRITE_AT, r->ecx, r->edx, r->esi, (const char *)r->edi) == STATUS_ERROR) {
+            return STATUS_ERROR;
+        }
+
         goto yield_collect;
     case SET_OPERATOR:
 

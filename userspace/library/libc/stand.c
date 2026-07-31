@@ -75,7 +75,7 @@ int change_directory(const char *path, char *directory_name) {
 }
 
 int list_dirents(char *buf, int buffer_size) {
-    return sys_getdirents(buf, NULL, buffer_size);
+    return sys_getdirents(buf, buffer_size);
 }
 
 void print(const char *msg) {
@@ -95,7 +95,7 @@ int scan(char *buf) {
 }
 
 int open(const char *path, uint32_t flags) {
-    return sys_open(path, flags);
+    return sys_open(path, strlen(path), flags);
 }
 
 void close(uint32_t fd) {

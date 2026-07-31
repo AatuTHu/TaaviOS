@@ -250,7 +250,8 @@ static int gui_paint_window_to_screen(request_table *req) {
                 return STATUS_ERROR;
             }
 
-            fb_fill_rect(entry->pixels, req->x, req->y, req->width, req->height, entry->width, entry->height, entry->bg_color);
+            fb_fill_rect(entry->pixels, req->x, req->y, req->width,
+                         req->height, entry->width, entry->height, req->color);
 
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
                 return STATUS_ERROR;

@@ -2,11 +2,7 @@
 #define FS_TASK_H
 
 #include "config.h"
-#include "klog.h"
-#include "kmalloc.h"
-#include "kstring.h"
 #include "ledger.h"
-#include "sched.h"
 #include "task.h"
 #include <stdint.h>
 

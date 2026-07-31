@@ -15,7 +15,6 @@ static int y_pos                  = 0;
 
 static int scroll_down() {
     int status = sys_conwi(SCROLL_DOWN, 0, 0, 0, y_pos);
-
     return status;
 }
 

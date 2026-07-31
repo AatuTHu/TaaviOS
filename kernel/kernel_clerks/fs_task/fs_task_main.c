@@ -1,6 +1,7 @@
 #include "blankie.h"
 #include "fs_task.h"
 #include "hail_mary.h"
+#include "klog.h"
 
 /**
  * Fs_task

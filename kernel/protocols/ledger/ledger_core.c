@@ -96,6 +96,11 @@ void ledger_remove_request() {
                     q->table[i]->pixels = NULL;
                 }
 
+                if (q->table[i]->buf != NULL) {
+                    kfree(q->table[i]->buf);
+                    q->table[i]->buf = NULL;
+                }
+
                 kfree(q->table[i]);
                 q->table[i] = NULL;
                 return;
@@ -155,24 +160,18 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
 
                 return req->fd;
             case LIST:
+            case READ:
                 if (out != NULL) {
                     DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d\n", caller_pid, req->buffer_size);
                     memcpy(out, req->buf, req->buffer_size);
                 }
                 req->status = TERMINATED;
                 return req->buffer_size;
-            case READ:
-                if (out != NULL) {
-                    memcpy(out, req->buf, req->buffer_size);
-                }
-                break;
             default:
                 break;
             }
 
-            task_t *current = scheduler_get_current_task();
-            req->status     = TERMINATED;
-            // DEBUG_LEDGER("[LEDGER][COLLECT]: Collectables found for: %s. at index: %d\n", current->name, i);
+            req->status = TERMINATED;
             return STATUS_OK;
         }
     }

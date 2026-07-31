@@ -1,5 +1,6 @@
 #include "sys_calls.h"
 #include "shared.h"
+#include <stdint.h>
 
 void sys_write(int fd, const char *msg, int len) {
     int retval;
@@ -19,11 +20,11 @@ int sys_getpid(void) {
     return result;
 }
 
-int sys_open(const char *path, uint32_t flags) {
+int sys_open(const char *path, uint32_t len, uint32_t flags) {
     int fd = -1;
     __asm__ __volatile__("int $0x80"
                          : "=a"(fd)
-                         : "a"(SYS_OPEN), "b"(path), "c"(flags));
+                         : "a"(SYS_OPEN), "b"(path), "c"(len), "d"(flags));
     return fd;
 }
 
@@ -47,7 +48,7 @@ int sys_wriat(int operation, int x, int y, int len, const char *msq) {
     return result;
 }
 
-int sys_drwi(int operation, gui_params_pack *params) {
+int sys_wi_package(int operation, gui_params_pack *params) {
     int result = -1;
     __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(operation), "c"(params));
     return result;
@@ -81,11 +82,11 @@ int sys_exec(const char *filename) {
     return result;
 }
 
-int sys_getdirents(const char *buf, const char *path, uint32_t len) {
+int sys_getdirents(const char *buf, uint32_t len) {
     int result;
     __asm__ __volatile__("int $0x80"
                          : "=a"(result)
-                         : "a"(SYS_GETDENTS), "b"(buf), "c"(len), "d"(path));
+                         : "a"(SYS_GETDENTS), "b"(buf), "c"(len));
     return result;
 }
 

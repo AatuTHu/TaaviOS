@@ -75,7 +75,6 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
 
     return STATUS_OK;
 }
-
 /**
  * dir_get_direction - Fetches dir traversal entry.
  * @param owner_pid: short description.
@@ -86,7 +85,8 @@ static int dir_traversal_mapper(uint32_t owner_pid, uint32_t current_cluster, ui
  * Context: It is beneficial to what is the current working directory to navigate clusters more easily.
  * Return: pointer to an dir_map entry || NULL
  */
-static dir_traversal_t *dir_get_direction(uint32_t owner_pid) {
+static dir_traversal_t *
+dir_get_direction(uint32_t owner_pid) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (dir_map[i] != NULL && dir_map[i]->owner_pid == owner_pid) {
             DEBUG_FS_TASK("[FS_TASK][GET_DIRECTION]: directions found!\n");
@@ -221,7 +221,7 @@ static int open(request_table *req) {
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
     char filename[TASK_NAME_LENGTH];
-    const char *path     = (char *)req->path;
+    const char *path     = req->buf;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
@@ -257,7 +257,7 @@ static int open(request_table *req) {
  * Return: STATUS_OK || STATUS_ERROR
  */
 static int create(const request_table *req) {
-    DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->path);
+    DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->buf);
     uint32_t base_directory = f32_fs.root_cluster;
     dir_traversal_t *map    = dir_get_direction(req->caller_pid);
 
@@ -267,12 +267,12 @@ static int create(const request_table *req) {
     }
 
     if (req->buffer_size > 8) {
-        if (fat32_mkdirp(base_directory, req->path) == STATUS_ERROR) {
+        if (fat32_mkdirp(base_directory, req->buf) == STATUS_ERROR) {
             ERROR("[FS_TASK][CREATE]: mkdirp failed!\n");
             return STATUS_ERROR;
         }
     } else {
-        if (fat32_mkdir(base_directory, req->path) == STATUS_ERROR) {
+        if (fat32_mkdir(base_directory, req->buf) == STATUS_ERROR) {
             ERROR("[FS_TASK][CREATE]: mkdir failed!\n");
             return STATUS_ERROR;
         }
@@ -367,7 +367,7 @@ static int find(const request_table *req) {
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
-    const char *path          = (char *)req->path;
+    const char *path          = req->buf;
     char filename[TASK_NAME_LENGTH];
 
     if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
@@ -560,7 +560,7 @@ void fs_handle_request(request_table *req) {
         return;
     }
 
-    if (req->request_type == LIST && strncmp(req->path, "SYS_INFO/TASKS", sizeof(req->path)) == 0) {
+    if (req->request_type == LIST && strncmp(req->buf, "SYS_INFO/TASKS", req->buffer_size) == 0) {
         req->status       = (fs_return_vdir_tasks(req) == STATUS_OK) ? COMPLETE : FAILED;
         fs_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);

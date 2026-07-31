@@ -100,7 +100,14 @@ int ledger_add_gui_text(uint32_t caller_pid, uint32_t type, uint32_t x, uint32_t
     new_request->y            = y;
     new_request->status       = PENDING;
 
-    strncpy(new_request->buf, buf, sizeof(new_request->buf));
+    if (buf != NULL) {
+        new_request->buf = (char *)kmalloc(len + 1);
+        if (new_request->buf != NULL) {
+            new_request->buffer_size = len;
+            memcpy(new_request->buf, buf, len);
+            new_request->buf[len] = '\0';
+        }
+    }
     // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buf: %s and buf length: %d\n",
     //     new_request->buf, buffer_size);
 

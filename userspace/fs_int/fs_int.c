@@ -1,6 +1,7 @@
 #include "folder.h"
 #include "font.h"
 #include "op_sy.h"
+#include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include <stddef.h>
@@ -66,7 +67,7 @@ static void command_open(const char *filename) {
     fd = open(filename, O_RDONLY | O_WRONLY);
 
     if (fd == -1) {
-        print_at(PADDING, INFO_LINE_Y, "print on opening the file");
+        print_at(PADDING, INFO_LINE_Y, "read on opening the file");
         return;
     }
     print_at(PADDING, INFO_LINE_Y, "Successfully opened the file");
@@ -162,7 +163,7 @@ static const Command commands[] = {
 };
 
 void exec_cmd(char *buf) {
-    print_at(10, 10, "filesystem interface");
+    ch_bg_color(COLOR_BLACK);
 
     const char *trimmed = skip_spaces(buf);
     if (*trimmed == '\0') {
@@ -204,6 +205,11 @@ int main(void) {
         return 1;
     }
 
+    if (paint_rectangle(WINDOW_WIDTH, (FONT_HEIGHT + 2), 0, CMD_LINE_Y - 1, COLOR_TEAL) == STATUS_ERROR) {
+        ch_bg_color(COLOR_BLACK);
+        print_at(PADDING, INFO_LINE_Y, "Failed to paint rectange to cmd line");
+    }
+
     print_at(10, 10, "filesystem interface");
 
     char buf[BUF_SIZE];
@@ -214,7 +220,8 @@ int main(void) {
     const char *art_end   = " ] ";
 
     while (1) {
-        print_at(0, CMD_LINE_Y, "                                                                ");
+        ch_bg_color(COLOR_TEAL);
+        //   print_at(0, CMD_LINE_Y, "                                                                ");
 
         int buffer_x_pos = 5;
         print_at(buffer_x_pos, CMD_LINE_Y, art_start);
