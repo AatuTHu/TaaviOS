@@ -36,21 +36,15 @@ int sys_chdir(const char *path, uint32_t len) {
     return result;
 }
 
-int sys_conwi(int operation, int p1, int p2, int p3, int p4) {
+int sys_conwi(gui_params_pack *params) {
     int result = -1;
-    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(operation), "c"(p1), "d"(p2), "S"(p3), "D"(p4));
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(params));
     return result;
 }
 
-int sys_wriat(int operation, int x, int y, int len, const char *msq) {
+int sys_ioctl(int operation, int p1, int p2) {
     int result = -1;
-    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(operation), "c"(x), "d"(y), "S"(len), "D"(msq));
-    return result;
-}
-
-int sys_wi_package(int operation, gui_params_pack *params) {
-    int result = -1;
-    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_WI), "b"(operation), "c"(params));
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_IOCTL), "b"(operation), "c"(p1), "d"(p2));
     return result;
 }
 

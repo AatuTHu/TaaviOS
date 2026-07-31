@@ -15,19 +15,24 @@
 #define SYS_GETPID 20
 #define SYS_KILL 37
 #define SYS_MKDIR 39
+#define SYS_IOCTL 54
 #define SYS_IDLE 112
 #define SYS_GETDENTS 141
 #define SYS_YIELD 158
 #define SYS_WI 250
 
 typedef struct {
+    uint32_t *pixels;
+    char *buf;
+    uint32_t buffer_size;
+    uint8_t opcode;
     uint32_t width;
     uint32_t height;
     uint32_t x;
     uint32_t y;
-    uint32_t color;
+    uint32_t fg_color;
+    uint32_t bg_color;
     uint32_t scale;
-    uint32_t *pixels;
 } gui_params_pack;
 
 typedef enum {

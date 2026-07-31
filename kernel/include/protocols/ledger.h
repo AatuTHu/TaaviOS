@@ -12,22 +12,23 @@ typedef enum {
 } reqistry_status;
 
 typedef struct request_table {
-    uint16_t caller_pid;
-    uint8_t clerk_pid;
-    uint16_t target_pid;
-    uint8_t request_type;
-    uint8_t status;
     char *buf;
     uint32_t *pixels;
+    uint32_t fg_color;
+    uint32_t bg_color;
     uint32_t buffer_size;
     uint32_t fd;
     uint32_t flags;
+    uint16_t caller_pid;
+    uint16_t target_pid;
     uint16_t width;
     uint16_t height;
     uint16_t x;
     uint16_t y;
+    uint8_t status;
+    uint8_t request_type;
+    uint8_t clerk_pid;
     uint8_t scale;
-    uint32_t color;
 } request_table;
 
 typedef struct {
@@ -44,11 +45,8 @@ int ledger_add_fs_req(uint32_t caller_pid,
                       const char *buf, uint32_t buffer_size, uint32_t flags);
 int ledger_add_fs_free_req(uint32_t caller_pid, uint32_t target_pid);
 // gui
-int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height,
-                       uint32_t x, uint32_t y, uint32_t scale, uint32_t color, const uint32_t *user_pixels);
+int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params);
 int ledger_add_gui_free_req(uint32_t caller_pid, uint32_t target_pid);
-int ledger_add_gui_text(uint32_t caller_pid, uint32_t type, uint32_t x, uint32_t y, uint32_t len, const char *buf);
-int ledger_ch_gui_color(uint32_t caller_pid, uint32_t type, uint32_t color);
 // reaper
 int ledger_add_reaper_req(uint32_t caller_pid, uint32_t target_pid);
 

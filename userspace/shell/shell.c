@@ -1,4 +1,5 @@
 #include "op_sy.h"
+#include "render.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -143,10 +144,7 @@ int main(void) {
         return 1;
     }
 
-    if (ch_fg_color(COLOR_WHITE) == STATUS_ERROR) {
-        print("Failed to set foreground color\n");
-    }
-
+    set_text_color(COLOR_WHITE);
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 

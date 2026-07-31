@@ -121,10 +121,11 @@ static int32_t sys_write(struct registers *r) {
 
     switch (fd) {
     case 1:
-        ledger_add_gui_text(current->pid, WRITE, 0, 0, len, buf);
-        scheduler_set_task_state(TASK_BLOCKED);
-        scheduler_yield(r);
-        return ledger_collect(current->pid, gui_task_pid, NULL);
+        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+        vga_write(buf);
+        r->eax = STATUS_OK;
+        break;
+
     case 2:
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         ERROR(buf);
@@ -433,6 +434,19 @@ static int change_keyboard_focus(uint32_t target_pid) {
     return STATUS_OK;
 }
 
+static int32_t sys_ioctl(struct registers *r) {
+    uint32_t opcode = r->ebx;
+    task_t *current = scheduler_get_current_task();
+    switch (opcode) {
+    case SET_OPERATOR:
+        return keyboard_set_operator_pid(current->pid);
+    case CH_ACT_W:
+        return change_keyboard_focus(r->ecx);
+    default:
+        break;
+    }
+}
+
 /**
  * sys_configure_window - When userspace task wants to make changes to their window.
  *
@@ -446,75 +460,16 @@ static int change_keyboard_focus(uint32_t target_pid) {
  * Return: STATUS_OK || STATUS_ERROR.
  */
 static int32_t sys_window(struct registers *r) {
-    //    DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
-    uint32_t operation = r->ebx;
-    task_t *current    = scheduler_get_current_task();
+    DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
+    gui_params_pack *params = (gui_params_pack *)r->ebx;
+    task_t *current         = scheduler_get_current_task();
 
-    if (current == NULL) {
+    if (current == NULL || params == NULL) {
+        ERROR("[SYSCALL][SYS_CONWI]: invalid input params. Aborting\n");
         return STATUS_ERROR;
     }
 
-    switch (operation) {
-    case CREATE:
-        current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, CREATE, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
-        goto yield_collect;
-    case PAINT_WINDOW:
-        current->state          = TASK_BLOCKED;
-        gui_params_pack *params = (gui_params_pack *)r->ecx;
-
-        if (params == NULL) {
-            return STATUS_ERROR;
-        }
-
-        ledger_add_gui_req(current->pid, PAINT_WINDOW, params->width, params->height, params->x, params->y, 0, params->color, NULL);
-        goto yield_collect;
-    case SCROLL_DOWN:
-        current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, SCROLL_DOWN, r->ecx, r->edx, r->esi, r->edi, 0, 0, NULL);
-        goto yield_collect;
-    case MOVE:
-        current->state = TASK_BLOCKED;
-        ledger_add_gui_req(current->pid, MOVE, 0, 0, r->ecx, r->edx, 0, 0, NULL);
-        goto yield_collect;
-    case BG_COLOR:
-    case FG_COLOR:
-        current->state = TASK_BLOCKED;
-        ledger_ch_gui_color(current->pid, operation, r->ecx);
-        goto yield_collect;
-    case DRAW: {
-        current->state          = TASK_BLOCKED;
-        gui_params_pack *params = (gui_params_pack *)r->ecx;
-
-        if (params == NULL) {
-            return STATUS_ERROR;
-        }
-
-        if (ledger_add_gui_req(current->pid, DRAW, params->width, params->height, params->x,
-                               params->y, params->scale, 0, params->pixels) == STATUS_ERROR) {
-            return STATUS_ERROR;
-        }
-        goto yield_collect;
-    }
-    case WRITE_AT:
-        current->state = TASK_BLOCKED;
-        if (ledger_add_gui_text(current->pid, WRITE_AT, r->ecx, r->edx, r->esi, (const char *)r->edi) == STATUS_ERROR) {
-            return STATUS_ERROR;
-        }
-
-        goto yield_collect;
-    case SET_OPERATOR:
-
-        return keyboard_set_operator_pid(current->pid);
-    case CH_ACT_W:
-        return change_keyboard_focus(r->ecx);
-    default:
-        current->state = TASK_RUNNING;
-        break;
-    }
-    return STATUS_ERROR;
-
-yield_collect:
+    ledger_add_gui_req(current->pid, params);
     scheduler_yield(r);
     return ledger_collect(current->pid, gui_task_pid, NULL);
 }
@@ -543,4 +498,5 @@ void syscall_init() {
     syscall_table[SYS_CHDIR]    = sys_chdir;
     syscall_table[SYS_GETDENTS] = sys_getdents;
     syscall_table[SYS_WI]       = sys_window;
+    syscall_table[SYS_IOCTL]    = sys_ioctl;
 }

@@ -82,10 +82,6 @@ void print(const char *msg) {
     render(msg, strlen(msg));
 }
 
-void print_at(uint32_t x, uint32_t y, const char *msg) {
-    sys_wriat(WRITE_AT, x, y, strlen(msg), msg);
-}
-
 void error(const char *msg) {
     sys_write(2, msg, strlen(msg));
 }

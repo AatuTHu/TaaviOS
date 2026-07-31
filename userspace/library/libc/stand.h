@@ -8,7 +8,6 @@
 #define STATUS_OK 0
 
 void print(const char *msg);
-void print_at(uint32_t x, uint32_t y, const char *msg);
 void error(const char *msg);
 int scan(char *buf);
 

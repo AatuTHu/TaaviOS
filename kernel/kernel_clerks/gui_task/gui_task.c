@@ -18,22 +18,21 @@
  * @author: A.H, 2026
  */
 
-static window_t *program_windows[MAX_TASKS];
-static blueprint_t compositor[MAX_TASKS];
+static blueprint_t *program_windows[MAX_TASKS];
 static uint32_t bg_color       = 0;
 static uint32_t fg_color       = 0;
 static int hail_mary_act_count = 0;
 
-static int copy_pixels_to_screen(window_t *entry) {
+static int copy_pixels_to_screen(blueprint_t *entry) {
     if (entry == NULL) {
         return STATUS_ERROR;
     }
 
     for (uint32_t row = 0; row < entry->height; row++) {
         memcpy(
-            (uint32_t *)fb.virt_addr + (compositor[entry->wid].screen_y + row) * (fb.pitch / 4) + compositor[entry->wid].screen_x, // dst
-            entry->pixels + row * entry->width,                                                                                    // src
-            entry->width * 4);                                                                                                     // len
+            (uint32_t *)fb.virt_addr + (entry->screen_y + row) * (fb.pitch / 4) + entry->screen_x, // dst
+            entry->pixels + row * entry->width,                                                    // src
+            entry->width * 4);                                                                     // len
     }
 
     return STATUS_OK;
@@ -56,7 +55,7 @@ static int gui_draw_string(request_table *req) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
             //  DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s\n", req->buf);
-            window_t *entry = program_windows[i];
+            blueprint_t *entry = program_windows[i];
 
             if (entry->pixels == NULL) {
                 DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Pixel buffer was null, cant draw\n");
@@ -66,7 +65,7 @@ static int gui_draw_string(request_table *req) {
             // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", req->y);
 
             fb_draw_string(entry->pixels, req->x, req->y, entry->width, req->buf,
-                           entry->fg_color, entry->bg_color);
+                           req->fg_color, req->bg_color);
 
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
                 return STATUS_ERROR;
@@ -76,26 +75,6 @@ static int gui_draw_string(request_table *req) {
         }
     }
     return STATUS_OK;
-}
-
-static int gui_change_fg_color(uint32_t owner_pid, int32_t fg_color) {
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
-            program_windows[i]->fg_color = fg_color;
-            return STATUS_OK;
-        }
-    }
-    return STATUS_ERROR;
-}
-
-static int gui_change_bg_color(uint32_t owner_pid, uint32_t bg_color) {
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
-            program_windows[i]->bg_color = bg_color;
-            return STATUS_OK;
-        }
-    }
-    return STATUS_ERROR;
 }
 
 /**
@@ -114,7 +93,7 @@ static int gui_delete_window(uint32_t target_pid) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == target_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
-            window_t *entry = program_windows[i];
+            blueprint_t *entry = program_windows[i];
 
             if (fb_clear(entry->pixels, entry->width, entry->height, fg_color) == STATUS_ERROR) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
@@ -125,10 +104,6 @@ static int gui_delete_window(uint32_t target_pid) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Failed the copy pixels to screen\n");
                 return STATUS_ERROR;
             }
-
-            compositor[entry->wid].entry    = NULL;
-            compositor[entry->wid].screen_x = 0;
-            compositor[entry->wid].screen_y = 0;
 
             if (entry->pixels != NULL) {
                 DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Freeing reserved pixels\n");
@@ -189,7 +164,7 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
         return STATUS_ERROR;
     }
 
-    window_t *entry = (window_t *)kmalloc(sizeof(window_t));
+    blueprint_t *entry = (blueprint_t *)kmalloc(sizeof(blueprint_t));
 
     if (entry == NULL) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: Reserving memory for the window table failed. Aborting\n");
@@ -197,13 +172,11 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
-    entry->wid           = slot;
     entry->owner_pid     = owner_pid;
     entry->width         = width;
     entry->height        = height;
-    entry->z_index       = 1;
-    entry->fg_color      = fb_pack_color(255, 255, 255);
-    entry->bg_color      = fb_pack_color(0, 0, 0);
+    entry->screen_x      = x;
+    entry->screen_y      = y;
 
     uint32_t pixels_size = entry->width * entry->height * 4;
     entry->pixels        = (uint32_t *)kmalloc(pixels_size);
@@ -213,14 +186,9 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
         return STATUS_ERROR;
     }
     memset(entry->pixels, 0, pixels_size);
+    program_windows[slot] = entry;
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
-    DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Filling compositor info\n");
-    program_windows[slot]     = entry;
-    compositor[slot].entry    = program_windows[slot];
-    compositor[slot].screen_x = x;
-    compositor[slot].screen_y = y;
-    DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created\n");
     return STATUS_OK;
 }
 
@@ -233,25 +201,25 @@ static int gui_scroll_window(request_table *req) {
     for (uint32_t i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
             return fb_scroll_down(program_windows[i]->pixels, program_windows[i]->width,
-                                  program_windows[i]->height, program_windows[i]->bg_color);
+                                  program_windows[i]->height, req->bg_color);
         }
     }
     return STATUS_ERROR;
 }
 
-static int gui_paint_window_to_screen(request_table *req) {
+static int gui_paint_blueprint_to_screen(request_table *req) {
 
     DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window for %d to screen!\n", req->caller_pid);
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            window_t *entry = program_windows[i];
+            blueprint_t *entry = program_windows[i];
 
             if (entry->pixels == NULL) {
                 return STATUS_ERROR;
             }
 
             fb_fill_rect(entry->pixels, req->x, req->y, req->width,
-                         req->height, entry->width, entry->height, req->color);
+                         req->height, entry->width, entry->height, req->bg_color);
 
             if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
                 return STATUS_ERROR;
@@ -269,7 +237,7 @@ static int gui_draw_sprite(request_table *req) {
 
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            window_t *entry = program_windows[i];
+            blueprint_t *entry = program_windows[i];
             for (uint32_t row = 0; row < req->height; row++) {
                 for (uint32_t col = 0; col < req->width; col++) {
                     uint32_t color = req->pixels[row * req->width + col];
@@ -310,13 +278,7 @@ static void gui_handle_request(request_table *req) {
         req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
     case PAINT_WINDOW:
-        req->status = (gui_paint_window_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
-    case FG_COLOR:
-        req->status = (gui_change_fg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
-    case BG_COLOR:
-        req->status = (gui_change_bg_color(req->caller_pid, req->color) == STATUS_OK) ? COMPLETE : FAILED;
+        req->status = (gui_paint_blueprint_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
     case DRAW:
         req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
@@ -379,8 +341,6 @@ void gui_init(task_t *gui_task) {
             }
         }
     }
-
-    memset(compositor, 0, sizeof(compositor));
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Screen succesfully initialized\n");
 }

@@ -28,11 +28,9 @@ int sys_exec(const char *filename);
 
 int sys_getdirents(const char *buf, uint32_t len);
 
-int sys_conwi(int operation, int p1, int p2, int p3, int p4);
+int sys_conwi(gui_params_pack *params);
 
-int sys_wi_package(int operation, gui_params_pack *params);
-
-int sys_wriat(int operation, int x, int y, int len, const char *msq);
+int sys_ioctl(int operation, int p1, int p2);
 
 int sys_kill(uint32_t target_pid);
 

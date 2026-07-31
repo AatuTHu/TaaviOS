@@ -1,6 +1,7 @@
 #include "folder.h"
 #include "font.h"
 #include "op_sy.h"
+#include "render.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -53,7 +54,7 @@ static void command_help(const char *arg) {
 
 static void command_write(const char *buf) {
     if (fd == -1) {
-        print_at(PADDING, INFO_LINE_Y, "No file currently open");
+        render_at(PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
     write(fd, buf);
@@ -67,16 +68,16 @@ static void command_open(const char *filename) {
     fd = open(filename, O_RDONLY | O_WRONLY);
 
     if (fd == -1) {
-        print_at(PADDING, INFO_LINE_Y, "read on opening the file");
+        render_at(PADDING, INFO_LINE_Y, "read on opening the file");
         return;
     }
-    print_at(PADDING, INFO_LINE_Y, "Successfully opened the file");
+    render_at(PADDING, INFO_LINE_Y, "Successfully opened the file");
 }
 
 static void command_read(const char *arg) {
     (void)arg;
     if (fd == STATUS_ERROR) {
-        print_at(PADDING, INFO_LINE_Y, "No file currently open");
+        render_at(PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
 
@@ -87,17 +88,17 @@ static void command_read(const char *arg) {
         print("\n\n");
         print(buf);
     } else {
-        print_at(PADDING, CMD_LINE_Y, "Read failed or file empty");
+        render_at(PADDING, CMD_LINE_Y, "Read failed or file empty");
     }
 }
 
 static void command_close(const char *arg) {
     (void)arg;
     if (fd == STATUS_ERROR) {
-        print_at(PADDING, INFO_LINE_Y, "No open file to close");
+        render_at(PADDING, INFO_LINE_Y, "No open file to close");
         return;
     }
-    print_at(PADDING, INFO_LINE_Y, "Closing file");
+    render_at(PADDING, INFO_LINE_Y, "Closing file");
     close(fd);
     fd = -1;
 }
@@ -108,7 +109,7 @@ static void command_mkdir(const char *directory_name) {
 
 static void command_cd(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {
-        print_at(PADDING, INFO_LINE_Y, "Failed to change directory");
+        render_at(PADDING, INFO_LINE_Y, "Failed to change directory");
     }
 }
 
@@ -133,7 +134,7 @@ static void command_ls(const char *arg) {
 
             if (entry[0] != '\0') {
                 draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder);
-                print_at(current_x, current_text_y, entry);
+                render_at(current_x, current_text_y, entry);
                 current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
             }
             entry = &dirents[i + 1];
@@ -163,7 +164,7 @@ static const Command commands[] = {
 };
 
 void exec_cmd(char *buf) {
-    ch_bg_color(COLOR_BLACK);
+    set_background_color(COLOR_BLACK);
 
     const char *trimmed = skip_spaces(buf);
     if (*trimmed == '\0') {
@@ -182,7 +183,7 @@ void exec_cmd(char *buf) {
                 const char *arg = skip_spaces(trimmed + len);
 
                 if (cmd->requires_arg && *arg == '\0') {
-                    print_at(PADDING, INFO_LINE_Y, "Argument required");
+                    render_at(PADDING, INFO_LINE_Y, "Argument required");
                     return;
                 }
 
@@ -192,25 +193,26 @@ void exec_cmd(char *buf) {
         }
     }
 
-    print_at(PADDING, INFO_LINE_Y, "Invalid command");
+    render_at(PADDING, INFO_LINE_Y, "Invalid command");
 }
 
 static void print_char(int buffer_x_pos, char c) {
     char tmp[2] = {c, '\0'};
-    print_at(buffer_x_pos, CMD_LINE_Y, tmp);
+    render_at(buffer_x_pos, CMD_LINE_Y, tmp);
 }
 
 int main(void) {
     if (create_task_window(WINDOW_WIDTH, WINDOW_HEIGTH, SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
         return 1;
     }
+    set_text_color(COLOR_WHITE);
 
     if (paint_rectangle(WINDOW_WIDTH, (FONT_HEIGHT + 2), 0, CMD_LINE_Y - 1, COLOR_TEAL) == STATUS_ERROR) {
-        ch_bg_color(COLOR_BLACK);
-        print_at(PADDING, INFO_LINE_Y, "Failed to paint rectange to cmd line");
+        set_text_color(COLOR_BLACK);
+        render_at(PADDING, INFO_LINE_Y, "Failed to paint rectange to cmd line");
     }
 
-    print_at(10, 10, "filesystem interface");
+    render_at(10, 10, "filesystem interface");
 
     char buf[BUF_SIZE];
     int pos = 0;
@@ -220,17 +222,17 @@ int main(void) {
     const char *art_end   = " ] ";
 
     while (1) {
-        ch_bg_color(COLOR_TEAL);
-        //   print_at(0, CMD_LINE_Y, "                                                                ");
+        set_background_color(COLOR_TEAL);
+        //   render_at(0, CMD_LINE_Y, "                                                                ");
 
         int buffer_x_pos = 5;
-        print_at(buffer_x_pos, CMD_LINE_Y, art_start);
+        render_at(buffer_x_pos, CMD_LINE_Y, art_start);
         buffer_x_pos += strlen(art_start) * FONT_WIDTH;
 
-        print_at(buffer_x_pos, CMD_LINE_Y, dir_name);
+        render_at(buffer_x_pos, CMD_LINE_Y, dir_name);
         buffer_x_pos += strlen(dir_name) * FONT_WIDTH;
 
-        print_at(buffer_x_pos, CMD_LINE_Y, art_end);
+        render_at(buffer_x_pos, CMD_LINE_Y, art_end);
         buffer_x_pos += strlen(art_end) * FONT_WIDTH;
 
         pos = 0;
@@ -247,7 +249,7 @@ int main(void) {
                 if (pos > 0) {
                     pos--;
                     buffer_x_pos -= FONT_WIDTH;
-                    print_at(buffer_x_pos, CMD_LINE_Y, " ");
+                    render_at(buffer_x_pos, CMD_LINE_Y, " ");
                 }
             } else if (pos < BUF_SIZE - 1) {
                 buf[pos++] = c;

@@ -4,6 +4,7 @@
 #include "kstring.h"
 #include "ledger.h"
 #include "sched.h"
+#include "shared.h"
 #include <stdint.h>
 
 static inline int queue_req(request_table *new_request, uint32_t caller_pid) {
@@ -24,14 +25,12 @@ static inline int queue_req(request_table *new_request, uint32_t caller_pid) {
  * @buffer_size: size of buf / requested size
  *
  * Description:
- * Validates params, allocates a new request_table entry, places it in
+ * Validates paramss, allocates a new request_table entry, places it in
  * the correct clerk's queue and wakes that clerk.
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, uint32_t height,
-                       uint32_t x, uint32_t y, uint32_t scale, uint32_t color,
-                       const uint32_t *user_pixels) {
+int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params) {
 
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {
@@ -42,17 +41,18 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     memset(new_request, 0, sizeof(request_table));
     new_request->caller_pid   = caller_pid;
     new_request->clerk_pid    = gui_task_pid;
-    new_request->request_type = type;
+    new_request->request_type = params->opcode;
     new_request->status       = PENDING;
-    new_request->width        = width;
-    new_request->height       = height;
-    new_request->x            = x;
-    new_request->y            = y;
-    new_request->scale        = scale;
-    new_request->color        = color;
+    new_request->width        = params->width;
+    new_request->height       = params->height;
+    new_request->x            = params->x;
+    new_request->y            = params->y;
+    new_request->scale        = params->scale;
+    new_request->fg_color     = params->fg_color;
+    new_request->bg_color     = params->bg_color;
 
-    if (user_pixels != NULL) {
-        size_t pixel_bytes  = width * height * sizeof(uint32_t);
+    if (params->pixels != NULL) {
+        size_t pixel_bytes  = params->width * params->height * sizeof(uint32_t);
         new_request->pixels = (uint32_t *)kmalloc(pixel_bytes);
 
         if (new_request->pixels == NULL) {
@@ -60,7 +60,16 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
             goto case_error;
         }
 
-        memcpy(new_request->pixels, user_pixels, pixel_bytes);
+        memcpy(new_request->pixels, params->pixels, pixel_bytes);
+    }
+
+    if (params->buf != NULL) {
+        new_request->buf = (char *)kmalloc(params->buffer_size + 1);
+        if (new_request->buf != NULL) {
+            new_request->buffer_size = params->buffer_size;
+            memcpy(new_request->buf, params->buf, params->buffer_size);
+            new_request->buf[params->buffer_size] = '\0';
+        }
     }
 
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
@@ -73,67 +82,6 @@ int ledger_add_gui_req(uint32_t caller_pid, operations_t type, uint32_t width, u
     //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
     //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
-    return queue_req(new_request, caller_pid);
-
-case_error:
-    scheduler_wake_task(caller_pid);
-    return STATUS_ERROR;
-}
-
-int ledger_add_gui_text(uint32_t caller_pid, uint32_t type, uint32_t x, uint32_t y, uint32_t len, const char *buf) {
-    if (caller_pid > MAX_TASKS || buf == NULL || len <= 0) {
-        goto case_error;
-    }
-
-    request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
-    if (new_request == NULL) {
-        ERROR("[LEDGER][ADD_GUI_TEXT]: could not allocate new request. Aborting\n");
-        goto case_error;
-    }
-
-    memset(new_request, 0, sizeof(request_table));
-    new_request->caller_pid   = caller_pid;
-    new_request->clerk_pid    = gui_task_pid;
-    new_request->request_type = type;
-    new_request->buffer_size  = len;
-    new_request->x            = x;
-    new_request->y            = y;
-    new_request->status       = PENDING;
-
-    if (buf != NULL) {
-        new_request->buf = (char *)kmalloc(len + 1);
-        if (new_request->buf != NULL) {
-            new_request->buffer_size = len;
-            memcpy(new_request->buf, buf, len);
-            new_request->buf[len] = '\0';
-        }
-    }
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buf: %s and buf length: %d\n",
-    //     new_request->buf, buffer_size);
-
-    return queue_req(new_request, caller_pid);
-
-case_error:
-    scheduler_wake_task(caller_pid);
-    return STATUS_ERROR;
-}
-
-int ledger_ch_gui_color(uint32_t caller_pid, uint32_t type, uint32_t color) {
-    if (caller_pid > MAX_TASKS) {
-        goto case_error;
-    }
-
-    request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
-    if (new_request == NULL) {
-        ERROR("[LEDGER][CH_GUI_COLOR]: could not allocate new request. Aborting\n");
-        goto case_error;
-    }
-
-    memset(new_request, 0, sizeof(request_table));
-    new_request->caller_pid   = caller_pid;
-    new_request->clerk_pid    = gui_task_pid;
-    new_request->request_type = type;
-    new_request->color        = color;
     return queue_req(new_request, caller_pid);
 
 case_error:
