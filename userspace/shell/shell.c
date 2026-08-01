@@ -18,15 +18,17 @@ typedef struct {
 
 static void command_help(const char *arg) {
     (void)arg;
-    print("------------------------------------------------------------\n");
-    print("Available commands                                          \n");
-    print("- help         'Prints this list'                           \n");
-    print("- get pid      'Shells pid'                                 \n");
-    print("- exec [task]  'Executes a task'                            \n");
-    print("- caw  [pid]   'Changes active window to provided pid'      \n");
-    print("- kill [pid]   'Kills task with the corresponding pid'      \n");
-    print("- tasks        'Lists active tasks with their pids'         \n");
-    print("- exit         'Exits and kills shell'                      \n");
+    print("----------------------------------------------------------------\n");
+    print("Available commands                                              \n");
+    print("- help         'Prints this list'                               \n");
+    print("- get pid      'Shells pid'                                     \n");
+    print("- exec [task]  'Executes a task'                                \n");
+    print("- caw  [pid]   'Changes active window to provided pid'          \n");
+    print("- kill [pid]   'Kills task with the corresponding pid'          \n");
+    print("- move [x,y]   'Moves the window tho x and y location'          \n");
+    print("- move [x,y]   'Resizes the window to given width and height'   \n");
+    print("- tasks        'Lists active tasks with their pids'             \n");
+    print("- exit         'Exits and kills shell'                          \n");
 }
 
 static void command_get_pid(const char *arg) {
@@ -81,6 +83,20 @@ static void command_tasks(const char *arg) {
     }
 }
 
+static void command_move(const char *arg) {
+    (void)arg;
+    if (move_task_window(40, 780) == STATUS_ERROR) {
+        print("Failed to move window\n");
+    }
+}
+
+static void command_resize(const char *arg) {
+    (void)arg;
+    if (resize_task_window(700, 100) == STATUS_ERROR) {
+        print("Failed to resize window\n");
+    }
+}
+
 static void command_kill(const char *target) {
     if (target == NULL || *target == '\0') {
         print("Missing target PID\n");
@@ -100,6 +116,8 @@ static const Command commands[] = {
     {"exec ", command_exec, 1},
     {"caw ", command_caw, 1},
     {"kill ", command_kill, 1},
+    {"move ", command_move, 1},
+    {"resize ", command_resize, 1},
 };
 
 void exec_cmd(char *buf) {
@@ -139,18 +157,13 @@ int main(void) {
         return 1;
     }
 
-    if (create_task_window(600, 200, 20, 780) == STATUS_ERROR) {
-        print("Failed to create task window\n");
-        return 1;
+    if (resize_task_window(600, 200) == STATUS_ERROR) {
+        print("Failed to resize window\n");
     }
 
-    // if (resize_task_window(600, 200) == STATUS_ERROR) {
-    //     print("Failed to resize window\n");
-    // }
-
-    // if (move_task_window(40, 780) == STATUS_ERROR) {
-    //   print("Failed to move window\n");
-    // }
+    if (move_task_window(40, 750) == STATUS_ERROR) {
+        print("Failed to move window\n");
+    }
 
     set_text_color(COLOR_WHITE);
     print("TaaviOS - Operating shell\n");

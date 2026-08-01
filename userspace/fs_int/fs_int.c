@@ -202,17 +202,13 @@ static void print_char(int buffer_x_pos, char c) {
 }
 
 int main(void) {
-    if (create_task_window(WINDOW_WIDTH, WINDOW_HEIGTH, SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
-        return 1;
+    if (resize_task_window(WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
+        print("Resizing window failed\n");
     }
 
-    // if (resize_task_window(WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
-    //     print("Resizing window failed\n");
-    // }
-
-    // if (move_task_window(SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
-    //     print("Moving task window failed\n");
-    //}
+    if (move_task_window(SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
+        print("Moving task window failed\n");
+    }
 
     set_text_color(COLOR_WHITE);
 

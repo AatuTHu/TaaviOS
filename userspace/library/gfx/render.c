@@ -167,7 +167,6 @@ int render(const char *text, uint32_t len) {
 }
 
 int create_task_window(int w, int h, int x, int y) {
-
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode   = CREATE;
@@ -271,5 +270,5 @@ int init_render() {
     fg_color               = COLOR_WHITE;
     bg_color               = COLOR_BLACK;
 
-    return 0;
+    return create_task_window(width, height, 10, 10);
 }

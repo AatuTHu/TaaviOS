@@ -20,7 +20,6 @@
 
 static blueprint_t *program_windows[MAX_TASKS];
 static uint32_t bg_color       = 0;
-static uint32_t fg_color       = 0;
 static int hail_mary_act_count = 0;
 
 static int copy_pixels_to_screen(blueprint_t *entry) {
@@ -95,7 +94,7 @@ static int gui_delete_window(uint32_t target_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
             blueprint_t *entry = program_windows[i];
 
-            if (fb_clear(entry->pixels, entry->width, entry->height, fg_color) == STATUS_ERROR) {
+            if (fb_clear(entry->pixels, entry->width, entry->height, bg_color) == STATUS_ERROR) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
                 return STATUS_ERROR;
             }
@@ -270,16 +269,18 @@ int gui_resize_window(request_table *req) {
             }
 
             if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                             entry->height, fb.width, fb.height, fg_color) == STATUS_ERROR) {
+                             entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
                 return STATUS_ERROR;
             }
 
-            uint32_t pixel_size        = req->width * req->height * 4;
-            uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixel_size);
+            uint32_t pixels_size       = req->width * req->height * 4;
+            uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixels_size);
             if (new_pixel_buffer == NULL) {
                 ERROR("[GUI_TASK][RESIZE]: Could not allocate new pixel buffer\n");
                 return STATUS_ERROR;
             }
+
+            memset(entry->pixels, 0, pixels_size);
 
             uint32_t copy_width  = (entry->width < req->width) ? entry->width : req->width;
             uint32_t copy_height = (entry->height < req->height) ? entry->height : req->height;
@@ -318,7 +319,7 @@ int gui_move_task_window(request_table *req) {
             }
 
             if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                             entry->height, fb.width, fb.height, fg_color) == STATUS_ERROR) {
+                             entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
                 return STATUS_ERROR;
             }
 
@@ -403,12 +404,11 @@ void gui_init(task_t *gui_task) {
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Initializing GUI\n");
     blankie_register(gui_task_pid, gui_task->context.eip, gui_task->kernel_stack);
     register_hail_mary_function(gui_task_pid, gui_recovery);
-    fg_color = fb_pack_color(115, 145, 125);
     bg_color = fb_pack_color(70, 50, 100);
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
 
-    fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, fg_color);
+    fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, bg_color);
 
     int y = 5;
     int x = fb.width - 133;
