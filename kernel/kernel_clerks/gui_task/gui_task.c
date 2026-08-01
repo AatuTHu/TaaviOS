@@ -280,7 +280,7 @@ int gui_resize_window(request_table *req) {
                 return STATUS_ERROR;
             }
 
-            memset(entry->pixels, 0, pixels_size);
+            memset(new_pixel_buffer, 0, pixels_size);
 
             uint32_t copy_width  = (entry->width < req->width) ? entry->width : req->width;
             uint32_t copy_height = (entry->height < req->height) ? entry->height : req->height;
