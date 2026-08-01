@@ -4,6 +4,7 @@
 #include "kmalloc.h"
 #include "kstring.h"
 #include "vmm.h"
+#include <stdint.h>
 
 /*
  * Task
@@ -12,7 +13,7 @@
 
 task_t *task_table[MAX_TASKS];
 
-task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
+task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
 
     if (page_dir == NULL) {
         return NULL;
@@ -67,6 +68,8 @@ task_t *task_create(int reserved_pid, uint32_t entry, const char *name, page_dir
                                            ? USER_STACK_TOP + USER_STACK_SIZE
                                            : task->kernel_stack; // stack pointer?
     task->priority                   = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
+    task->heap_start                 = heap_start;
+    task->heap_end                   = heap_start;
     task->context.cs                 = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
     task->context.ss                 = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
     task->context.ebp                = task->context.useresp; // stack bottom. Same as top in the begining. No

@@ -1,4 +1,5 @@
 #include "op_sy.h"
+#include "malloc.h"
 #include "render.h"
 #include "shared.h"
 #include "sys_calls.h"
@@ -31,4 +32,29 @@ void terminate_program() {
 
 int kill_task(uint32_t target_pid) {
     return sys_kill(target_pid);
+}
+
+int release_window() {
+    gui_params_pack params;
+    memset(&params, 0, sizeof(params));
+    params.opcode = FREE;
+    return sys_conwi(&params);
+}
+
+int __init_task() {
+
+    if (init_render() == -1) {
+        return -1;
+    }
+
+    int heap_start       = sys_sbrk(0);
+    int current_heap_end = sys_sbrk(64);
+
+    if (heap_start == -1 || current_heap_end == -1) {
+        return -1;
+    }
+
+    malloc_init((void *)heap_start, current_heap_end);
+
+    return 0;
 }

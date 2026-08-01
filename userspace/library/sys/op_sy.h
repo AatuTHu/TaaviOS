@@ -9,5 +9,6 @@ int get_ac_tasks(char *list_buf, int len);
 int exec(const char *filename);
 int kill_task(uint32_t target_pid);
 void terminate_program();
-
+int __init_task();
+int release_window();
 #endif

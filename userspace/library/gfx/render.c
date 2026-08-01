@@ -6,6 +6,12 @@
 #include "sys_calls.h"
 #include <stdint.h>
 
+/**
+ * TaaviOS window manager
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 static int def_horizontal_padding = 5;
 static int def_vertical_padding   = 5;
 static int width                  = 0;
@@ -161,25 +167,37 @@ int render(const char *text, uint32_t len) {
 }
 
 int create_task_window(int w, int h, int x, int y) {
-    def_vertical_padding   = 1;
-    def_horizontal_padding = 1;
-    width                  = w;
-    height                 = h;
-    x_pos                  = def_horizontal_padding;
-    y_pos                  = def_vertical_padding;
-    fg_color               = COLOR_WHITE;
-    bg_color               = COLOR_BLACK;
 
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode   = CREATE;
-    params.width    = width;
-    params.height   = height;
+    params.width    = w;
+    params.height   = h;
     params.x        = x;
     params.y        = y;
     params.fg_color = fg_color;
     params.bg_color = bg_color;
     return sys_conwi(&params);
+}
+
+int resize_task_window(int w, int h) {
+
+    gui_params_pack params;
+    memset(&params, 0, sizeof(params));
+    params.opcode   = RESIZE;
+    params.width    = w;
+    params.height   = h;
+    params.fg_color = fg_color;
+    params.bg_color = bg_color;
+    int result      = sys_conwi(&params);
+
+    if (result == -1) {
+        return result;
+    }
+
+    width  = w;
+    height = h;
+    return result;
 }
 
 int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color) {
@@ -199,10 +217,11 @@ int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uin
 int move_task_window(int x, int y) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    params.opcode = MOVE;
-    params.x      = x;
-    params.y      = y;
-
+    params.opcode   = MOVE;
+    params.x        = x;
+    params.y        = y;
+    params.fg_color = fg_color;
+    params.bg_color = bg_color;
     return sys_conwi(&params);
 }
 
@@ -240,4 +259,17 @@ void set_vertical_padding(uint32_t vp) {
 
 void set_horizontal_padding(uint32_t hp) {
     def_horizontal_padding = hp;
+}
+
+int init_render() {
+    def_vertical_padding   = 1;
+    def_horizontal_padding = 1;
+    width                  = 200;
+    height                 = 100;
+    x_pos                  = def_horizontal_padding;
+    y_pos                  = def_vertical_padding;
+    fg_color               = COLOR_WHITE;
+    bg_color               = COLOR_BLACK;
+
+    return 0;
 }

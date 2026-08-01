@@ -35,10 +35,10 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 * [x] ATA PIO disk driver with MBR partition detection
 * [x] Framebuffer graphics via multiboot VBE
 * [x] Virtual SYS_INFO/TASKS directory for live process listing
-* [x] Userspace malloc
-* [x] Proper locking / synchronization
-* [x] Arrow key history, blinking cursor
-* [x] File creation (O_CREAT), file deletion
+* [ ] Userspace malloc
+* [ ] Proper locking / synchronization
+* [ ] Arrow key history, blinking cursor
+* [ ] File creation (O_CREAT), file deletion
 
 ## Tradeoffs of Microlithic Kernel Model
 In its essence, the microlithic kernel is a monolith with the organization of a microkernel.

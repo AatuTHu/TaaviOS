@@ -20,19 +20,21 @@ typedef enum { PRIORITY_HIGH,
                PRIORITY_LOW } task_priority_t;
 
 typedef struct task_t {
-    uint32_t pid;
-    char name[TASK_NAME_LENGTH];
-    task_state_t state;
+    struct registers context;
     page_directory_t *page_dir;
+    task_state_t state;
+    char name[TASK_NAME_LENGTH];
+    uint32_t pid;
     uint32_t kernel_stack;
+    uint32_t heap_start;
+    uint32_t heap_end;
     uint8_t started;
     uint8_t priority;
-    struct registers context;
     uint8_t task_mode;
 } task_t;
 
 extern task_t *task_table[MAX_TASKS];
-task_t *task_create(int reserved_pid, uint32_t entry, const char *name,
+task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const char *name,
                     page_directory_t *page_dir, uint8_t task_mode);
 task_t *task_get(uint32_t pid);
 int task_destroy(task_t *task);

@@ -144,6 +144,14 @@ int main(void) {
         return 1;
     }
 
+    // if (resize_task_window(600, 200) == STATUS_ERROR) {
+    //     print("Failed to resize window\n");
+    // }
+
+    // if (move_task_window(40, 780) == STATUS_ERROR) {
+    //   print("Failed to move window\n");
+    // }
+
     set_text_color(COLOR_WHITE);
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");

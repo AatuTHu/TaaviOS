@@ -207,7 +207,7 @@ static int gui_scroll_window(request_table *req) {
     return STATUS_ERROR;
 }
 
-static int gui_paint_blueprint_to_screen(request_table *req) {
+static int gui_paint_rectangle(request_table *req) {
 
     DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Painting a window for %d to screen!\n", req->caller_pid);
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -261,6 +261,82 @@ static int gui_draw_sprite(request_table *req) {
     return STATUS_OK;
 }
 
+int gui_resize_window(request_table *req) {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
+            blueprint_t *entry = program_windows[i];
+            if (entry->pixels == NULL) {
+                return STATUS_ERROR;
+            }
+
+            if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                             entry->height, fb.width, fb.height, fg_color) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
+
+            uint32_t pixel_size        = req->width * req->height * 4;
+            uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixel_size);
+            if (new_pixel_buffer == NULL) {
+                ERROR("[GUI_TASK][RESIZE]: Could not allocate new pixel buffer\n");
+                return STATUS_ERROR;
+            }
+
+            uint32_t copy_width  = (entry->width < req->width) ? entry->width : req->width;
+            uint32_t copy_height = (entry->height < req->height) ? entry->height : req->height;
+
+            for (uint32_t row = 0; row < copy_height; row++) {
+                memcpy(
+                    new_pixel_buffer + row * req->width, // dst
+                    entry->pixels + row * entry->width,  // src
+                    copy_width * 4);                     // len
+            }
+
+            kfree(entry->pixels);
+            entry->pixels = new_pixel_buffer;
+            entry->width  = req->width;
+            entry->height = req->height;
+
+            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
+
+            DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
+            return STATUS_OK;
+        }
+    }
+    ERROR("[GUI_TASK][RESIZE]: Did not find callers blueprint\n");
+    return STATUS_ERROR;
+}
+
+int gui_move_task_window(request_table *req) {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
+            blueprint_t *entry = program_windows[i];
+
+            if (entry->pixels == NULL) {
+                return STATUS_ERROR;
+            }
+
+            if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                             entry->height, fb.width, fb.height, fg_color) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
+
+            entry->screen_x = req->x;
+            entry->screen_y = req->y;
+
+            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+                return STATUS_ERROR;
+            }
+
+            DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
+            return STATUS_OK;
+        }
+    }
+    ERROR("[GUI_TASK][MOVE]: Did not find callers blueprint\n");
+    return STATUS_ERROR;
+}
+
 static void gui_handle_request(request_table *req) {
     task_t *gui_task = task_get(gui_task_pid);
 
@@ -278,7 +354,7 @@ static void gui_handle_request(request_table *req) {
         req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
     case PAINT_WINDOW:
-        req->status = (gui_paint_blueprint_to_screen(req) == STATUS_OK) ? COMPLETE : FAILED;
+        req->status = (gui_paint_rectangle(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
     case DRAW:
         req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
@@ -286,6 +362,13 @@ static void gui_handle_request(request_table *req) {
     case SCROLL_DOWN:
         req->status = (gui_scroll_window(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
+    case MOVE:
+        req->status = (gui_move_task_window(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto after_req_steps;
+    case RESIZE:
+        req->status = (gui_resize_window(req) == STATUS_OK) ? COMPLETE : FAILED;
+        goto after_req_steps;
+
     default:
         req->status = FAILED;
         scheduler_wake_task(req->caller_pid);

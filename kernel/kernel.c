@@ -103,7 +103,7 @@ static void init_filesystems() {
 static void init_microlithic() {
     DEBUG("[KERNEL]: --INIT KERNEL TASKS--\n");
     DEBUG("[KERNEL]: Creating an idle kernel task\n");
-    task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, "idle",
+    task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, 0, "idle",
                                       &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
@@ -111,7 +111,7 @@ static void init_microlithic() {
     }
 
     DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
-    kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, "fs_task",
+    kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, 0, "fs_task",
                               &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
@@ -120,7 +120,7 @@ static void init_microlithic() {
     }
 
     DEBUG("[KERNEL]: Creating an reaper kernel task\n");
-    kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop,
+    kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop, 0,
                               "reaper", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
@@ -129,7 +129,7 @@ static void init_microlithic() {
     }
 
     DEBUG("[KERNEL]: Creating an graphical user interface kernel task\n");
-    kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop,
+    kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop, 0,
                               "gui_task", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
@@ -166,13 +166,14 @@ void kernel_main(const uint32_t *mboot_info) {
     if (total_mods > 0) {
         page_directory_t *init_pd = vmm_create_directory();
         uint32_t init_phys        = module_starts[0];
-        uint32_t entry            = elf_load((void *)phys_to_virt(init_phys), init_pd);
+        uint32_t heap_start       = 0;
+        uint32_t entry            = elf_load((void *)phys_to_virt(init_phys), init_pd, &heap_start);
         if (entry == ET_NONE) {
             DEBUG("[KERNEL]: ELF load failed!\n");
         }
         DEBUG("[KERNEL]: ELF loaded.\n");
         DEBUG("[KERNEL]: Creating init task\n");
-        first_task = task_create(-1, entry, "init", init_pd, USER_TASK);
+        first_task = task_create(-1, entry, heap_start, "init", init_pd, USER_TASK);
         // first_task->priority = PRIORITY_HIGH;
 
         if (first_task == NULL) {

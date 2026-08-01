@@ -15,6 +15,7 @@
 #define SYS_GETPID 20
 #define SYS_KILL 37
 #define SYS_MKDIR 39
+#define SYS_SBRK 45
 #define SYS_IOCTL 54
 #define SYS_IDLE 112
 #define SYS_GETDENTS 141
@@ -55,6 +56,7 @@ typedef enum {
     SET_OPERATOR,
     CH_ACT_W,
     SCROLL_DOWN,
+    RESIZE,
 } operations_t;
 
 #define O_RDONLY 0x01

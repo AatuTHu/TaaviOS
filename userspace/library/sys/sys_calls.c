@@ -48,6 +48,12 @@ int sys_ioctl(int operation, int p1, int p2) {
     return result;
 }
 
+int sys_sbrk(uint32_t size) {
+    int result = -1;
+    __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_SBRK), "b"(size));
+    return result;
+}
+
 int sys_mkdir(const char *path, uint32_t len) {
     int result = -1;
     __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_MKDIR), "b"(path), "c"(len));

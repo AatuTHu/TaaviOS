@@ -5,6 +5,7 @@
 #include "keyboard.h"
 #include "klog.h"
 #include "ledger.h"
+#include "paging.h"
 #include "sched.h"
 #include "shared.h"
 #include "task.h"
@@ -221,6 +222,33 @@ static int32_t sys_chdir(struct registers *r) {
     return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
+static int32_t sys_sbrk(struct registers *r) {
+
+    DEBUG_SYSCALL("[SYSCALL][SYS_SBRK]\n");
+    task_t *current = scheduler_get_current_task();
+    uint32_t size   = r->ebx;
+    if (current == NULL) {
+        ERROR("[SYSCALL][SYS_SBRK]: Could not find current task\n");
+        return STATUS_ERROR;
+    }
+
+    if (size == 0) {
+        return current->heap_end;
+    }
+
+    uint32_t old_end      = current->heap_end;
+    uint32_t aligned_size = (size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+
+    if (vmm_alloc(current->page_dir, current->heap_end, aligned_size, PAGE_USER_RW) == STATUS_ERROR) {
+        ERROR("[SYSCALL][SYS_SBRK]: Allocating more heap failed\n");
+        return STATUS_ERROR;
+    }
+
+    current->heap_end = old_end + aligned_size;
+    r->eax            = STATUS_OK;
+    return old_end;
+}
+
 /**
  * sys_exec - executes elf binaries.
  *
@@ -278,7 +306,8 @@ static int32_t sys_exec(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    int entry = elf_load(binary_buffer, pd);
+    uint32_t heap_start = 0;
+    int entry           = elf_load(binary_buffer, pd, &heap_start);
 
     if (entry == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: elf load failed aborting.\n");
@@ -288,7 +317,7 @@ static int32_t sys_exec(struct registers *r) {
 
     kfree(binary_buffer);
 
-    task_t *task = task_create(-1, entry, task_name, pd, USER_TASK);
+    task_t *task = task_create(-1, entry, heap_start, task_name, pd, USER_TASK);
 
     if (task == NULL) {
         goto failure;
@@ -465,7 +494,7 @@ static int32_t sys_ioctl(struct registers *r) {
  * Return: STATUS_OK || STATUS_ERROR.
  */
 static int32_t sys_window(struct registers *r) {
-    DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
+    // DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
     gui_params_pack *params = (gui_params_pack *)r->ebx;
     task_t *current         = scheduler_get_current_task();
 
@@ -504,4 +533,5 @@ void syscall_init() {
     syscall_table[SYS_GETDENTS] = sys_getdents;
     syscall_table[SYS_WI]       = sys_window;
     syscall_table[SYS_IOCTL]    = sys_ioctl;
+    syscall_table[SYS_SBRK]     = sys_sbrk;
 }

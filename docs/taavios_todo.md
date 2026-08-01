@@ -10,7 +10,7 @@
 - [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
 - [x] sys_caw and sys_conwi merged into single system call (sys_wi)
 - [x] sys_wi operation to draw image/sprite from ring 3 (blit user space buffer to window)
-- [ ] User space needs malloc/alloc
+- [50%] User space needs malloc/alloc
 - [ ] GUI scroll screen up and down
 - [ ] Shell arrow traversal
 - [ ] Blinking cursor
@@ -51,4 +51,6 @@
   it can allocate more space for heap. But if the space is deallocated it should be returned?
   That is the whole point to not have huge amount of heap at the start? <- idea cooking
 - On Task dead the VMM_FREE_USER_SPACE can make an early return. In that case parts of it is destroyed but not all. Ill cook something for this
+- kernel maps heap for user space. Only adding more not shrinking it.
+
 

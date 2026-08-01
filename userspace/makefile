@@ -5,6 +5,7 @@ LIBC_DIR = $(LIB_DIR)/libc
 SYS_DIR  = $(LIB_DIR)/sys
 ART_DIR  = $(LIB_DIR)/art
 GFX_DIR  = $(LIB_DIR)/gfx
+MALLOC_DIR = $(LIB_DIR)/malloc
 BUILD    = build
 BINDIR   = $(BUILD)/bin
 LIBDIR   = $(BUILD)/lib
@@ -15,20 +16,23 @@ CFLAGS = -m32 -ffreestanding -nostdlib -nostartfiles -nodefaultlibs -O0 \
          -I$(LIBC_DIR) \
          -I$(SYS_DIR) \
          -I$(ART_DIR) \
-         -I$(GFX_DIR)
+         -I$(GFX_DIR) \
+         -I$(MALLOC_DIR)
 
 LDFLAGS = -m32 -nostdlib -no-pie -T link.ld
 
-LIBC_SRCS = $(wildcard $(LIBC_DIR)/*.c)
-SYS_SRCS  = $(wildcard $(SYS_DIR)/*.c)
-ART_SRCS  = $(wildcard $(ART_DIR)/*.c)
-GFX_SRCS  = $(wildcard $(GFX_DIR)/*.c)
+LIBC_SRCS   = $(wildcard $(LIBC_DIR)/*.c)
+SYS_SRCS    = $(wildcard $(SYS_DIR)/*.c)
+ART_SRCS    = $(wildcard $(ART_DIR)/*.c)
+GFX_SRCS    = $(wildcard $(GFX_DIR)/*.c)
+MALLOC_SRCS = $(wildcard $(MALLOC_DIR)/*.c)
 
-LIBC_OBJS = $(patsubst $(LIBC_DIR)/%.c, $(LIBDIR)/libc/%.o, $(LIBC_SRCS))
-SYS_OBJS  = $(patsubst $(SYS_DIR)/%.c, $(LIBDIR)/sys/%.o, $(SYS_SRCS))
-ART_OBJS  = $(patsubst $(ART_DIR)/%.c, $(LIBDIR)/art/%.o, $(ART_SRCS))
-GFX_OBJS  = $(patsubst $(GFX_DIR)/%.c, $(LIBDIR)/gfx/%.o, $(GFX_SRCS))
-LIB_OBJS  = $(LIBC_OBJS) $(SYS_OBJS) $(ART_OBJS) $(GFX_OBJS)
+LIBC_OBJS   = $(patsubst $(LIBC_DIR)/%.c, $(LIBDIR)/libc/%.o, $(LIBC_SRCS))
+SYS_OBJS    = $(patsubst $(SYS_DIR)/%.c, $(LIBDIR)/sys/%.o, $(SYS_SRCS))
+ART_OBJS    = $(patsubst $(ART_DIR)/%.c, $(LIBDIR)/art/%.o, $(ART_SRCS))
+GFX_OBJS    = $(patsubst $(GFX_DIR)/%.c, $(LIBDIR)/gfx/%.o, $(GFX_SRCS))
+MALLOC_OBJS = $(patsubst $(MALLOC_DIR)/%.c, $(LIBDIR)/malloc/%.o, $(MALLOC_SRCS))
+LIB_OBJS    = $(LIBC_OBJS) $(SYS_OBJS) $(ART_OBJS) $(GFX_OBJS) $(MALLOC_OBJS)
 
 START_OBJ = $(LIBDIR)/start.o
 
@@ -50,6 +54,10 @@ $(LIBDIR)/art/%.o: $(ART_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(LIBDIR)/gfx/%.o: $(GFX_DIR)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(LIBDIR)/malloc/%.o: $(MALLOC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
