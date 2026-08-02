@@ -5,9 +5,7 @@
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
-#include <stddef.h>
 #include <stdint.h>
-#include <string.h>
 
 #define PADDING_BETWEEN_FILES 8
 #define BUF_SIZE 256

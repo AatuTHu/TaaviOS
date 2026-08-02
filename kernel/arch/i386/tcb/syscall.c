@@ -505,7 +505,7 @@ static int32_t sys_window(struct registers *r) {
 
     ledger_add_gui_req(current->pid, params);
     scheduler_yield(r);
-    return ledger_collect(current->pid, gui_task_pid, NULL);
+    return ledger_collect(current->pid, gui_task_pid, params->buf);
 }
 
 void syscall_dispatch(struct registers *r) {

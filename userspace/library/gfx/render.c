@@ -181,17 +181,52 @@ int create_task_window(int w, int h, int x, int y) {
 
 int resize_task_window(int w, int h) {
 
+    char dimensions_buffer[22]; // 22 because that give 10 digits to left side and 10 to right. A dot
+    // to middle and a '\0' to end.
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    params.opcode   = RESIZE;
-    params.width    = w;
-    params.height   = h;
-    params.fg_color = fg_color;
-    params.bg_color = bg_color;
-    int result      = sys_conwi(&params);
+    params.opcode      = RESIZE;
+    params.width       = w;
+    params.height      = h;
+    params.fg_color    = fg_color;
+    params.bg_color    = bg_color;
+    params.buf         = dimensions_buffer;
+    params.buffer_size = 22;
+    int result         = sys_conwi(&params);
 
     if (result == -1) {
         return result;
+    }
+
+    const char *ptr = params.buf;
+
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        return -1;
+    }
+
+    while (*ptr >= '0' && *ptr <= '9') {
+        w = w * 10 + (*ptr - '0');
+        ptr++;
+    }
+
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr != '.') {
+        return -1;
+    }
+    ptr++;
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        return -1;
+    }
+
+    while (*ptr >= '0' && *ptr <= '9') {
+        h = h * 10 + (*ptr - '0');
+        ptr++;
     }
 
     width  = w;

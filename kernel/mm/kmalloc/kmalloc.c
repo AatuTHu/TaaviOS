@@ -24,7 +24,7 @@ static void update_remaining_heap_size() {
         current = current->next;
     }
     remaining_heap_size = total_free;
-    // DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
+    DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
 }
 
 void kmalloc_init(void *heap_start, uint32_t heap_size) {
@@ -76,14 +76,14 @@ void *kmalloc(uint32_t size) {
         }
         if (size > remaining_heap_size) {
             // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
-            int addition_size = HEAP_PAGES * PAGE_SIZE;
+            int addition_size = (HEAP_PAGES * PAGE_SIZE) * 2;
             if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
-                // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
+                ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
                 break;
             }
 
             if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
-                // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
+                ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
                 break;
             }
 

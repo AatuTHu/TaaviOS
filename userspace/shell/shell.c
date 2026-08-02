@@ -1,9 +1,9 @@
+#include "malloc.h"
 #include "op_sy.h"
 #include "render.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
-#include <stddef.h>
 #include <stdint.h>
 
 #define BUF_SIZE 256
@@ -77,22 +77,99 @@ static void command_tasks(const char *arg) {
     int result      = get_ac_tasks(tasks, sizeof(tasks));
     if (result > 0) {
         print(tasks);
-        print("\n");
     } else {
         print("Failed to retrieve task list\n");
     }
 }
 
-static void command_move(const char *arg) {
-    (void)arg;
-    if (move_task_window(40, 780) == STATUS_ERROR) {
+static void command_move(const char *positions) {
+    if (!positions) {
+        print("coo'ordinates were not valid\n");
+        return;
+    }
+
+    const char *ptr = positions;
+
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        print("separate x and y with a dot and try again\n");
+        return;
+    }
+
+    int x = 0;
+    while (*ptr >= '0' && *ptr <= '9') {
+        x = x * 10 + (*ptr - '0');
+        ptr++;
+    }
+
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr != '.') {
+        print("separate x and y with a dot and try again\n");
+        return;
+    }
+    ptr++;
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        print("separate x and y with a dot and try again\n");
+        return;
+    }
+
+    int y = 0;
+    while (*ptr >= '0' && *ptr <= '9') {
+        y = y * 10 + (*ptr - '0');
+        ptr++;
+    }
+
+    if (move_task_window(x, y) == STATUS_ERROR) {
         print("Failed to move window\n");
     }
 }
 
-static void command_resize(const char *arg) {
-    (void)arg;
-    if (resize_task_window(700, 100) == STATUS_ERROR) {
+static void command_resize(const char *dimensions) {
+    if (!dimensions) {
+        print("coo'ordinates were not valid\n");
+        return;
+    }
+
+    const char *ptr = dimensions;
+
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        print("separate x and y with a dot and try again\n");
+        return;
+    }
+
+    int width = 0;
+    while (*ptr >= '0' && *ptr <= '9') {
+        width = width * 10 + (*ptr - '0');
+        ptr++;
+    }
+
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr != '.') {
+        print("separate width and height with a dot and try again\n");
+        return;
+    }
+    ptr++;
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        print("separate x and y with a dot and try again\n");
+        return;
+    }
+
+    int height = 0;
+    while (*ptr >= '0' && *ptr <= '9') {
+        height = height * 10 + (*ptr - '0');
+        ptr++;
+    }
+
+    if (resize_task_window(width, height) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 }
@@ -157,7 +234,7 @@ int main(void) {
         return 1;
     }
 
-    if (resize_task_window(600, 200) == STATUS_ERROR) {
+    if (resize_task_window(300, 100) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 

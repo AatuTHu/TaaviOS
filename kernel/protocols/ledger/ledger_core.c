@@ -103,6 +103,7 @@ void ledger_remove_request() {
 
                 kfree(q->table[i]);
                 q->table[i] = NULL;
+                DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper removed one request\n");
                 return;
             }
         }
@@ -124,6 +125,27 @@ int ledger_enqueue(uint32_t clerk_pid, request_table *req) {
     return STATUS_ERROR;
 }
 
+static char *pack_dimensions(uint32_t value, char *buf) {
+    char tmp[10];
+    int i = 0;
+
+    if (value == 0) {
+        *buf++ = '0';
+        return buf;
+    }
+
+    while (value > 0) {
+        tmp[i++] = '0' + (value % 10);
+        value /= 10;
+    }
+
+    while (i > 0) {
+        *buf++ = tmp[--i];
+    }
+
+    return buf;
+}
+
 /**
  * ledger_collect - retrieves a COMPLETE request belonging to caller_pid.
  * @caller_pid: pid of the task collecting its result
@@ -137,7 +159,8 @@ int ledger_enqueue(uint32_t clerk_pid, request_table *req) {
  * completion path. Any matching TERMINATED entries also trigger the
  * reaper so stale requests don't linger.
  *
- * Return: STATUS_OK / FD on success, STATUS_ERROR if nothing found.
+ * Return: STATUS_OK / FD on success / buffer containing width and height
+ * STATUS_ERROR if nothing found.
  */
 int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
     clerk_queue *q = ledger_get_queue(clerk_pid);
@@ -167,6 +190,22 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                 }
                 req->status = TERMINATED;
                 return req->buffer_size;
+            case RESIZE:
+                if (out != NULL) {
+                    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting width and height\n", caller_pid);
+                    char *params = out;
+
+                    params       = pack_dimensions(req->width, params);
+                    *params++    = '.';
+                    params       = pack_dimensions(req->height, params);
+                    *params      = '\0';
+                }
+
+                // DEBUG_LEDGER("[LEDGER][COLLECT]: params packed to go %s\n", out);
+
+                req->status = TERMINATED;
+                return STATUS_OK;
+
             default:
                 break;
             }
