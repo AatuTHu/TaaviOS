@@ -217,13 +217,22 @@ static int gui_paint_rectangle(request_table *req) {
                 return STATUS_ERROR;
             }
 
-            if (req->x + req->width >= entry->width) {
+            if (req->x + req->width > entry->width) {
                 DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it horizontal\n");
+                DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.x: %d req.width: %d, entry.width: %d\n", req->x, req->width, entry->width);
+                if (req->width > entry->width) {
+                    req->width = entry->width;
+                }
                 req->x = entry->width - req->width;
             }
 
-            if (req->y + req->height >= entry->height) {
+            if (req->y + req->height > entry->height) {
                 DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it verticaly\n");
+                DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.y: %d req.height: %d, entry.hei: %d\n", req->y, req->height, entry->height);
+
+                if (req->height > entry->height) {
+                    req->height = entry->width;
+                }
                 req->y = entry->height - req->height;
             }
 
@@ -311,8 +320,7 @@ int gui_resize_window(request_table *req) {
                 DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.width = %d, req.width = %d, fb.width = %d\n", entry->width, req->width, fb.width);
 
                 if (req->width > fb.width) {
-                    entry->screen_x = 0;
-                    req->width      = fb.width;
+                    req->width = fb.width;
                 } else {
                     entry->screen_x = fb.width - req->width;
                 }
@@ -323,8 +331,7 @@ int gui_resize_window(request_table *req) {
                 DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.height = %d, req.height = %d, fb.height = %d\n", entry->height, req->height, fb.height);
 
                 if (req->height > fb.width) {
-                    entry->screen_y = 0;
-                    req->height     = fb.height;
+                    req->height = fb.height;
                 } else {
                     entry->screen_y = fb.height - req->height;
                 }

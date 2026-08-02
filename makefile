@@ -3,39 +3,49 @@ CC = i686-elf-gcc
 LD = i686-elf-ld
 ASFLAGS = -f elf32
 LOG_LEVEL ?= 2
+
+KERNEL_DIR = kernel
+
+INCLUDES = -I$(KERNEL_DIR)/include -I$(KERNEL_DIR)/include/i386 -I$(KERNEL_DIR)/include/drivers \
+           -I$(KERNEL_DIR)/include/libraries -I$(KERNEL_DIR)/include/mm -I$(KERNEL_DIR)/include/tcb \
+           -I$(KERNEL_DIR)/include/loader -I$(KERNEL_DIR)/include/usermode -I$(KERNEL_DIR)/include/fs \
+           -I$(KERNEL_DIR)/include/kernel_clerks -I$(KERNEL_DIR)/include/protocols \
+           -I$(KERNEL_DIR)/include/shared -I$(KERNEL_DIR)
+
 CFLAGS = -g -ffreestanding -O2 -nostdlib -Wall -Wextra \
-         -Ikernel/include -Ikernel/include/i386 -Ikernel/include/drivers -Ikernel/include/libraries \
-		 -Ikernel/include/mm -Ikernel/include/tcb -Ikernel/include/loader -Ikernel \
-		 -Ikernel/include/usermode -Ikernel/include/fs -Ikernel/include/kernel_clerks \
-		 -Ikernel/include/protocols -Ikernel/include/shared\
+         $(INCLUDES) \
          -fno-pic -fno-stack-protector \
          -fno-asynchronous-unwind-tables -fno-exceptions \
-		 -mno-sse -mno-sse2 -mno-mmx \
+         -mno-sse -mno-sse2 -mno-mmx \
          -DLOG_LEVEL=$(LOG_LEVEL)
+
 LDFLAGS = -melf_i386 -T boot/linker.ld -z noexecstack
+
 BUILD = build
-C_SRCS   = $(shell find kernel -name '*.c')
-ASM_SRCS = $(shell find kernel boot -name '*.asm')
+
+C_SRCS   = $(shell find $(KERNEL_DIR) -name '*.c')
+ASM_SRCS = $(shell find $(KERNEL_DIR) boot -name '*.asm')
 C_OBJS   = $(patsubst %.c,   $(BUILD)/%.o, $(C_SRCS))
 ASM_OBJS = $(patsubst %.asm, $(BUILD)/%.o, $(ASM_SRCS))
 OBJS     = $(ASM_OBJS) $(C_OBJS)
-all: $(BUILD)/taavi.bin $(BUILD)/taavi.elf
+
+all: $(BUILD)/taavi.bin
+
 $(BUILD)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
+
 $(BUILD)/%.o: %.asm
 	mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) $< -o $@
+
 $(BUILD)/taavi.bin: $(OBJS)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
-$(BUILD)/taavi.elf: $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
-iso: $(BUILD)/taavi.bin $(BUILD)/taavi.elf
+iso: $(BUILD)/taavi.bin
 	$(MAKE) -C userspace
 	mkdir -p isodir/boot/grub
 	cp $(BUILD)/taavi.bin isodir/boot/
-	cp $(BUILD)/taavi.elf isodir/boot/
 	cp userspace/build/bin/*.elf isodir/boot/
 	cp grub.cfg isodir/boot/grub/grub.cfg
 	grub-mkrescue -o $(BUILD)/taavi.iso isodir
@@ -54,8 +64,6 @@ run: iso
 
 clean:
 	$(MAKE) -C userspace clean
-	find . -name '*.o' -delete
-	rm -f taavi.bin taavi.iso taavi.elf
 	rm -rf $(BUILD) isodir
 	rm -f cppcheck_report.txt
 
@@ -64,10 +72,13 @@ disk:
 	mkfs.fat -F 32 fat.img
 	mmd -i fat.img ::sysbin
 	mmd -i fat.img ::test
-	mmd -i fat.img ::test/tust
 	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::test/hello.txt
-	mcopy -i fat.img ./isodir/boot/shell.elf ::sysbin/shell
-	mcopy -i fat.img ./isodir/boot/fs_int.elf ::sysbin/fs_int
+	for f in userspace/build/bin/*.elf; do \
+		name=$$(basename $$f .elf); \
+		if [ "$$name" != "init" ]; then \
+			mcopy -i fat.img $$f ::sysbin/$$name; \
+		fi; \
+	done
 
 reset:
 	$(MAKE) clean
@@ -78,21 +89,10 @@ check:
 	cppcheck \
 		--enable=all --inconclusive --language=c \
 		--check-level=exhaustive \
-		--language=c \
 		--suppress=missingIncludeSystem \
 		--suppress=unusedFunction \
-		-I kernel/include \
-		-I kernel/include/i386 \
-		-I kernel/include/drivers \
-		-I kernel/include/libraries \
-		-I kernel/include/mm \
-		-I kernel/include/tcb \
-		-I kernel/include/loader \
-		-I kernel/include/usermode \
-		-I kernel/include/fs \
-		-I kernel/include/kernel_clerks \
-		-I kernel/include/protocols \
-		kernel/ \
+		$(INCLUDES) \
+		$(KERNEL_DIR)/ \
 		2>&1 | tee cppcheck_report.txt
 
 format:
@@ -100,5 +100,5 @@ format:
 	@find $(KERNEL_DIR) -name "*.c" -o -name "*.h" | xargs clang-format -i
 	@echo "Kernel formatting complete."
 
-gdb: $(BUILD)/taavi.elf
-	gdb -ex "file $(BUILD)/taavi.elf" -ex "target remote localhost:1234"
+gdb: $(BUILD)/taavi.bin
+	gdb -ex "file $(BUILD)/taavi.bin" -ex "target remote localhost:1234"

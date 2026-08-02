@@ -201,22 +201,30 @@ static void print_char(int buffer_x_pos, char c) {
 
 int main(void) {
     if (resize_task_window(WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
-        print("Resizing window failed\n");
+        render_at(PADDING, INFO_LINE_Y, "Resizing window failed\n");
     }
 
     if (move_task_window(SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
-        print("Moving task window failed\n");
+        render_at(PADDING, INFO_LINE_Y, "Moving task window failed\n");
     }
 
     set_text_color(COLOR_WHITE);
 
-    if (paint_rectangle(WINDOW_WIDTH, (FONT_HEIGHT + 2), 0, CMD_LINE_Y - 1, COLOR_TEAL) == STATUS_ERROR) {
+    if (paint_rectangle(WINDOW_WIDTH - (PADDING * 2), WINDOW_HEIGTH - (HEADER_Y + (FONT_HEIGHT * 3 + PADDING)), PADDING, HEADER_Y + (PADDING * 2), COLOR_GRAY) == STATUS_ERROR) {
+        render_at(PADDING, INFO_LINE_Y, "Failed to paint main area rectange");
+    }
+
+    if (paint_rectangle(WINDOW_WIDTH - 2, (FONT_HEIGHT + 2), 1, CMD_LINE_Y - 1, COLOR_TEAL) == STATUS_ERROR) {
         set_text_color(COLOR_BLACK);
         render_at(PADDING, INFO_LINE_Y, "Failed to paint rectange to cmd line");
     }
 
-    render_at(10, 10, "filesystem interface");
+    if (paint_rectangle(WINDOW_WIDTH - 1000, HEADER_Y + 2, 1, 1, COLOR_TEAL) == STATUS_ERROR) {
+        render_at(PADDING, INFO_LINE_Y, "Failed to paint program header");
+    }
 
+    set_background_color(COLOR_TEAL);
+    render_at(240, 3, "filesystem interface");
     char buf[BUF_SIZE];
     int pos = 0;
     char c;
@@ -226,7 +234,7 @@ int main(void) {
 
     while (1) {
         set_background_color(COLOR_TEAL);
-        //   render_at(0, CMD_LINE_Y, "                                                                ");
+        render_at(0, CMD_LINE_Y, "                                                                ");
 
         int buffer_x_pos = 5;
         render_at(buffer_x_pos, CMD_LINE_Y, art_start);

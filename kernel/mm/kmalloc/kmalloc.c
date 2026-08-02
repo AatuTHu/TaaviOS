@@ -1,7 +1,9 @@
 #include "kmalloc.h"
 #include "config.h"
 #include "klog.h"
+#include "paging.h"
 #include "vmm.h"
+#include <stdint.h>
 
 /**
  * Heap allocator
@@ -9,8 +11,6 @@
  * Inspiration from osdev & countless other osdev projects
  * @author: A.H, 2026
  */
-
-#define MAX_ALLOC_SPINS 4
 
 static block_header_t *free_list = NULL;
 static uint32_t remaining_heap_size;
@@ -44,9 +44,8 @@ void *kmalloc(uint32_t size) {
     // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
     block_header_t *current = free_list;
     block_header_t *prev    = NULL;
-    int tries               = 0;
 
-    while (tries < MAX_ALLOC_SPINS) {
+    while (1) {
         while (current != NULL) {
             if (current->size >= size) {
                 if (current->size >= size + sizeof(block_header_t) + 1) {
@@ -74,38 +73,32 @@ void *kmalloc(uint32_t size) {
             prev    = current;
             current = current->next;
         }
-        if (size > remaining_heap_size) {
-            // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
-            int addition_size = (HEAP_PAGES * PAGE_SIZE) * 2;
-            if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
-                ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
-                break;
-            }
-
-            if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
-                ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
-                break;
-            }
-
-            // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
-            block_header_t *new_block = (block_header_t *)current_heap_ceiling;
-            new_block->size           = addition_size - sizeof(block_header_t);
-            new_block->magic          = HEAP_MAGIC;
-            new_block->next           = NULL;
-            kfree((void *)((uint8_t *)new_block + sizeof(block_header_t)));
-
-            current_heap_ceiling += addition_size;
-            current = free_list;
-            prev    = NULL;
-
-            // DEBUG_KMALLOC("[KMALLOC][ALLOC]: heap size: %d\n", free_list->size);
-            // DEBUG_KMALLOC("[KMALLOC][ALLOC]: current heap ceiling: 0x%x\n\n", current_heap_ceiling);
-            update_remaining_heap_size();
-
-            tries++;
-        } else {
+        // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
+        int addition_size = (HEAP_PAGES * PAGE_SIZE) * 2;
+        if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
+            ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
             break;
         }
+
+        if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
+            ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
+            break;
+        }
+
+        // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
+        block_header_t *new_block = (block_header_t *)current_heap_ceiling;
+        new_block->size           = addition_size - sizeof(block_header_t);
+        new_block->magic          = HEAP_MAGIC;
+        new_block->next           = NULL;
+        kfree((void *)((uint8_t *)new_block + sizeof(block_header_t)));
+
+        current_heap_ceiling += addition_size;
+        current = free_list;
+        prev    = NULL;
+
+        // DEBUG_KMALLOC("[KMALLOC][ALLOC]: heap size: %d\n", free_list->size);
+        // DEBUG_KMALLOC("[KMALLOC][ALLOC]: current heap ceiling: 0x%x\n\n", current_heap_ceiling);
+        update_remaining_heap_size();
     }
 
     ERROR("[KMALLOC][ALLOC]: Out of heap memory!\n");

@@ -103,7 +103,7 @@ void ledger_remove_request() {
 
                 kfree(q->table[i]);
                 q->table[i] = NULL;
-                DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper removed one request\n");
+                //  DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper removed one request\n");
                 return;
             }
         }
