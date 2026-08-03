@@ -1,6 +1,7 @@
 #ifndef MBR_H
 #define MBR_H
 
+#include "ata.h"
 #include <stddef.h>
 #include <stdint.h>
 
@@ -19,6 +20,6 @@ typedef struct __attribute__((packed)) {
     uint16_t signature;
 } mbr_t;
 
-int mbr_find_fat32(uint32_t *lba_start, uint32_t *sector_count);
+int mbr_find_fat32(ata_drive_t *drive, uint32_t *lba_start, uint32_t *sector_count);
 
 #endif

@@ -1,4 +1,5 @@
 #include "ata.h"
+#include "config.h"
 #include "elf.h"
 #include "fat32.h"
 #include "fb.h"
@@ -93,11 +94,16 @@ static void init_filesystems() {
     uint32_t fat32_lba     = 0;
     uint32_t fat32_sectors = 0;
 
-    if (mbr_find_fat32(&fat32_lba, &fat32_sectors) != 0) {
-        DEBUG("[MBR]: No partition table found, trying LBA0\n");
-        fat32_lba = 0;
+    for (int i = 0; i < 4; i++) {
+        ata_drive_t *drive = ata_get_drive(i);
+        if (drive == NULL) {
+            continue;
+        }
+        if (mbr_find_fat32(drive, &fat32_lba, &fat32_sectors) == STATUS_OK) {
+            DEBUG("[MBR]: Partition found, initializing filesystem\n");
+            fat32_init(drive, fat32_lba);
+        }
     }
-    fat32_init(fat32_lba);
 }
 
 static void init_microlithic() {

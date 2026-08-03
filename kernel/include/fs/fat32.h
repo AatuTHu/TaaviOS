@@ -70,6 +70,7 @@ typedef struct __attribute__((packed)) {
 } fat32_bpb_t;
 
 typedef struct {
+    ata_drive_t *drive;
     uint32_t partition_lba;
     uint32_t fat_start;
     uint32_t data_start;
@@ -94,7 +95,7 @@ typedef struct __attribute__((packed)) {
 } fat32_dirent_t;
 
 /* Read */
-int fat32_init(uint32_t partition_lba);
+int fat32_init(ata_drive_t *drive, uint32_t partition_lba);
 void fat32_list_dir(uint32_t cluster, uint8_t *out_buffer, uint32_t *out_size);
 int fat32_find_cluster(uint32_t starting_dir_cluster, const char *path, uint32_t *out_file_cluster, uint32_t *out_dir_cluster, uint32_t *out_size,
                        char *out_fname, uint8_t *out_attr);

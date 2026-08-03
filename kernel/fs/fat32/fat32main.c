@@ -1,4 +1,7 @@
+#include "ata.h"
 #include "fat32.h"
+#include "klog.h"
+#include <stdint.h>
 
 fat32_fs_t f32_fs;
 
@@ -148,19 +151,19 @@ int fat32_find_parent_cluster(uint32_t oprhan_cluster, uint32_t *out_parent) {
 }
 
 // constucts a fat table of from the partition lba
-int fat32_init(uint32_t partition_lba) {
+int fat32_init(ata_drive_t *drive, uint32_t partition_lba) {
     uint8_t buf[FAT32_SECTOR_SIZE];
-    ata_read_sector(partition_lba, buf);
+    ata_read_sector(drive, partition_lba, buf);
     const fat32_bpb_t *bpb = (fat32_bpb_t *)buf;
 
     if (bpb->bytes_per_sector != FAT32_SECTOR_SIZE) {
         DEBUG_FAT32("[FAT32][INIT]: bytes_pre_sector lower than 512. Is: %d\n", bpb->bytes_per_sector);
     }
 
-    f32_fs.partition_lba = partition_lba;
-    f32_fs.fat_start     = partition_lba + bpb->reserved_sectors;
-    f32_fs.data_start =
-        f32_fs.fat_start + (bpb->fat_count * bpb->sectors_per_fat);
+    f32_fs.drive                  = drive;
+    f32_fs.partition_lba          = partition_lba;
+    f32_fs.fat_start              = partition_lba + bpb->reserved_sectors;
+    f32_fs.data_start             = f32_fs.fat_start + (bpb->fat_count * bpb->sectors_per_fat);
     f32_fs.root_cluster           = bpb->root_cluster;
     f32_fs.sectors_per_cluster    = bpb->sectors_per_cluster;
     f32_fs.bytes_per_sector       = bpb->bytes_per_sector;
@@ -170,7 +173,7 @@ int fat32_init(uint32_t partition_lba) {
     uint32_t data_sectors         = bpb->total_sectors_32 - bpb->reserved_sectors -
                                     (bpb->fat_count * bpb->sectors_per_fat);
     f32_fs.maximum_cluster_size   = (data_sectors / bpb->sectors_per_cluster) +
-                                    2; // 2 for reserved clusters
+                                    2;
 
     DEBUG_FAT32("[FAT32][INIT]: partition_lba: %d\n", f32_fs.partition_lba);
     DEBUG_FAT32("[FAT32][INIT]: fat_start: %d\n", f32_fs.fat_start);

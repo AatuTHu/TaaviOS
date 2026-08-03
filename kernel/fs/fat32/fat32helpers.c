@@ -1,5 +1,5 @@
+#include "ata.h"
 #include "fat32.h"
-
 /*
  * Calculate the Logical Block Address (LBA) of the FAT sector
  * that contains the allocation entry for the given cluster.
@@ -141,7 +141,7 @@ uint32_t __fat32_next_cluster(uint32_t cluster) {
      *   if read fails free the buffer and abort.
      */
 
-    if (ata_read_sector(lba, buf) == STATUS_ERROR) {
+    if (ata_read_sector(f32_fs.drive, lba, buf) == STATUS_ERROR) {
         ERROR("[FAT32][NEXT_CLUSTER]: could not read sector with lba: %d\n",
               lba);
         kfree(buf);
@@ -188,7 +188,7 @@ int __fat32_read_cluster(uint32_t cluster, uint8_t *buf) {
      * manipulated.
      */
     for (uint8_t i = 0; i < f32_fs.sectors_per_cluster; i++) {
-        if (ata_read_sector((sector_number + i),
+        if (ata_read_sector(f32_fs.drive, (sector_number + i),
                             (buf + i * FAT32_SECTOR_SIZE)) == STATUS_ERROR) {
             ERROR("[FAT32][READ_CLUSTER]: reading clusters went wrong. "
                   "Aborting \n");
@@ -233,7 +233,7 @@ uint32_t __fat32_alloc_cluster(void) {
          * and advancing it by i
          *
          */
-        if (ata_read_sector((f32_fs.fat_start + i), buf) == -1) {
+        if (ata_read_sector(f32_fs.drive, (f32_fs.fat_start + i), buf) == -1) {
             ERROR("[FAT32][ALLOC_CLUSTER]: Could read sector. Stopping cluster "
                   "allocation\n");
             kfree(buf);
@@ -280,9 +280,9 @@ uint32_t __fat32_alloc_cluster(void) {
                  * of current J as free cluster and return Invalid
                  * cluster.
                  */
-                if (ata_write_sector(f32_fs.fat_start + i, buf) == -1 ||
-                    ata_write_sector(
-                        f32_fs.fat_start + f32_fs.sectors_per_fat + i, buf) ==
+                if (ata_write_sector(f32_fs.drive, f32_fs.fat_start + i, buf) == -1 ||
+                    ata_write_sector(f32_fs.drive,
+                                     f32_fs.fat_start + f32_fs.sectors_per_fat + i, buf) ==
                         -1) {
                     ERROR("[FAT32][ALLOC_CLUSTER]: Could not write to "
                           "sector. "
@@ -334,7 +334,7 @@ int __fat32_write_cluster(uint32_t cluster, const uint8_t *buf) {
      * sectors
      */
     for (int i = 0; i < f32_fs.sectors_per_cluster; i++) {
-        if (ata_write_sector(sector_number + i, buf + i * FAT32_SECTOR_SIZE) ==
+        if (ata_write_sector(f32_fs.drive, sector_number + i, buf + i * FAT32_SECTOR_SIZE) ==
             -1) {
             ERROR("[FAT32][WRITE_CLUSTER]: Could not write to sector.\n");
             return STATUS_ERROR;
@@ -374,7 +374,7 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
      *   if read fails free the buffer and abort.
      */
 
-    if (ata_read_sector(lba, buf) == STATUS_ERROR) {
+    if (ata_read_sector(f32_fs.drive, lba, buf) == STATUS_ERROR) {
         ERROR("[FAT32][SET_CLUSTER]: Could not read sector with lba: %d\n",
               lba);
         kfree(buf);
@@ -395,8 +395,8 @@ int __fat32_set_cluster(uint32_t cluster, uint32_t value) {
      * Write the change to the actual hard drive. Both the first and the second
      * fat tables.
      */
-    if (ata_write_sector(lba, buf) == -1 ||
-        ata_write_sector(lba + f32_fs.sectors_per_fat, buf) == -1) {
+    if (ata_write_sector(f32_fs.drive, lba, buf) == -1 ||
+        ata_write_sector(f32_fs.drive, lba + f32_fs.sectors_per_fat, buf) == -1) {
         kfree(buf);
         return STATUS_ERROR;
     }

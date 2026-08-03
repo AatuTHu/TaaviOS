@@ -69,16 +69,23 @@ clean:
 
 disk:
 	dd if=/dev/zero of=fat.img bs=1M count=64
-	mkfs.fat -F 32 fat.img
-	mmd -i fat.img ::sysbin
-	mmd -i fat.img ::test
-	echo "Hello from Taavi OS!" | mcopy -i fat.img - ::test/hello.txt
+	parted -s fat.img mklabel msdos
+	parted -s fat.img mkpart primary fat32 1MiB 100%
+	sudo losetup -Pf --show fat.img > /tmp/taavi_loop.txt
+	sudo mkfs.fat -F 32 $$(cat /tmp/taavi_loop.txt)p1
+	sudo mkdir -p /mnt/taavi
+	sudo mount $$(cat /tmp/taavi_loop.txt)p1 /mnt/taavi
+	sudo mkdir -p /mnt/taavi/sysbin /mnt/taavi/test
+	echo "Hello from TaaviOS!" | sudo tee /mnt/taavi/test/hello.txt
 	for f in userspace/build/bin/*.elf; do \
 		name=$$(basename $$f .elf); \
 		if [ "$$name" != "init" ]; then \
-			mcopy -i fat.img $$f ::sysbin/$$name; \
+			sudo cp $$f /mnt/taavi/sysbin/$$name; \
 		fi; \
 	done
+	sudo umount /mnt/taavi
+	sudo losetup -d $$(cat /tmp/taavi_loop.txt)
+	rm /tmp/taavi_loop.txt
 
 reset:
 	$(MAKE) clean
