@@ -15,6 +15,7 @@ struct mmap_entry {
 };
 
 void pmm_init(const struct multiboot_info *mboot);
+uint32_t pmm_get_total_memory_bytes();
 uint32_t pmm_alloc(void);
 uint32_t pmm_get_used_pages(void);
 uint32_t pmm_get_free_pages(void);

@@ -112,8 +112,11 @@ void paging_init() {
     }
     DEBUG_CORE_MM("[PAGING] PAGE DIRECTORY INITIALIZED\n");
 
-    for (uint32_t i = 0; i < ENTRIES_PER_TABLE; i++) {
-        paging_map(&kernel_page_dir, KERNEL_VIRTUAL_START + i * PAGE_SIZE,
+    uint32_t total_bytes = pmm_get_total_memory_bytes();
+    uint32_t pages       = (total_bytes - KERNEL_PHYSICAL_ADDRESS) / PAGE_SIZE;
+    for (uint32_t i = 0; i < pages; i++) {
+        paging_map(&kernel_page_dir,
+                   KERNEL_VIRTUAL_START + i * PAGE_SIZE,
                    KERNEL_PHYSICAL_ADDRESS + i * PAGE_SIZE,
                    PAGE_PRESENT | PAGE_RW);
     }

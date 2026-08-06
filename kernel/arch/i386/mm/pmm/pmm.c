@@ -3,11 +3,13 @@
 #include "klog.h"
 #include "mm.h"
 #include <kstring.h>
+#include <stdint.h>
 
 static uint32_t bitmap[MAX_PAGES / 32];
-static uint32_t used_pages = 0;
-static uint32_t free_pages = 0;
-static uint32_t last_found = 0;
+static uint32_t used_pages      = 0;
+static uint32_t free_pages      = 0;
+static uint32_t last_found      = 0;
+static uint32_t total_mem_bytes = 0;
 
 /**
  * __pmm_set_bit - Sets a bit on a slot as used.
@@ -50,6 +52,7 @@ static int __pmm_test_bit(uint32_t page) {
 void pmm_init(const struct multiboot_info *mboot) {
     DEBUG_CORE_MM("[PMM] mem_upper: 0x%x\n", mboot->mem_upper);
     uint32_t total_memory_kb = mboot->mem_upper + CONVENTIONAL_MEMORY_KB;
+    total_mem_bytes          = total_memory_kb * 1024;
     uint32_t total_pages     = (total_memory_kb * 1024) / PAGE_SIZE;
     DEBUG_CORE_MM("[PMM] Total memory: %d kb\n", total_memory_kb);
     DEBUG_CORE_MM("[PMM] Total pages: %d\n", total_pages);
@@ -176,4 +179,8 @@ uint32_t pmm_get_used_pages(void) {
 
 uint32_t pmm_get_free_pages(void) {
     return free_pages;
+}
+
+uint32_t pmm_get_total_memory_bytes() {
+    return total_mem_bytes;
 }
