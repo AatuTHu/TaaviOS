@@ -47,10 +47,6 @@ static void init_arch() {
     tss_init();
     idt_init();
     paging_init();
-
-    DEBUG("[KERNEL]: Allocating kernel page directory\n");
-    vmm_alloc(&kernel_page_dir, HEAP_START, HEAP_PAGES * PAGE_SIZE,
-              PAGE_PRESENT | PAGE_RW);
 }
 
 static void init_mm(const uint32_t *mboot_info) {
@@ -158,7 +154,7 @@ void kernel_main(const uint32_t *mboot_info) {
 
     init_arch();
 
-    kmalloc_init((void *)HEAP_START, HEAP_PAGES * PAGE_SIZE);
+    kmalloc_init((void *)HEAP_START, STARTING_HEAP_PAGES * PAGE_SIZE);
 
     init_drivers();
     init_filesystems();

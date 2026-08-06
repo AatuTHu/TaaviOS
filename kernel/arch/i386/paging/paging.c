@@ -114,6 +114,9 @@ void paging_init() {
 
     uint32_t total_bytes = pmm_get_total_memory_bytes();
     uint32_t pages       = (total_bytes - KERNEL_PHYSICAL_ADDRESS) / PAGE_SIZE;
+
+    DEBUG_CORE_MM("[PAGING] mapping %d pages to kernel page dir\n", pages);
+
     for (uint32_t i = 0; i < pages; i++) {
         paging_map(&kernel_page_dir,
                    KERNEL_VIRTUAL_START + i * PAGE_SIZE,

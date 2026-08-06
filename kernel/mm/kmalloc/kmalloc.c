@@ -30,6 +30,11 @@ static void update_remaining_heap_size() {
 void kmalloc_init(void *heap_start, uint32_t heap_size) {
     DEBUG_KMALLOC("[KMALLOC]: Initializing kmalloc with heap_start: 0x%x\n", heap_start);
     DEBUG_KMALLOC("[KMALLOC]: Heap_size: %d\n", heap_size);
+
+    DEBUG_KMALLOC("[KERNEL]: Allocating initial heap memory\n");
+    vmm_alloc(&kernel_page_dir, (uint32_t)heap_start, heap_size,
+              PAGE_PRESENT | PAGE_RW);
+
     free_list            = (block_header_t *)heap_start;
     free_list->size      = (heap_size - sizeof(block_header_t));
     free_list->magic     = HEAP_MAGIC;
@@ -74,7 +79,7 @@ void *kmalloc(uint32_t size) {
             current = current->next;
         }
         // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
-        int addition_size = (HEAP_PAGES * PAGE_SIZE) * 2;
+        int addition_size = ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE;
         if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
             ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
             break;
