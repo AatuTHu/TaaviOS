@@ -26,7 +26,7 @@ int paging_map(page_directory_t *dir, uint32_t virt, uint32_t phys,
 
     if (!((*dir)[pd_index] & PAGE_PRESENT)) {
         uint32_t phys_addr = pmm_alloc();
-
+        DEBUG_CORE_MM("[PAGING]: Page at the given pd_index was not present paging created new page: 0x%x\n", phys_addr);
         if (phys_addr == 0) {
             ERROR("[PAGING][ALLOC]: Out of physical memory\n");
             return STATUS_ERROR;

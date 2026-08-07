@@ -82,6 +82,39 @@ task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const
     return task;
 }
 
+/**
+ * task_sync_kernel_entries_to_all_tasks - when you edit kernel page directory.
+ *
+ * Description:
+ * This function copies kernel directory to every tasks directory.
+ * It loops over the MAX_TASKS count to get a tasks with the given index.
+ * then it checks if the task is eligible for a sync. After that it memcpies
+ * the kernel directory upper indexes to tasks page directory,
+ *
+ * Context: This was made because I wanted a growable heap and not start with max ram size.
+ * And because altering kernel directory is not automatically visible to tasks you have to
+ * sync the changes to tasks.
+ *
+ */
+void task_sync_kernel_entries_to_all_tasks() {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_t *task = task_get(i);
+
+        if (task == NULL)
+            continue;
+        if (task->state == TASK_DEAD)
+            continue;
+        if (task->page_dir == NULL)
+            continue;
+        if (task->page_dir == &kernel_page_dir)
+            continue;
+
+        memcpy(&(*task->page_dir)[KERNEL_PD_INDEX_START],
+               &kernel_page_dir[KERNEL_PD_INDEX_START],
+               KERNEL_PD_ENTRIES * sizeof(uint32_t));
+    }
+}
+
 int task_destroy(task_t *task) {
     if (task == NULL) {
         return STATUS_ERROR;

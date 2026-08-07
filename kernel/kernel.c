@@ -154,7 +154,7 @@ void kernel_main(const uint32_t *mboot_info) {
 
     init_arch();
 
-    kmalloc_init((void *)HEAP_START, STARTING_HEAP_PAGES * PAGE_SIZE);
+    kmalloc_init((void *)HEAP_START, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE);
 
     init_drivers();
     init_filesystems();

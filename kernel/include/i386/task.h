@@ -38,4 +38,5 @@ task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const
                     page_directory_t *page_dir, uint8_t task_mode);
 task_t *task_get(uint32_t pid);
 int task_destroy(task_t *task);
+void task_sync_kernel_entries_to_all_tasks();
 #endif

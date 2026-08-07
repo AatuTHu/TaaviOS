@@ -2,6 +2,7 @@
 #include "config.h"
 #include "klog.h"
 #include "paging.h"
+#include "task.h"
 #include "vmm.h"
 #include <stdint.h>
 
@@ -31,7 +32,6 @@ void kmalloc_init(void *heap_start, uint32_t heap_size) {
     DEBUG_KMALLOC("[KMALLOC]: Initializing kmalloc with heap_start: 0x%x\n", heap_start);
     DEBUG_KMALLOC("[KMALLOC]: Heap_size: %d\n", heap_size);
 
-    DEBUG_KMALLOC("[KERNEL]: Allocating initial heap memory\n");
     vmm_alloc(&kernel_page_dir, (uint32_t)heap_start, heap_size,
               PAGE_PRESENT | PAGE_RW);
 
@@ -79,7 +79,7 @@ void *kmalloc(uint32_t size) {
             current = current->next;
         }
         // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
-        int addition_size = ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE;
+        int addition_size = (ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) * 2;
         if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
             ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
             break;
@@ -89,6 +89,8 @@ void *kmalloc(uint32_t size) {
             ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
             break;
         }
+
+        task_sync_kernel_entries_to_all_tasks();
 
         // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
         block_header_t *new_block = (block_header_t *)current_heap_ceiling;

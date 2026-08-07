@@ -36,7 +36,6 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
     // DEBUG_CORE_MM("[VMM]: Flags: %d\n", flags);
 
     uint32_t n_pages    = (size + PAGE_SIZE - 1) / PAGE_SIZE;
-    // DEBUG_CORE_MM("[VMM]: Number of pages to be allocated: %d\n", n_pages);
     uint32_t virt_start = virt;
     for (uint32_t i = 0; i < n_pages; i++) {
         uint32_t addr = pmm_alloc();
