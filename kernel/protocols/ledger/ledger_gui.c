@@ -40,6 +40,7 @@ int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params) {
 
     memset(new_request, 0, sizeof(request_table));
     new_request->caller_pid   = caller_pid;
+    new_request->struct_key   = params->struct_key;
     new_request->clerk_pid    = gui_task_pid;
     new_request->target_pid   = caller_pid;
     new_request->request_type = params->opcode;

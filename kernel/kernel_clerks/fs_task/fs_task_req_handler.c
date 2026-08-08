@@ -174,7 +174,7 @@ static int read(request_table *req) {
      * Dont fucking touch this function ever again.
      */
 
-    fd_entry_t *entry = fd_entry_table[req->fd];
+    fd_entry_t *entry = fd_entry_table[req->struct_key];
     if (entry == NULL) {
         ERROR("[FS_TASK][READ]: entry not found\n");
         return STATUS_ERROR;
@@ -209,7 +209,7 @@ static int read(request_table *req) {
  * This function opens a file at the end of the given path that comes from request_table req->path field.
  * before opening the file it tries to check if there is a directory_tarversal entry for the requester.
  * If there is the starting cluster will be the one found from there. Otherwise it will use the root cluster.
- * If the file is found the function creates an fd entry of it and places the fd number to req->fd field.
+ * If the file is found the function creates an fd entry of it and places the fd number to req->struct_key field.
  *
  * Context: Why was it made, when to call it.
  * Return: STATUS_OK || STATUS_ERROR
@@ -241,7 +241,7 @@ static int open(request_table *req) {
         return STATUS_ERROR;
     }
 
-    req->fd = fd;
+    req->struct_key = fd;
     return STATUS_OK;
 }
 
@@ -294,7 +294,7 @@ static int create(const request_table *req) {
  * Return: STATUS_OK || STATUS_ERROR
  */
 static int write(const request_table *req) {
-    fd_entry_t *entry = fd_entry_table[req->fd];
+    fd_entry_t *entry = fd_entry_table[req->struct_key];
     if (entry == NULL) {
         ERROR("[FS_TASK][WRITE]: entry not found\n");
         return STATUS_ERROR;
@@ -336,14 +336,14 @@ static int write(const request_table *req) {
  * Return: STATUS_OK || STATUS_ERROR
  */
 static int close(const request_table *req) {
-    fd_entry_t *entry = fd_entry_table[req->fd];
+    fd_entry_t *entry = fd_entry_table[req->struct_key];
     if (entry == NULL) {
         ERROR("[FS_TASK][CLOSE]: entry not found\n");
         return STATUS_ERROR;
     }
 
     DEBUG_FS_TASK("[FS_TASK][CLOSE]: Closing fd: %d\n", entry->fd);
-    fd_entry_table[req->fd] = NULL;
+    fd_entry_table[req->struct_key] = NULL;
     kfree(entry);
     return STATUS_OK;
 }

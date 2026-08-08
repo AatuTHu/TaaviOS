@@ -43,7 +43,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     new_request->request_type = type;
     new_request->flags        = flags;
     new_request->status       = PENDING;
-    new_request->fd           = fd;
+    new_request->struct_key   = fd;
     new_request->buffer_size  = buffer_size;
 
     if (buffer_size > 0) {
@@ -62,7 +62,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
     DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
     DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->fd);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->struct_key);
     DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
     DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 

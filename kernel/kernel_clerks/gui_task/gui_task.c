@@ -51,28 +51,29 @@ static int copy_pixels_to_screen(blueprint_t *entry) {
  */
 static int gui_draw_string(request_table *req) {
     // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            //  DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s\n", req->buf);
-            blueprint_t *entry = program_windows[i];
+    //  DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s\n", req->buf);
+    blueprint_t *entry = program_windows[req->struct_key];
 
-            if (entry->pixels == NULL) {
-                DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Pixel buffer was null, cant draw\n");
-                return STATUS_ERROR;
-            }
-            // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New x position %d\n", req->x);
-            // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", req->y);
-
-            fb_draw_string(entry->pixels, req->x, req->y, entry->width, req->buf,
-                           req->fg_color, req->bg_color);
-
-            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-                return STATUS_ERROR;
-            }
-
-            break;
-        }
+    if (entry == NULL || entry->pixels == NULL) {
+        DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Pixel buffer was null, cant draw\n");
+        return STATUS_ERROR;
     }
+
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
+
+    // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New x position %d\n", req->x);
+    // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", req->y);
+
+    fb_draw_string(entry->pixels, req->x, req->y, entry->width, req->buf,
+                   req->fg_color, req->bg_color);
+
+    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
     return STATUS_OK;
 }
 
@@ -122,11 +123,7 @@ static int gui_delete_window(uint32_t target_pid) {
 
 /**
  * gui_create_window_entry - used if a task wishes to create a window to screen.
- * @param owner_pid: window entry owner pid
- * @param width: window width
- * @param height: window height
- * @param x: compositor coordinate x
- * @param y: compositor coordinate y
+ * @param req: hold metadata of the made reguest.
  *
  * Description:
  * Function searches for an empty slot from the program_windows. If found it allocates new entry
@@ -137,17 +134,10 @@ static int gui_delete_window(uint32_t target_pid) {
  *
  * Return: If successful return STATUS_OK || if unsuccessful return STATUS_ERROR.
  */
-static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t height, uint32_t x, uint32_t y) {
+static int gui_create_window_entry(request_table *req) {
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Trying to initialize a window\n");
 
     int slot = -1;
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == owner_pid) {
-            gui_delete_window(owner_pid);
-            slot = i;
-            break;
-        }
-    }
 
     if (slot == -1) {
         for (int i = 0; i < MAX_TASKS; i++) {
@@ -160,6 +150,7 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
 
     if (slot == -1) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: There was no space on the window table\n");
+        req->struct_key = STATUS_ERROR;
         return STATUS_ERROR;
     }
 
@@ -167,27 +158,30 @@ static int gui_create_window_entry(uint32_t owner_pid, uint32_t width, uint32_t 
 
     if (entry == NULL) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: Reserving memory for the window table failed. Aborting\n");
+        req->struct_key = STATUS_ERROR;
         return STATUS_ERROR;
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
-    entry->owner_pid     = owner_pid;
-    entry->width         = width;
-    entry->height        = height;
-    entry->screen_x      = x;
-    entry->screen_y      = y;
+    entry->owner_pid     = req->caller_pid;
+    entry->width         = req->width;
+    entry->height        = req->height;
+    entry->screen_x      = req->x;
+    entry->screen_y      = req->y;
 
     uint32_t pixels_size = entry->width * entry->height * 4;
     entry->pixels        = (uint32_t *)kmalloc(pixels_size);
 
     if (entry->pixels == NULL) {
         DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Unable to allocate memory for pixels\n");
+        req->struct_key = STATUS_ERROR;
         return STATUS_ERROR;
     }
     memset(entry->pixels, 0, pixels_size);
     program_windows[slot] = entry;
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Window created to table index: %d\n", slot);
+    req->struct_key = slot;
     return STATUS_OK;
 }
 
@@ -199,205 +193,216 @@ static int gui_scroll_window(request_table *req) {
 
     DEBUG_GUI_TASK("[GUI_TASK][SCROLL] %d is asking to scroll its the window down\n", req->caller_pid);
 
-    for (uint32_t i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            return fb_scroll_down(program_windows[i]->pixels, program_windows[i]->width,
-                                  program_windows[i]->height, req->bg_color);
-        }
+    blueprint_t *entry = program_windows[req->struct_key];
+
+    if (entry == NULL) {
+        return STATUS_ERROR;
     }
-    return STATUS_ERROR;
+
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
+
+    return fb_scroll_down(entry->pixels, entry->width,
+                          entry->height, req->bg_color);
 }
 
 static int gui_paint_rectangle(request_table *req) {
 
     DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Painting a window for %d to screen!\n", req->caller_pid);
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            blueprint_t *entry = program_windows[i];
+    blueprint_t *entry = program_windows[req->struct_key];
 
-            if (entry->pixels == NULL) {
-                return STATUS_ERROR;
-            }
-
-            if (req->x + req->width > entry->width) {
-                DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it horizontal\n");
-                DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.x: %d req.width: %d, entry.width: %d\n", req->x, req->width, entry->width);
-                if (req->width > entry->width) {
-                    req->width = entry->width;
-                }
-                req->x = entry->width - req->width;
-            }
-
-            if (req->y + req->height > entry->height) {
-                DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it verticaly\n");
-                DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.y: %d req.height: %d, entry.hei: %d\n", req->y, req->height, entry->height);
-
-                if (req->height > entry->height) {
-                    req->height = entry->width;
-                }
-                req->y = entry->height - req->height;
-            }
-
-            fb_fill_rect(entry->pixels, req->x, req->y, req->width,
-                         req->height, entry->width, entry->height, req->bg_color);
-
-            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-                return STATUS_ERROR;
-            }
-
-            DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Window painted successfully to screen!\n");
-            return STATUS_OK;
-        }
+    if (entry == NULL || entry->pixels == NULL) {
+        return STATUS_ERROR;
     }
 
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
+
+    if (req->x + req->width > entry->width) {
+        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it horizontal\n");
+        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.x: %d req.width: %d, entry.width: %d\n", req->x, req->width, entry->width);
+        if (req->width > entry->width) {
+            req->width = entry->width;
+        }
+        req->x = entry->width - req->width;
+    }
+
+    if (req->y + req->height > entry->height) {
+        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it verticaly\n");
+        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.y: %d req.height: %d, entry.hei: %d\n", req->y, req->height, entry->height);
+
+        if (req->height > entry->height) {
+            req->height = entry->width;
+        }
+        req->y = entry->height - req->height;
+    }
+
+    fb_fill_rect(entry->pixels, req->x, req->y, req->width,
+                 req->height, entry->width, entry->height, req->bg_color);
+
+    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Window painted successfully to screen!\n");
     return STATUS_OK;
 }
 
 static int gui_draw_sprite(request_table *req) {
 
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            blueprint_t *entry = program_windows[i];
-            for (uint32_t row = 0; row < req->height; row++) {
-                for (uint32_t col = 0; col < req->width; col++) {
-                    uint32_t color = req->pixels[row * req->width + col];
-                    if (color != TRANSPARENT) {
-                        fb_fill_rect((uint32_t *)entry->pixels,
-                                     req->x + col * req->scale, req->y + row * req->scale,
-                                     req->scale, req->scale,
-                                     entry->width, entry->height,
-                                     color);
-                    }
-                }
-            }
+    blueprint_t *entry = program_windows[req->struct_key];
 
-            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-                return STATUS_ERROR;
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
+
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
+
+    for (uint32_t row = 0; row < req->height; row++) {
+        for (uint32_t col = 0; col < req->width; col++) {
+            uint32_t color = req->pixels[row * req->width + col];
+            if (color != TRANSPARENT) {
+                fb_fill_rect((uint32_t *)entry->pixels,
+                             req->x + col * req->scale, req->y + row * req->scale,
+                             req->scale, req->scale,
+                             entry->width, entry->height,
+                             color);
             }
-            break;
         }
+    }
+
+    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+        return STATUS_ERROR;
     }
 
     return STATUS_OK;
 }
 
 int gui_resize_window(request_table *req) {
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            blueprint_t *entry = program_windows[i];
-            DEBUG_GUI_TASK("[GUI_TASK]: %d asking for resize\n", entry->owner_pid);
-            if (entry->pixels == NULL) {
-                return STATUS_ERROR;
-            }
+    blueprint_t *entry = program_windows[req->struct_key];
 
-            if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                             entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
-                return STATUS_ERROR;
-            }
+    if (entry == NULL || entry->pixels == NULL) {
+        return STATUS_ERROR;
+    }
 
-            uint32_t pixels_size       = req->width * req->height * 4;
-            uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixels_size);
-            if (new_pixel_buffer == NULL) {
-                ERROR("[GUI_TASK][RESIZE]: Could not allocate new pixel buffer\n");
-                return STATUS_ERROR;
-            }
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
 
-            memset(new_pixel_buffer, 0, pixels_size);
+    DEBUG_GUI_TASK("[GUI_TASK]: %d asking for resize\n", entry->owner_pid);
+    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
-            uint32_t copy_width  = (entry->width < req->width) ? entry->width : req->width;
-            uint32_t copy_height = (entry->height < req->height) ? entry->height : req->height;
+    uint32_t pixels_size       = req->width * req->height * 4;
+    uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixels_size);
+    if (new_pixel_buffer == NULL) {
+        ERROR("[GUI_TASK][RESIZE]: Could not allocate new pixel buffer\n");
+        return STATUS_ERROR;
+    }
 
-            for (uint32_t row = 0; row < copy_height; row++) {
-                memcpy(
-                    new_pixel_buffer + row * req->width, // dst
-                    entry->pixels + row * entry->width,  // src
-                    copy_width * 4);                     // len
-            }
+    memset(new_pixel_buffer, 0, pixels_size);
 
-            kfree(entry->pixels);
-            entry->pixels = new_pixel_buffer;
+    uint32_t copy_width  = (entry->width < req->width) ? entry->width : req->width;
+    uint32_t copy_height = (entry->height < req->height) ? entry->height : req->height;
 
-            if (entry->screen_x + req->width > fb.width) {
-                DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New width goes over the screen in horizontal direction. Moving it inside\n");
-                DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.width = %d, req.width = %d, fb.width = %d\n", entry->width, req->width, fb.width);
+    for (uint32_t row = 0; row < copy_height; row++) {
+        memcpy(
+            new_pixel_buffer + row * req->width, // dst
+            entry->pixels + row * entry->width,  // src
+            copy_width * 4);                     // len
+    }
 
-                if (req->width > fb.width) {
-                    req->width = fb.width;
-                } else {
-                    entry->screen_x = fb.width - req->width;
-                }
-            }
+    kfree(entry->pixels);
+    entry->pixels = new_pixel_buffer;
 
-            if (entry->screen_y + req->height > fb.height) {
-                DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New height goes over the screen in vertical direction. Moving it inside\n");
-                DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.height = %d, req.height = %d, fb.height = %d\n", entry->height, req->height, fb.height);
+    if (entry->screen_x + req->width > fb.width) {
+        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New width goes over the screen in horizontal direction. Moving it inside\n");
+        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.width = %d, req.width = %d, fb.width = %d\n", entry->width, req->width, fb.width);
 
-                if (req->height > fb.width) {
-                    req->height = fb.height;
-                } else {
-                    entry->screen_y = fb.height - req->height;
-                }
-            }
-
-            entry->width  = req->width;
-            entry->height = req->height;
-
-            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-                return STATUS_ERROR;
-            }
-
-            DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
-            return STATUS_OK;
+        if (req->width > fb.width) {
+            req->width = fb.width;
+        } else {
+            entry->screen_x = fb.width - req->width;
         }
     }
-    ERROR("[GUI_TASK][RESIZE]: Did not find callers blueprint\n");
-    return STATUS_ERROR;
+
+    if (entry->screen_y + req->height > fb.height) {
+        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New height goes over the screen in vertical direction. Moving it inside\n");
+        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.height = %d, req.height = %d, fb.height = %d\n", entry->height, req->height, fb.height);
+
+        if (req->height > fb.width) {
+            req->height = fb.height;
+        } else {
+            entry->screen_y = fb.height - req->height;
+        }
+    }
+
+    entry->width  = req->width;
+    entry->height = req->height;
+
+    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
+    return STATUS_OK;
 }
 
 int gui_move_task_window(request_table *req) {
-    for (int i = 0; i < MAX_TASKS; i++) {
-        if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
-            blueprint_t *entry = program_windows[i];
+    blueprint_t *entry = program_windows[req->struct_key];
 
-            if (entry->pixels == NULL) {
-                return STATUS_ERROR;
-            }
-
-            if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                             entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
-                return STATUS_ERROR;
-            }
-
-            entry->screen_x = req->x;
-            entry->screen_y = req->y;
-
-            if (entry->width + req->x > fb.width) {
-                DEBUG_GUI_TASK("[GUI_TASK][MOVE]: New horizontal position goes over the screen. Moving it inside\n");
-                DEBUG_GUI_TASK("[GUI_TASK][MOVE]: entry.width = %d, req.x = %d, fb.width = %d\n", entry->width, req->x, fb.width);
-
-                entry->screen_x = fb.width - entry->width;
-            }
-
-            if (entry->height + req->y > fb.height) {
-                DEBUG_GUI_TASK("[GUI_TASK][MOVE]: New vertical position goes over the screen. Moving it inside\n");
-                DEBUG_GUI_TASK("[GUI_TASK][MOVE]: entry.height = %d, req.y = %d, fb.height= %d\n", entry->height, req->y, fb.height);
-                entry->screen_y = fb.height - entry->height;
-            }
-
-            if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-                return STATUS_ERROR;
-            }
-
-            DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
-            return STATUS_OK;
-        }
+    if (entry == NULL || entry->pixels == NULL) {
+        return STATUS_ERROR;
     }
-    ERROR("[GUI_TASK][MOVE]: Did not find callers blueprint\n");
-    return STATUS_ERROR;
+
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
+
+    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    entry->screen_x = req->x;
+    entry->screen_y = req->y;
+
+    if (entry->width + req->x > fb.width) {
+        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: New horizontal position goes over the screen. Moving it inside\n");
+        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: entry.width = %d, req.x = %d, fb.width = %d\n", entry->width, req->x, fb.width);
+
+        entry->screen_x = fb.width - entry->width;
+    }
+
+    if (entry->height + req->y > fb.height) {
+        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: New vertical position goes over the screen. Moving it inside\n");
+        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: entry.height = %d, req.y = %d, fb.height= %d\n", entry->height, req->y, fb.height);
+        entry->screen_y = fb.height - entry->height;
+    }
+
+    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
+    return STATUS_OK;
 }
 
 static void gui_handle_request(request_table *req) {
     task_t *gui_task = task_get(gui_task_pid);
+
+    DEBUG_GUI_TASK("[GUI_TASK][HANDLE]: servicing struct_key: %d", req->struct_key);
 
     if (gui_task == NULL || req == NULL)
         return;
@@ -407,7 +412,7 @@ static void gui_handle_request(request_table *req) {
         req->status = (gui_draw_string(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
     case CREATE:
-        req->status = (gui_create_window_entry(req->caller_pid, req->width, req->height, req->x, req->y) == STATUS_OK) ? COMPLETE : FAILED;
+        req->status = (gui_create_window_entry(req) == STATUS_OK) ? COMPLETE : FAILED;
         goto after_req_steps;
     case FREE:
         req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
@@ -464,8 +469,10 @@ void gui_init(task_t *gui_task) {
     register_hail_mary_function(gui_task_pid, gui_recovery);
     bg_color = COLOR_DARK_GRAY;
 
-    DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
+    DEBUG_GUI_TASK("[GUI_TASK][INIT]: Initializing program windows\n");
+    memset(program_windows, 0, sizeof(blueprint_t));
 
+    DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
     fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, bg_color);
 
     int y = 5;

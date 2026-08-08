@@ -13,6 +13,7 @@
  * @author: A.H, 2026
  */
 
+static int window_id              = -1;
 static int def_horizontal_padding = 5;
 static int def_vertical_padding   = 5;
 static int width                  = 0;
@@ -26,6 +27,7 @@ void render_at(uint32_t x, uint32_t y, const char *msg) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode      = WRITE_AT;
+    params.struct_key  = window_id;
     params.x           = x;
     params.y           = y;
     params.buf         = (char *)msg;
@@ -38,8 +40,9 @@ void render_at(uint32_t x, uint32_t y, const char *msg) {
 static int scroll_down() {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    params.opcode   = SCROLL_DOWN;
-    params.bg_color = bg_color;
+    params.opcode     = SCROLL_DOWN;
+    params.struct_key = window_id;
+    params.bg_color   = bg_color;
     return sys_conwi(&params);
 }
 
@@ -54,6 +57,7 @@ static void case_new_line(uint32_t *nwlind, uint32_t current_i, const char *text
         gui_params_pack params;
         memset(&params, 0, sizeof(params));
         params.opcode      = WRITE_AT;
+        params.struct_key  = window_id;
         params.x           = x_pos;
         params.y           = y_pos;
         params.buf         = temp_str;
@@ -83,6 +87,7 @@ static int backspace_pressed() {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode      = WRITE_AT;
+    params.struct_key  = window_id;
     params.x           = x_pos;
     params.y           = y_pos;
     params.buf         = " ";
@@ -117,6 +122,7 @@ int render(const char *text, uint32_t len) {
                 gui_params_pack params;
                 memset(&params, 0, sizeof(params));
                 params.opcode      = WRITE_AT;
+                params.struct_key  = window_id;
                 params.x           = x_pos;
                 params.y           = y_pos;
                 params.buf         = temp_str;
@@ -142,6 +148,7 @@ int render(const char *text, uint32_t len) {
         gui_params_pack params;
         memset(&params, 0, sizeof(params));
         params.opcode      = WRITE_AT;
+        params.struct_key  = window_id;
         params.x           = x_pos;
         params.y           = y_pos;
         params.buf         = temp_str;
@@ -187,6 +194,7 @@ int resize_task_window(int w, int h) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode      = RESIZE;
+    params.struct_key  = window_id;
     params.width       = w;
     params.height      = h;
     params.fg_color    = fg_color;
@@ -239,13 +247,14 @@ int resize_task_window(int w, int h) {
 int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    params.opcode   = PAINT_WINDOW;
-    params.width    = width;
-    params.height   = height;
-    params.x        = x;
-    params.y        = y;
-    params.bg_color = color;
-    params.fg_color = fg_color;
+    params.opcode     = PAINT_WINDOW;
+    params.struct_key = window_id;
+    params.width      = width;
+    params.height     = height;
+    params.x          = x;
+    params.y          = y;
+    params.bg_color   = color;
+    params.fg_color   = fg_color;
 
     return sys_conwi(&params);
 }
@@ -253,26 +262,28 @@ int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uin
 int move_task_window(int x, int y) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    params.opcode   = MOVE;
-    params.x        = x;
-    params.y        = y;
-    params.fg_color = fg_color;
-    params.bg_color = bg_color;
+    params.opcode     = MOVE;
+    params.struct_key = window_id;
+    params.x          = x;
+    params.y          = y;
+    params.fg_color   = fg_color;
+    params.bg_color   = bg_color;
     return sys_conwi(&params);
 }
 
 int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *sprite) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    params.opcode   = DRAW;
-    params.width    = width;
-    params.height   = height;
-    params.x        = x;
-    params.y        = y;
-    params.scale    = scale;
-    params.pixels   = sprite;
-    params.fg_color = fg_color;
-    params.bg_color = bg_color;
+    params.opcode     = DRAW;
+    params.struct_key = window_id;
+    params.width      = width;
+    params.height     = height;
+    params.x          = x;
+    params.y          = y;
+    params.scale      = scale;
+    params.pixels     = sprite;
+    params.fg_color   = fg_color;
+    params.bg_color   = bg_color;
     return sys_conwi(&params);
 }
 
@@ -298,7 +309,7 @@ void set_horizontal_padding(uint32_t hp) {
 }
 
 int init_render() {
-    LOG("Initializing renderer\n");
+    // LOG("Initializing renderer\n");
     def_vertical_padding   = 1;
     def_horizontal_padding = 1;
     width                  = 200;
@@ -308,6 +319,14 @@ int init_render() {
     fg_color               = COLOR_WHITE;
     bg_color               = COLOR_BLACK;
 
-    LOG("Renderer initialized\n");
-    return create_task_window(width, height, 10, 10);
+    // LOG("Renderer initialized\n");
+    window_id              = create_task_window(width, height, 10, 10);
+
+    if (window_id == STATUS_ERROR) {
+        //    LOG("Failed to create window\n");
+        return STATUS_ERROR;
+    }
+
+    LOG("%d\n", window_id);
+    return STATUS_OK;
 }

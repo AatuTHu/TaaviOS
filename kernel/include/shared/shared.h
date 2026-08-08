@@ -23,10 +23,9 @@
 #define SYS_WI 250
 
 typedef struct {
-    uint32_t *pixels;
     char *buf;
+    uint32_t *pixels;
     uint32_t buffer_size;
-    uint8_t opcode;
     uint32_t width;
     uint32_t height;
     uint32_t x;
@@ -34,6 +33,8 @@ typedef struct {
     uint32_t fg_color;
     uint32_t bg_color;
     uint32_t scale;
+    uint16_t struct_key;
+    uint8_t opcode;
 } gui_params_pack;
 
 typedef enum {

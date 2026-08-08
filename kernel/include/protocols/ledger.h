@@ -14,10 +14,10 @@ typedef enum {
 typedef struct request_table {
     char *buf;
     uint32_t *pixels;
+    uint32_t struct_key;
     uint32_t fg_color;
     uint32_t bg_color;
     uint32_t buffer_size;
-    uint32_t fd;
     uint32_t flags;
     uint16_t caller_pid;
     uint16_t target_pid;

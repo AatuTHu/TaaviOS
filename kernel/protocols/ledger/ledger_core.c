@@ -4,6 +4,7 @@
 #include "kstring.h"
 #include "ledger.h"
 #include "sched.h"
+#include "shared.h"
 /*
  * Ledger Protocol
  * Design & Implementation: A.H, 2026
@@ -178,10 +179,11 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
 
         if (req->status == COMPLETE) {
             switch (req->request_type) {
+            case CREATE:
             case OPEN:
                 req->status = TERMINATED;
-
-                return req->fd;
+                DEBUG_LEDGER("[LEDGER][COLLECT]: collecting struct_key: %d\n", req->struct_key);
+                return req->struct_key;
             case LIST:
             case READ:
                 if (out != NULL) {
@@ -200,9 +202,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                     params       = pack_dimensions(req->height, params);
                     *params      = '\0';
                 }
-
                 // DEBUG_LEDGER("[LEDGER][COLLECT]: params packed to go %s\n", out);
-
                 req->status = TERMINATED;
                 return STATUS_OK;
 
