@@ -129,7 +129,7 @@ static int32_t sys_write(struct registers *r) {
 
     case 2:
         vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-        ERROR(buf);
+        klog(buf);
         r->eax = STATUS_OK;
         break;
 

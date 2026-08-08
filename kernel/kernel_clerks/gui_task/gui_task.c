@@ -197,6 +197,8 @@ static int gui_scroll_window(request_table *req) {
         return STATUS_ERROR;
     }
 
+    DEBUG_GUI_TASK("[GUI_TASK][SCROLL] %d is asking to scroll its the window down\n", req->caller_pid);
+
     for (uint32_t i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == req->caller_pid) {
             return fb_scroll_down(program_windows[i]->pixels, program_windows[i]->width,

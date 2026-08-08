@@ -25,8 +25,8 @@ static void command_help(const char *arg) {
     print("- exec [task]  'Executes a task'                                \n");
     print("- caw  [pid]   'Changes active window to provided pid'          \n");
     print("- kill [pid]   'Kills task with the corresponding pid'          \n");
-    print("- move [x,y]   'Moves the window tho x and y location'          \n");
-    print("- move [x,y]   'Resizes the window to given width and height'   \n");
+    print("- move [x.y]   'Moves the window tho x and y location'          \n");
+    print("- resize [x.y]   'Resizes the window to given width and height' \n");
     print("- tasks        'Lists active tasks with their pids'             \n");
     print("- exit         'Exits and kills shell'                          \n");
 }
@@ -234,7 +234,7 @@ int main(void) {
         return 1;
     }
 
-    if (resize_task_window(300, 100) == STATUS_ERROR) {
+    if (resize_task_window(600, 200) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 

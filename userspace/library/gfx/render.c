@@ -1,5 +1,6 @@
 #include "render.h"
 #include "font.h"
+#include "log.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -38,7 +39,6 @@ static int scroll_down() {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode   = SCROLL_DOWN;
-    params.fg_color = fg_color;
     params.bg_color = bg_color;
     return sys_conwi(&params);
 }
@@ -207,6 +207,7 @@ int resize_task_window(int w, int h) {
         return -1;
     }
 
+    w = 0;
     while (*ptr >= '0' && *ptr <= '9') {
         w = w * 10 + (*ptr - '0');
         ptr++;
@@ -224,6 +225,7 @@ int resize_task_window(int w, int h) {
         return -1;
     }
 
+    h = 0;
     while (*ptr >= '0' && *ptr <= '9') {
         h = h * 10 + (*ptr - '0');
         ptr++;
@@ -296,6 +298,7 @@ void set_horizontal_padding(uint32_t hp) {
 }
 
 int init_render() {
+    LOG("Initializing renderer\n");
     def_vertical_padding   = 1;
     def_horizontal_padding = 1;
     width                  = 200;
@@ -305,5 +308,6 @@ int init_render() {
     fg_color               = COLOR_WHITE;
     bg_color               = COLOR_BLACK;
 
+    LOG("Renderer initialized\n");
     return create_task_window(width, height, 10, 10);
 }
