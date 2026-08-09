@@ -16,7 +16,10 @@
 #define PADDING 5
 #define HEADER_Y 18
 #define CMD_LINE_Y (WINDOW_HEIGTH - FONT_HEIGHT - PADDING)
-#define INFO_LINE_Y (WINDOW_HEIGTH - (2 * FONT_HEIGHT) - PADDING)
+#define INFO_LINE_Y (WINDOW_HEIGTH - (2 * FONT_HEIGHT) - PADDING - 1)
+#define MAIN_AREA_START_Y HEADER_Y + (FONT_HEIGHT + 2)
+#define MAIN_AREA_START_X PADDING + 2
+
 typedef void (*cmd_handler_t)(const char *arg);
 
 typedef struct {
@@ -37,39 +40,18 @@ static const char *skip_spaces(const char *str) {
 
 static void command_help(const char *arg) {
     (void)arg;
-    print("------------------------------------------\n");
-    print("Available commands:\n");
-    print("- help         'Prints this list'\n");
-    print("- open  [path] 'Open a file'\n");
-    print("- write [text] 'Writes to opened file'\n");
-    print("- mkdir [text] 'Creates a directory'\n");
-    print("- cd    [text] 'Changes working directory'\n");
-    print("- ls           'Lists directory contents'\n");
-    print("- read         'Reads the opened file'\n");
-    print("- close        'Close opened file'\n");
-    print("- exit         'Close fs_interface'\n");
-}
-
-static void command_write(const char *buf) {
-    if (fd == -1) {
-        render_at(PADDING, INFO_LINE_Y, "No file currently open");
-        return;
-    }
-    write(fd, buf);
-}
-
-static void command_open(const char *filename) {
-    if (fd != -1) {
-        close(fd);
-    }
-
-    fd = open(filename, O_RDONLY | O_WRONLY);
-
-    if (fd == -1) {
-        render_at(PADDING, INFO_LINE_Y, "read on opening the file");
-        return;
-    }
-    render_at(PADDING, INFO_LINE_Y, "Successfully opened the file");
+    set_background_color(COLOR_GRAY);
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y, "Available commands:");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT, "- help         'Prints this list'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 2, "- open  [path] 'Open a file'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 3, "- write [text] 'Writes to opened file'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 4, "- mkdir [text] 'Creates a directory'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 5, "- mkfil [text] 'Creates a file in the current directory'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 6, "- cd    [text] 'Changes working directory'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 7, "- ls           'Lists directory contents'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 8, "- read         'Reads the opened file'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 9, "- close        'Close opened file'");
+    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 10, "- exit         'Close fs_interface'");
 }
 
 static void command_read(const char *arg) {
@@ -83,11 +65,36 @@ static void command_read(const char *arg) {
     int nread     = read(fd, buf, sizeof(buf) - 1);
 
     if (nread != -1) {
-        print("\n\n");
-        print(buf);
+        set_background_color(COLOR_GRAY);
+        render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y, buf);
     } else {
         render_at(PADDING, CMD_LINE_Y, "Read failed or file empty");
     }
+}
+
+static void command_write(const char *buf) {
+    if (fd == -1) {
+        render_at(PADDING, INFO_LINE_Y, "No file currently open");
+        return;
+    }
+    write(fd, buf);
+    render_at(PADDING, INFO_LINE_Y, "Wrote to the file, now reading it");
+    command_read(0);
+}
+
+static void command_open(const char *filename) {
+    if (fd != -1) {
+        close(fd);
+    }
+
+    fd = open(filename, O_RDONLY | O_WRONLY);
+
+    if (fd == -1) {
+        render_at(PADDING, INFO_LINE_Y, "read on opening the file");
+        return;
+    }
+    render_at(PADDING, INFO_LINE_Y, "Opened the file, now reading it");
+    command_read(0);
 }
 
 static void command_close(const char *arg) {
@@ -96,13 +103,17 @@ static void command_close(const char *arg) {
         render_at(PADDING, INFO_LINE_Y, "No open file to close");
         return;
     }
-    render_at(PADDING, INFO_LINE_Y, "Closing file");
     close(fd);
+    render_at(PADDING, INFO_LINE_Y, "File closed");
     fd = -1;
 }
 
 static void command_mkdir(const char *directory_name) {
-    mkdir(directory_name);
+    if (mkdir(directory_name) == STATUS_ERROR) {
+        render_at(PADDING, INFO_LINE_Y, "Could not create directories");
+        return;
+    }
+    render_at(PADDING, INFO_LINE_Y, "Directory(ies) created");
 }
 
 static void command_cd(const char *path) {
@@ -123,7 +134,7 @@ static void command_ls(const char *arg) {
     int current_text_y = 35 + HEADER_Y;
     int folder_y       = 10 + HEADER_Y;
     char *entry        = dirents;
-
+    set_background_color(COLOR_GRAY);
     for (int i = 0; i < read_size; i++) {
         if (dirents[i] == '\n' || dirents[i] == '\0') {
             dirents[i] = '\0';
@@ -253,6 +264,12 @@ int main(void) {
                 continue;
             }
             if (c == '\n') {
+                set_background_color(COLOR_BLACK);
+                render_at(0, INFO_LINE_Y, "                                                                ");
+                if (paint_rectangle(WINDOW_WIDTH - (PADDING * 2), WINDOW_HEIGTH - (HEADER_Y + (FONT_HEIGHT * 3 + PADDING)), PADDING, HEADER_Y + (PADDING * 2), COLOR_GRAY) == STATUS_ERROR) {
+                    render_at(PADDING, INFO_LINE_Y, "Failed to paint main area rectange");
+                }
+
                 buf[pos] = '\0';
                 exec_cmd(buf);
                 break;

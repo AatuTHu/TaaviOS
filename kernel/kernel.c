@@ -98,6 +98,7 @@ static void init_filesystems() {
         if (mbr_find_fat32(drive, &fat32_lba, &fat32_sectors) == STATUS_OK) {
             DEBUG("[MBR]: Partition found, initializing filesystem\n");
             fat32_init(drive, fat32_lba);
+            break;
         }
     }
 }

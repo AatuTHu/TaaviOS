@@ -1,4 +1,5 @@
 #include "fat32.h"
+#include "klog.h"
 
 /**
 * __fat32_list_dir() - lists all directories
@@ -299,6 +300,9 @@ error_case:
  */
 int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
 
+    DEBUG_FAT32("[FAT32][MKDIR]: starting cluster number: %d\n", directory_cluster);
+    DEBUG_FAT32("[FAT32][MKDIR]: directory_name: %s\n", directory_name);
+
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)
         return STATUS_ERROR;
@@ -311,11 +315,6 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
     fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
     uint32_t max_entries      = __fat32_calculate_max_dir_entries();
     uint8_t name83[11];
-
-    if (!(dir_entry->attributes & FAT32_ATTR_DIRECTORY)) {
-        ERROR("[FAT32][MKDIR]: Cluster was not a directory. Aborting\n");
-        goto error_case;
-    }
 
     // A conviniant function even tho we are not walking path.  It removes the / and formats the node
     if (__fat32_walk_dir_path(&directory_name, name83) == STATUS_ERROR) {
