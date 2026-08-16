@@ -207,7 +207,7 @@ int fat32_update_dirent_size(uint32_t starting_cluster, uint32_t file_cluster, u
 
     DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", starting_cluster);
     DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: file_cluster: %d\n", file_cluster);
-    DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: starting_cluster: %d\n", new_size);
+    DEBUG_FAT32("[FAT32][UPDATE_DIRENT_SIZE]: new_size: %d\n", new_size);
 
     uint8_t *buf = __fat32_allocate_buffer();
     if (buf == INVALID_BUFFER)

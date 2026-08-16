@@ -71,25 +71,18 @@ clean:
 
 disk:
 	@dd if=/dev/zero of=fat.img bs=1M count=64 status=none
-	@parted -s fat.img mklabel msdos
-	@parted -s fat.img mkpart primary fat32 1MiB 100%
-	@sudo losetup -Pf --show fat.img > /tmp/taavi_loop.txt
-	@sudo mkfs.fat -F 32 $$(cat /tmp/taavi_loop.txt)p1 > /dev/null
-	@sudo mkdir -p /mnt/taavi
-	@sudo mount $$(cat /tmp/taavi_loop.txt)p1 /mnt/taavi
-	@sudo mkdir -p /mnt/taavi/sysbin /mnt/taavi/test
-	@echo "Hello from TaaviOS!" | sudo tee /mnt/taavi/test/hello.txt > /dev/null
+	@printf 'label: dos\ntype=0C, bootable\n' | sfdisk fat.img > /dev/null 2>&1
+	@mformat -i fat.img@@1M -F -v TAAVI_FAT
+	@mmd -i fat.img@@1M ::/sysbin ::/test
+	@echo "Hello from TaaviOS!" | mcopy -i fat.img@@1M - ::/test/hello.txt
 	@for f in userspace/build/bin/*.elf; do \
 		if [ -f "$$f" ]; then \
 			name=$$(basename $$f .elf); \
 			if [ "$$name" != "init" ]; then \
-				sudo cp $$f /mnt/taavi/sysbin/$$name; \
+				mcopy -i fat.img@@1M $$f ::/sysbin/$$name; \
 			fi; \
 		fi; \
 	done
-	@sudo umount /mnt/taavi
-	@sudo losetup -d $$(cat /tmp/taavi_loop.txt)
-	@rm /tmp/taavi_loop.txt
 
 reset:
 	@echo "Rebuilding OS..."

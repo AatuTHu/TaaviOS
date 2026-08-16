@@ -10,6 +10,69 @@
 #define MAX_PATH_LEN 128
 static char save_path[MAX_PATH_LEN];
 
+int parse_flags_from_commands(char *command) {
+    int i          = 0;
+    uint32_t flags = 0;
+
+    if (command == NULL) {
+        return STATUS_ERROR;
+    }
+
+    while (command[i] != '\0') {
+
+        if (command[i] == ' ' && command[i + 1] != '-') {
+            *command += i;
+        }
+
+        if (command[i] == '-') {
+
+            while (command[i] == '-') {
+                i++;
+            }
+
+            int len = strlen(command) - i;
+
+            if (len <= 0) {
+                return STATUS_ERROR;
+            }
+
+            char flag[len];
+            for (int j = 0; j < len; j++) {
+                if (command[i + j] == '\0' || command[i + j] == ' ') {
+                    i += j;
+                    flag[j] = '\0';
+                    break;
+                }
+                flag[j] = command[j + i];
+            }
+
+            if (strcmp(flag, "a") == 0 && !(flags & O_APPEND)) {
+                flags += O_APPEND;
+            }
+
+            if (strcmp(flag, "r") == 0 && !(flags & O_RDONLY)) {
+                flags += O_RDONLY;
+            }
+
+            if (strcmp(flag, "rw") == 0 && !(flags & O_RDWR)) {
+                flags += O_RDWR;
+            }
+
+            if (strcmp(flag, "w") == 0 && !(flags & O_WRONLY)) {
+                flags += O_WRONLY;
+            }
+
+            if (strcmp(flag, "c") == 0 && !(flags & O_CREAT)) {
+                flags += O_CREAT;
+            }
+        }
+
+        i++;
+    }
+
+    return flags;
+}
+
 static int parse_segment_from_path(const char *path, char *dir_name, int max_dir_len) {
     int len = strlen(path);
 

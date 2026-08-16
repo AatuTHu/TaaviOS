@@ -17,6 +17,7 @@
 - [ ] fs_int more complex file system management.
 - [ ] First real text editor
 - [ ] Keyboard routing fixes
+- [ ] Virtual tasks return adds random chars at the end of the list
 
 **Concurrency / Locks** <- Not too urgent
 - Add a locking mechanism in which interrupts are disabled but only can be active at one place at a time. To prevent deadlocks

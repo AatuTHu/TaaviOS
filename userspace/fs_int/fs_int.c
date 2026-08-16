@@ -1,5 +1,7 @@
+#include "document.h"
 #include "folder.h"
 #include "font.h"
+#include "log.h"
 #include "op_sy.h"
 #include "render.h"
 #include "shared.h"
@@ -87,8 +89,27 @@ static void command_open(const char *filename) {
         close(fd);
     }
 
-    fd = open(filename, O_RDONLY | O_WRONLY);
+    char *cpy_path = (char *)filename;
+    uint32_t flag  = O_RDONLY;
 
+    if (str_starts_with(cpy_path, "-a ")) {
+        flag = O_APPEND;
+        cpy_path += 3;
+    } else if (str_starts_with(cpy_path, "-r ")) {
+        flag = O_RDONLY;
+        cpy_path += 3;
+    } else if (str_starts_with(cpy_path, "-w ")) {
+        flag = O_WRONLY;
+        cpy_path += 3;
+    } else if (str_starts_with(cpy_path, "-rw ")) {
+        flag = O_RDWR;
+        cpy_path += 4;
+    } else {
+        render_at(PADDING, INFO_LINE_Y, "special flag not provided opening with read_only");
+        cpy_path += 3;
+    }
+
+    fd = open(cpy_path, flag);
     if (fd == -1) {
         render_at(PADDING, INFO_LINE_Y, "read on opening the file");
         return;
@@ -142,7 +163,11 @@ static void command_ls(const char *arg) {
             trim(entry);
 
             if (entry[0] != '\0') {
-                draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder);
+                if (strlen(entry) > 8) {
+                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)document);
+                } else {
+                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder);
+                }
                 render_at(current_x, current_text_y, entry);
                 current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
             }

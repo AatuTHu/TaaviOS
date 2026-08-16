@@ -18,7 +18,7 @@ void close(uint32_t fd);
 int mkdir(const char *path);
 int change_directory(const char *path, char *directory_name);
 int list_dirents(char *buf, int buffer_size);
-
+int parse_flags_from_commands(char *command);
 void idle(void);
 int get_pid();
 

@@ -1,8 +1,9 @@
 #include "config.h"
 #include "fat32.h"
-#include "fs_task.h"
+#include "fs_clerk.h"
 #include "ledger.h"
 #include "sched.h"
+#include "shared.h"
 #include "task.h"
 
 static dir_traversal_t *dir_map[MAX_TASKS];
@@ -140,15 +141,20 @@ static int fs_alloc_fd(uint32_t owner_pid, uint32_t file_cluster, uint32_t dir_c
     entry->size         = size;
     entry->fd           = slot;
     entry->curr_offset  = 0;
-    entry->flags        = flags;
-    entry->attr         = file_attr;
+
+    if (flags & O_APPEND) {
+        entry->curr_offset = size;
+    }
+
+    entry->flags = flags;
+    entry->attr  = file_attr;
 
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: fd table created\n");
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: file_cluster: %d\n", file_cluster);
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: dir_cluster: %d\n", dir_cluster);
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: size: %d\n", size);
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: fd: %d\n", slot);
-    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: current_offset: %d\n", 0);
+    DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: current_offset: %d\n", entry->curr_offset);
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: flags: %d\n", flags);
     DEBUG_FS_TASK("[FS_TASK][ALLOC_FD]: attr: %d\n", file_attr);
 
@@ -300,8 +306,8 @@ static int write(const request_table *req) {
         return STATUS_ERROR;
     }
 
-    if (!(entry->flags & O_WRONLY) && !(entry->flags & O_RDWR)) {
-        ERROR("[FS_TASK][WRITE]: flag mismatch\n");
+    if (entry->flags & O_RDONLY) {
+        ERROR("[FS_TASK][WRITE]: File opened in read mode\n");
         return STATUS_ERROR;
     }
 
@@ -312,8 +318,13 @@ static int write(const request_table *req) {
     }
 
     DEBUG_FS_TASK("[FS_TASK][WRITE]: Write was successful\n");
-    entry->curr_offset = req->buffer_size;
-    entry->size        = req->buffer_size;
+    if (entry->flags & O_APPEND) {
+        entry->curr_offset += req->buffer_size;
+        entry->size += req->buffer_size;
+    } else {
+        entry->curr_offset = req->buffer_size;
+        entry->size        = req->buffer_size;
+    }
 
     if (fat32_update_dirent_size(entry->dir_cluster, entry->file_cluster,
                                  entry->size) == STATUS_ERROR) {
