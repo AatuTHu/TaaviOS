@@ -2,9 +2,9 @@
 #include "malloc.h"
 #include "render.h"
 #include "shared.h"
+#include "string.h"
 #include "sys_calls.h"
 #include <stdint.h>
-#include <string.h>
 
 int get_ac_tasks(char *buf, int len) {
     if (buf != NULL) {

@@ -187,8 +187,9 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
             case LIST:
             case READ:
                 if (out != NULL) {
-                    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d\n", caller_pid, req->buffer_size);
                     memcpy(out, req->buf, req->buffer_size);
+                    out[req->buffer_size] = '\0';
+                    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d containing: %s\n", caller_pid, req->buffer_size, req->buf);
                 }
                 req->status = TERMINATED;
                 return req->buffer_size;

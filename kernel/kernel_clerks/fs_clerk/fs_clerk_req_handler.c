@@ -1,6 +1,8 @@
 #include "config.h"
 #include "fat32.h"
 #include "fs_clerk.h"
+#include "klog.h"
+#include "kstring.h"
 #include "ledger.h"
 #include "sched.h"
 #include "shared.h"
@@ -443,6 +445,8 @@ int fs_return_vdir_tasks(request_table *req) {
             char spid[10];
             itoa(virt_tasks_dir[i].pid, spid);
 
+            DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: spid: %s\n", spid);
+
             int spid_len       = strlen(spid);
             int name_len       = strlen(virt_tasks_dir[i].name);
             int required_space = spid_len + 1 + name_len + 1;
@@ -467,9 +471,10 @@ int fs_return_vdir_tasks(request_table *req) {
 
     list_buffer[read_size] = '\0';
 
-    DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Read size %d \n", read_size);
     memcpy(req->buf, list_buffer, read_size);
-    req->buffer_size = read_size;
+    req->buffer_size    = read_size;
+    req->buf[read_size] = '\0';
+    DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Returning %s\n", req->buf);
     kfree(list_buffer);
     return STATUS_OK;
 }
@@ -571,7 +576,7 @@ void fs_handle_request(request_table *req) {
         return;
     }
 
-    if (req->request_type == LIST && strncmp(req->buf, "SYS_INFO/TASKS", req->buffer_size) == 0) {
+    if (req->request_type == LIST && strncmp(req->buf, "SYS_INFO/TASKS", strlen("SYS_INFO/TASKS")) == 0) {
         req->status       = (fs_return_vdir_tasks(req) == STATUS_OK) ? COMPLETE : FAILED;
         fs_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
@@ -651,7 +656,7 @@ void fs_maintain_virt_dir() {
 
         virt_tasks_dir[i].pid = temp_task->pid;
 
-        strncpy(virt_tasks_dir[i].name, temp_task->name, sizeof(virt_tasks_dir[i].name) - 1);
+        memcpy(virt_tasks_dir[i].name, temp_task->name, sizeof(virt_tasks_dir[i].name) - 1);
         virt_tasks_dir[i].name[sizeof(virt_tasks_dir[i].name) - 1] = '\0';
 
         virt_tasks_dir[i].slot_used                                = 1;
