@@ -43,10 +43,6 @@ int release_window() {
 
 int __init_task() {
 
-    if (init_render() == -1) {
-        return -1;
-    }
-
     int heap_start       = sys_sbrk(0);
     int current_heap_end = sys_sbrk(64);
 
@@ -55,6 +51,10 @@ int __init_task() {
     }
 
     malloc_init((void *)heap_start, current_heap_end);
+
+    if (init_render() == -1) {
+        return -1;
+    }
 
     return 0;
 }

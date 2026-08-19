@@ -1,11 +1,14 @@
 #include "render.h"
-#include "font.h"
 #include "log.h"
+#include "malloc.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
+#include <math.h>
 #include <stdint.h>
+
+window_t *window_components[MAX_SECTIONS];
 
 /**
  * TaaviOS window manager
@@ -13,167 +16,65 @@
  * @author: A.H, 2026
  */
 
-static int window_id              = -1;
-static int def_horizontal_padding = 5;
-static int def_vertical_padding   = 5;
-static int width                  = 0;
-static int height                 = 0;
-static int x_pos                  = 0;
-static int y_pos                  = 0;
-static int fg_color               = 0;
-static int bg_color               = 0;
+static int parse_dimensions(const char *ptr, int *w, int *h) {
 
-void render_at(uint32_t x, uint32_t y, const char *msg) {
-    gui_params_pack params;
-    memset(&params, 0, sizeof(params));
-    params.opcode      = WRITE_AT;
-    params.struct_key  = window_id;
-    params.x           = x;
-    params.y           = y;
-    params.buf         = (char *)msg;
-    params.buffer_size = strlen(msg);
-    params.bg_color    = bg_color;
-    params.fg_color    = fg_color;
-    sys_conwi(&params);
-}
+    while (*ptr == ' ') ptr++;
 
-static int scroll_down() {
-    gui_params_pack params;
-    memset(&params, 0, sizeof(params));
-    params.opcode     = SCROLL_DOWN;
-    params.struct_key = window_id;
-    params.bg_color   = bg_color;
-    return sys_conwi(&params);
-}
-
-static void case_new_line(uint32_t *nwlind, uint32_t current_i, const char *text) {
-    uint32_t buffer_size = current_i - *nwlind;
-
-    if (buffer_size > 0) {
-        char temp_str[buffer_size + 1];
-        memcpy(temp_str, &text[*nwlind], buffer_size);
-        temp_str[buffer_size] = '\0';
-
-        gui_params_pack params;
-        memset(&params, 0, sizeof(params));
-        params.opcode      = WRITE_AT;
-        params.struct_key  = window_id;
-        params.x           = x_pos;
-        params.y           = y_pos;
-        params.buf         = temp_str;
-        params.buffer_size = buffer_size;
-        params.fg_color    = fg_color;
-        params.bg_color    = bg_color;
-        sys_conwi(&params);
+    if (*ptr < '0' || *ptr > '9') {
+        return STATUS_ERROR;
     }
 
-    y_pos += FONT_HEIGHT;
-    x_pos   = def_horizontal_padding;
-    *nwlind = current_i + 1;
-}
-
-static int backspace_pressed() {
-    if (y_pos == def_vertical_padding && x_pos == def_horizontal_padding) {
-        return STATUS_OK;
+    *w = 0;
+    while (*ptr >= '0' && *ptr <= '9') {
+        *w = *w * 10 + (*ptr - '0');
+        ptr++;
     }
 
-    if (y_pos >= (def_vertical_padding + FONT_HEIGHT) && x_pos <= def_horizontal_padding) {
-        y_pos -= FONT_HEIGHT;
-        x_pos = width - FONT_WIDTH - def_horizontal_padding;
-    } else if (x_pos > def_horizontal_padding) {
-        x_pos -= FONT_WIDTH;
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr != '.') {
+        return STATUS_ERROR;
+    }
+    ptr++;
+    while (*ptr == ' ') ptr++;
+
+    if (*ptr < '0' || *ptr > '9') {
+        return STATUS_ERROR;
     }
 
-    gui_params_pack params;
-    memset(&params, 0, sizeof(params));
-    params.opcode      = WRITE_AT;
-    params.struct_key  = window_id;
-    params.x           = x_pos;
-    params.y           = y_pos;
-    params.buf         = " ";
-    params.buffer_size = 1;
-    params.fg_color    = fg_color;
-    params.bg_color    = bg_color;
-    sys_conwi(&params);
+    *h = 0;
+    while (*ptr >= '0' && *ptr <= '9') {
+        *h = *h * 10 + (*ptr - '0');
+        ptr++;
+    }
+
     return STATUS_OK;
 }
 
-int render(const char *text, uint32_t len) {
-    uint32_t new_line_ind = 0;
+static void clamp_borders_to_window(window_t *entry) {
+    gui_params_pack params;
+    memset(&params, 0, sizeof(params));
+    params.opcode     = PAINT_WINDOW;
+    params.struct_key = entry->window_id;
 
-    for (uint32_t i = 0; i < len; i++) {
-        switch (text[i]) {
-        case '\n':
-            case_new_line(&new_line_ind, i, text);
-            if ((y_pos + FONT_HEIGHT) >= (height - def_vertical_padding)) {
-                scroll_down();
-                y_pos = height - FONT_HEIGHT - def_vertical_padding;
-                x_pos = def_horizontal_padding;
-            }
-            break;
+    // top border
+    params.width      = entry->width;
+    params.height     = entry->height;
+    params.x          = 0;
+    params.y          = 0;
+    params.bg_color   = entry->border_color;
+    sys_conwi(&params);
 
-        case '\b':
-            if (i > new_line_ind) {
-                uint32_t buffer_size = i - new_line_ind;
-                char temp_str[buffer_size + 1];
-                memcpy(temp_str, &text[new_line_ind], buffer_size);
-                temp_str[buffer_size] = '\0';
-
-                gui_params_pack params;
-                memset(&params, 0, sizeof(params));
-                params.opcode      = WRITE_AT;
-                params.struct_key  = window_id;
-                params.x           = x_pos;
-                params.y           = y_pos;
-                params.buf         = temp_str;
-                params.buffer_size = buffer_size;
-                params.fg_color    = fg_color;
-                params.bg_color    = bg_color;
-                sys_conwi(&params);
-                x_pos += buffer_size * FONT_WIDTH;
-            }
-            backspace_pressed();
-            new_line_ind = i + 1;
-            break;
-        }
-    }
-
-    uint32_t buffer_size = len - new_line_ind;
-
-    if (buffer_size > 0) {
-        char temp_str[buffer_size + 1];
-        memcpy(temp_str, &text[new_line_ind], buffer_size);
-        temp_str[buffer_size] = '\0';
-
-        gui_params_pack params;
-        memset(&params, 0, sizeof(params));
-        params.opcode      = WRITE_AT;
-        params.struct_key  = window_id;
-        params.x           = x_pos;
-        params.y           = y_pos;
-        params.buf         = temp_str;
-        params.buffer_size = buffer_size;
-        params.fg_color    = fg_color;
-        params.bg_color    = bg_color;
-        sys_conwi(&params);
-
-        x_pos += buffer_size * FONT_WIDTH;
-
-        if (x_pos >= width) {
-            if ((y_pos + FONT_HEIGHT) >= (height - def_vertical_padding)) {
-                scroll_down();
-                y_pos = height - FONT_HEIGHT - def_vertical_padding;
-                x_pos = def_horizontal_padding;
-                return STATUS_OK;
-            }
-            y_pos += FONT_HEIGHT;
-            x_pos = def_horizontal_padding;
-        }
-    }
-    return STATUS_OK;
+    params.width    = entry->width - (entry->border_width * 2);
+    params.height   = entry->height - (entry->border_width * 2);
+    params.x        = entry->border_width;
+    params.y        = entry->border_width;
+    params.bg_color = entry->bg_color;
+    sys_conwi(&params);
 }
 
-int create_task_window(int w, int h, int x, int y) {
+int create_task_window(int w, int h, int x, int y, uint32_t foreground_color, uint32_t background_color) {
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode   = CREATE;
@@ -181,24 +82,30 @@ int create_task_window(int w, int h, int x, int y) {
     params.height   = h;
     params.x        = x;
     params.y        = y;
-    params.fg_color = fg_color;
-    params.bg_color = bg_color;
-    return sys_conwi(&params);
+    params.fg_color = foreground_color;
+    params.bg_color = background_color;
+
+    //  clamp_borders_to_window(entry);
+
+    int key         = sys_conwi(&params);
+
+    return key;
 }
 
-int resize_task_window(int w, int h) {
+int resize_task_window(int w, int h, uint32_t key) {
 
     char dimensions_buffer[22]; // 22 because that give 10 digits to left side and 10 to right. A dot
     // to middle and a '\0' to end.
+    window_t *entry = window_components[key];
 
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode      = RESIZE;
-    params.struct_key  = window_id;
+    params.struct_key  = entry->window_id;
     params.width       = w;
     params.height      = h;
-    params.fg_color    = fg_color;
-    params.bg_color    = bg_color;
+    params.fg_color    = entry->fg_color;
+    params.bg_color    = entry->bg_color;
     params.buf         = dimensions_buffer;
     params.buffer_size = 22;
     int result         = sys_conwi(&params);
@@ -209,124 +116,199 @@ int resize_task_window(int w, int h) {
 
     const char *ptr = params.buf;
 
-    while (*ptr == ' ') ptr++;
+    parse_dimensions(ptr, &w, &h);
 
-    if (*ptr < '0' || *ptr > '9') {
-        return -1;
-    }
+    entry->width  = w;
+    entry->height = h;
 
-    w = 0;
-    while (*ptr >= '0' && *ptr <= '9') {
-        w = w * 10 + (*ptr - '0');
-        ptr++;
-    }
+    // clamp_borders_to_window(entry);
 
-    while (*ptr == ' ') ptr++;
-
-    if (*ptr != '.') {
-        return -1;
-    }
-    ptr++;
-    while (*ptr == ' ') ptr++;
-
-    if (*ptr < '0' || *ptr > '9') {
-        return -1;
-    }
-
-    h = 0;
-    while (*ptr >= '0' && *ptr <= '9') {
-        h = h * 10 + (*ptr - '0');
-        ptr++;
-    }
-
-    width  = w;
-    height = h;
     return result;
 }
 
-int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color) {
+int paint_section(uint32_t key) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
+    window_t *entry   = window_components[key];
+
     params.opcode     = PAINT_WINDOW;
-    params.struct_key = window_id;
+    params.struct_key = entry->window_id;
+    params.width      = entry->width;
+    params.height     = entry->height;
+    params.x          = entry->cursor_x_pos;
+    params.y          = entry->cursor_y_pos;
+    params.bg_color   = entry->bg_color;
+    params.fg_color   = entry->fg_color;
+
+    return sys_conwi(&params);
+}
+
+int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color, uint32_t key) {
+    gui_params_pack params;
+    memset(&params, 0, sizeof(params));
+    window_t *entry        = window_components[key];
+
+    uint32_t double_border = entry->border_width * 2;
+
+    uint32_t max_w         = (entry->width > double_border) ? (entry->width - double_border) : 0;
+    uint32_t max_h         = (entry->height > double_border) ? (entry->height - double_border) : 0;
+
+    if (x < entry->border_width) {
+        x = entry->border_width;
+    }
+    if (y < entry->border_width) {
+        y = entry->border_width;
+    }
+
+    if (x >= entry->width - entry->border_width) {
+        width = 0;
+    } else if (x + width > entry->width - entry->border_width) {
+        width = (entry->width - entry->border_width) - x;
+    }
+
+    if (y >= entry->height - entry->border_width) {
+        height = 0;
+    } else if (y + height > entry->height - entry->border_width) {
+        height = (entry->height - entry->border_width) - y;
+    }
+
+    if (width > max_w)
+        width = max_w;
+    if (height > max_h)
+        height = max_h;
+
+    params.opcode     = PAINT_WINDOW;
+    params.struct_key = entry->window_id;
     params.width      = width;
     params.height     = height;
     params.x          = x;
     params.y          = y;
     params.bg_color   = color;
-    params.fg_color   = fg_color;
+    params.fg_color   = entry->fg_color;
 
     return sys_conwi(&params);
 }
 
-int move_task_window(int x, int y) {
+int move_task_window(int x, int y, uint32_t key) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
+    window_t *entry   = window_components[key];
     params.opcode     = MOVE;
-    params.struct_key = window_id;
+    params.struct_key = entry->window_id;
     params.x          = x;
     params.y          = y;
-    params.fg_color   = fg_color;
-    params.bg_color   = bg_color;
+    params.fg_color   = entry->fg_color;
+    params.bg_color   = entry->bg_color;
+
+    //    clamp_borders_to_window();
+
     return sys_conwi(&params);
 }
 
-int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *sprite) {
+int draw_buffer(int width, int height, int x, int y, uint32_t scale, uint32_t *sprite, uint32_t key) {
+    window_t *entry = window_components[key];
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode     = DRAW;
-    params.struct_key = window_id;
+    params.struct_key = entry->window_id;
     params.width      = width;
     params.height     = height;
     params.x          = x;
     params.y          = y;
     params.scale      = scale;
     params.pixels     = sprite;
-    params.fg_color   = fg_color;
-    params.bg_color   = bg_color;
+    params.fg_color   = entry->fg_color;
+    params.bg_color   = entry->bg_color;
     return sys_conwi(&params);
 }
 
-void set_background_color(uint32_t color) {
-    bg_color = color;
-}
+int register_section(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t foreground_color, uint32_t background_color) {
 
-void set_text_color(uint32_t color) {
-    fg_color = color;
-}
+    int slot = -1;
 
-void set_dimensions(uint32_t w, uint32_t h) {
-    width  = w;
-    height = h;
-}
+    for (int i = RESERVED_SLOT; i < MAX_SECTIONS; i++) {
+        if (window_components[i] == NULL) {
+            slot = i;
+            break;
+        }
+    }
 
-void set_vertical_padding(uint32_t vp) {
-    def_vertical_padding = vp;
-}
+    if (slot == -1) {
+        LOG("Could not find free slot from the window\n");
+        return STATUS_ERROR;
+    }
 
-void set_horizontal_padding(uint32_t hp) {
-    def_horizontal_padding = hp;
+    window_t *parent = window_components[MAIN_WINDOW_KEY];
+
+    if (parent == NULL) {
+        LOG("Cant register a section if there is not parent window\n");
+        return STATUS_ERROR;
+    }
+
+    window_t *new_entry = (window_t *)malloc(sizeof(window_t));
+
+    if (new_entry == NULL) {
+        LOG("Could not allocate memory for new section entry\n");
+        return STATUS_ERROR;
+    }
+
+    new_entry->window_id              = parent->window_id;
+    new_entry->width                  = width;
+    new_entry->height                 = height;
+    new_entry->section_x_pos          = x;
+    new_entry->section_y_pos          = y;
+    new_entry->cursor_x_pos           = x;
+    new_entry->cursor_y_pos           = y;
+    new_entry->border_width           = 0;
+    new_entry->def_horizontal_padding = 0;
+    new_entry->def_vertical_padding   = 0;
+    new_entry->bg_color               = background_color;
+    new_entry->fg_color               = foreground_color;
+
+    window_components[slot]           = new_entry;
+
+    LOG("Added section to slot: %d\n", slot);
+    LOG("width: %d\n", width);
+    LOG("height: %d\n", height);
+    LOG("x: %d\n", x);
+    LOG("y: %d\n", y);
+    // paint_rectangle(width, height, x, y, background_color, slot);
+
+    return slot;
 }
 
 int init_render() {
-    // LOG("Initializing renderer\n");
-    def_vertical_padding   = 1;
-    def_horizontal_padding = 1;
-    width                  = 200;
-    height                 = 100;
-    x_pos                  = def_horizontal_padding;
-    y_pos                  = def_vertical_padding;
-    fg_color               = COLOR_WHITE;
-    bg_color               = COLOR_BLACK;
-
     // LOG("Renderer initialized\n");
-    window_id              = create_task_window(width, height, 10, 10);
+    int window_id = create_task_window(300, 150, 10, 10, COLOR_WHITE, COLOR_BLACK);
 
     if (window_id == STATUS_ERROR) {
         //    LOG("Failed to create window\n");
         return STATUS_ERROR;
     }
 
-    LOG("%d\n", window_id);
+    window_t *entry = (window_t *)malloc(sizeof(window_t));
+
+    if (entry == NULL) {
+        LOG("Cant allocate entry for the main window\n");
+        return STATUS_ERROR;
+    }
+
+    // LOG("Initializing renderer\n");
+    entry->window_id                 = window_id;
+    entry->border_color              = COLOR_DARKER_GRAY;
+    entry->border_width              = 4;
+    entry->def_vertical_padding      = 1 + entry->border_width;
+    entry->def_horizontal_padding    = 1 + entry->border_width;
+    entry->width                     = 200;
+    entry->height                    = 100;
+    entry->cursor_x_pos              = entry->def_horizontal_padding;
+    entry->cursor_y_pos              = entry->def_vertical_padding;
+    entry->fg_color                  = COLOR_WHITE;
+    entry->bg_color                  = COLOR_BLACK;
+
+    window_components[RESERVED_SLOT] = entry;
+
+    // clamp_borders_to_window();
+
     return STATUS_OK;
 }

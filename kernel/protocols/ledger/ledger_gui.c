@@ -19,10 +19,7 @@ static inline int queue_req(request_table *new_request, uint32_t caller_pid) {
 
 /**
  * ledger_add_gui_req - makes a new entry req.
- * @caller_pid:  pid of the task making the request
- * @type:        operation type (WRITE)
- * @buf:         data buffer, used for WRITE
- * @buffer_size: size of buf / requested size
+ * @params: paced set of params used to make the request
  *
  * Description:
  * Validates paramss, allocates a new request_table entry, places it in
@@ -74,15 +71,15 @@ int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params) {
         }
     }
 
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
+    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
-    // DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
-    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
-    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
-    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
-    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
-    //  DEBUG_LEDGER("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    //  DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     return queue_req(new_request, caller_pid);
 

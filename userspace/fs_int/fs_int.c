@@ -1,7 +1,6 @@
 #include "document.h"
 #include "folder.h"
 #include "font.h"
-#include "log.h"
 #include "op_sy.h"
 #include "render.h"
 #include "shared.h"
@@ -15,14 +14,21 @@
 #define WINDOW_HEIGTH 600
 #define SCREEN_CO_X 20
 #define SCREEN_CO_Y 20
-#define PADDING 5
-#define HEADER_Y 18
-#define CMD_LINE_Y (WINDOW_HEIGTH - FONT_HEIGHT - PADDING)
-#define INFO_LINE_Y (WINDOW_HEIGTH - (2 * FONT_HEIGHT) - PADDING - 1)
-#define MAIN_AREA_START_Y HEADER_Y + (FONT_HEIGHT + 2)
-#define MAIN_AREA_START_X PADDING + 2
+#define PADDING 2
+
+#define CMD_LINE_Y WINDOW_HEIGTH - FONT_HEIGHT - PADDING * 2
+#define INFO_LINE_Y CMD_LINE_Y - FONT_HEIGHT
+#define MAIN_AREA_START_Y HEADER_BLOCK
+
+#define HEADER_BLOCK FONT_HEIGHT + PADDING
+#define FOOTER_BLOCK FONT_HEIGHT * 2 + PADDING * 2
+#define MAIN_AREA_BLOCK WINDOW_HEIGTH - FOOTER_BLOCK - HEADER_BLOCK
 
 typedef void (*cmd_handler_t)(const char *arg);
+
+static int header_id = -1;
+static int main_id   = -1;
+static int footer_id = -1;
 
 typedef struct {
     const char *name;
@@ -40,26 +46,76 @@ static const char *skip_spaces(const char *str) {
     return str;
 }
 
-static void command_help(const char *arg) {
-    (void)arg;
-    set_background_color(COLOR_GRAY);
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y, "Available commands:");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT, "- help         'Prints this list'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 2, "- open  [path] 'Open a file'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 3, "- write [text] 'Writes to opened file'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 4, "- mkdir [text] 'Creates a directory'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 5, "- mkfil [text] 'Creates a file in the current directory'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 6, "- cd    [text] 'Changes working directory'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 7, "- ls           'Lists directory contents'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 8, "- read         'Reads the opened file'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 9, "- close        'Close opened file'");
-    render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y + FONT_HEIGHT * 10, "- exit         'Close fs_interface'");
+static void show_commands(const char *args) {
+    (void)args;
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING, "Available commands:", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT, "- help         'Prints this list'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 2, "- open  [path] 'Open a file'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 3, "- write [text] 'Writes to opened file'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 4, "- mkdir [text] 'Creates a directory'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 5, "- cd    [text] 'Changes working directory'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 6, "- ls           'Lists directory contents'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 7, "- read         'Reads the opened file'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 8, "- close        'Close opened file'", main_id);
+    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 9, "- exit         'Close fs_interface'", main_id);
 }
 
-static void command_read(const char *arg) {
-    (void)arg;
+static void close_file(const char *args) {
+    (void)args;
     if (fd == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "No file currently open");
+        render_at_section(PADDING, INFO_LINE_Y, "No open file to close", footer_id);
+        return;
+    }
+    close(fd);
+    render_at_section(PADDING, INFO_LINE_Y, "File closed", footer_id);
+    fd = -1;
+}
+
+static void list_directories(const char *args) {
+    (void)args;
+    char dirents[512] = {0};
+    int read_size     = list_dirents(dirents, sizeof(dirents) - 1);
+    if (read_size <= 0) {
+        return;
+    }
+
+    int current_x      = PADDING_BETWEEN_FILES;
+    int current_text_y = 35 + HEADER_BLOCK;
+    int folder_y       = 10 + HEADER_BLOCK;
+    char *entry        = dirents;
+    for (int i = 0; i < read_size; i++) {
+        if (dirents[i] == '\n' || dirents[i] == '\0') {
+            dirents[i] = '\0';
+
+            trim(entry);
+
+            if (entry[0] != '\0') {
+                if (strlen(entry) > 8) {
+                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)document, main_id);
+                } else {
+                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder, main_id);
+                }
+                render_at_section(current_x, current_text_y, entry, main_id);
+                current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
+            }
+            entry = &dirents[i + 1];
+        }
+    }
+}
+
+static void quit_program(const char *args) {
+    (void)args;
+    if (fd != STATUS_ERROR) {
+        close(fd);
+        fd = STATUS_ERROR;
+    }
+    terminate_program();
+}
+
+static void read_file(const char *args) {
+    (void)args;
+    if (fd == STATUS_ERROR) {
+        render_at_section(PADDING, INFO_LINE_Y, "No file currently open", footer_id);
         return;
     }
 
@@ -67,29 +123,27 @@ static void command_read(const char *arg) {
     int nread     = read(fd, buf, sizeof(buf) - 1);
 
     if (nread != -1) {
-        set_background_color(COLOR_GRAY);
-        render_at(MAIN_AREA_START_X, MAIN_AREA_START_Y, buf);
+        render_at_section(PADDING, MAIN_AREA_START_Y, buf, main_id);
     } else {
-        render_at(PADDING, CMD_LINE_Y, "Read failed or file empty");
+        render_at_section(PADDING, CMD_LINE_Y, "Read failed or file empty", footer_id);
     }
 }
 
-static void command_write(const char *buf) {
+static void write_to_file(const char *buffer) {
     if (fd == -1) {
-        render_at(PADDING, INFO_LINE_Y, "No file currently open");
+        render_at_section(PADDING, INFO_LINE_Y, "No file currently open", footer_id);
         return;
     }
-    write(fd, buf);
-    render_at(PADDING, INFO_LINE_Y, "Wrote to the file, now reading it");
-    command_read(0);
+    write(fd, buffer);
+    render_at_section(PADDING, INFO_LINE_Y, "Wrote to the file, now reading it", footer_id);
+    read_file(0);
 }
-
-static void command_open(const char *filename) {
+static void open_file(const char *flag_and_path) {
     if (fd != -1) {
         close(fd);
     }
 
-    char *cpy_path = (char *)filename;
+    char *cpy_path = (char *)flag_and_path;
     uint32_t flag  = O_RDONLY;
 
     if (str_starts_with(cpy_path, "-a ")) {
@@ -105,100 +159,47 @@ static void command_open(const char *filename) {
         flag = O_RDWR;
         cpy_path += 4;
     } else {
-        render_at(PADDING, INFO_LINE_Y, "special flag not provided opening with read_only");
+        render_at_section(PADDING, INFO_LINE_Y, "special flag not provided opening with read_only", footer_id);
         cpy_path += 3;
     }
 
     fd = open(cpy_path, flag);
     if (fd == -1) {
-        render_at(PADDING, INFO_LINE_Y, "read on opening the file");
+        render_at_section(PADDING, INFO_LINE_Y, "read on opening the file", footer_id);
         return;
     }
-    render_at(PADDING, INFO_LINE_Y, "Opened the file, now reading it");
-    command_read(0);
+    render_at_section(PADDING, INFO_LINE_Y, "Opened the file, now reading it", footer_id);
+    read_file(0);
 }
 
-static void command_close(const char *arg) {
-    (void)arg;
-    if (fd == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "No open file to close");
+static void create_dir(const char *flag_and_path) {
+    if (mkdir(flag_and_path) == STATUS_ERROR) {
+        render_at_section(PADDING, INFO_LINE_Y, "Could not create directories", footer_id);
         return;
     }
-    close(fd);
-    render_at(PADDING, INFO_LINE_Y, "File closed");
-    fd = -1;
+    render_at_section(PADDING, INFO_LINE_Y, "Directory(ies) created", footer_id);
 }
 
-static void command_mkdir(const char *directory_name) {
-    if (mkdir(directory_name) == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "Could not create directories");
-        return;
-    }
-    render_at(PADDING, INFO_LINE_Y, "Directory(ies) created");
-}
-
-static void command_cd(const char *path) {
+static void change_dir(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "Failed to change directory");
+        render_at_section(PADDING, INFO_LINE_Y, "Failed to change directory", footer_id);
     }
-}
-
-static void command_ls(const char *arg) {
-    (void)arg;
-    char dirents[512] = {0};
-    int read_size     = list_dirents(dirents, sizeof(dirents) - 1);
-    if (read_size <= 0) {
-        return;
-    }
-
-    int current_x      = PADDING_BETWEEN_FILES;
-    int current_text_y = 35 + HEADER_Y;
-    int folder_y       = 10 + HEADER_Y;
-    char *entry        = dirents;
-    set_background_color(COLOR_GRAY);
-    for (int i = 0; i < read_size; i++) {
-        if (dirents[i] == '\n' || dirents[i] == '\0') {
-            dirents[i] = '\0';
-
-            trim(entry);
-
-            if (entry[0] != '\0') {
-                if (strlen(entry) > 8) {
-                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)document);
-                } else {
-                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder);
-                }
-                render_at(current_x, current_text_y, entry);
-                current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
-            }
-            entry = &dirents[i + 1];
-        }
-    }
-}
-
-static void command_exit(const char *arg) {
-    (void)arg;
-    if (fd != STATUS_ERROR) {
-        close(fd);
-        fd = STATUS_ERROR;
-    }
-    terminate_program();
 }
 
 static const Command commands[] = {
-    {"help", command_help, 0},
-    {"close", command_close, 0},
-    {"read", command_read, 0},
-    {"ls", command_ls, 0},
-    {"exit", command_exit, 0},
-    {"write", command_write, 1},
-    {"open", command_open, 1},
-    {"mkdir", command_mkdir, 1},
-    {"cd", command_cd, 1},
+    {"help", show_commands, 0},
+    {"close", close_file, 0},
+    {"ls", list_directories, 0},
+    {"exit", quit_program, 0},
+    {"read", read_file, 0},
+    {"write", write_to_file, 1},
+    {"open", open_file, 1},
+    {"mkdir", create_dir, 1},
+    {"cd", change_dir, 1},
 };
 
 void exec_cmd(char *buf) {
-    set_background_color(COLOR_BLACK);
+    paint_section(main_id);
 
     const char *trimmed = skip_spaces(buf);
     if (*trimmed == '\0') {
@@ -217,7 +218,6 @@ void exec_cmd(char *buf) {
                 const char *arg = skip_spaces(trimmed + len);
 
                 if (cmd->requires_arg && *arg == '\0') {
-                    render_at(PADDING, INFO_LINE_Y, "Argument required");
                     return;
                 }
 
@@ -226,41 +226,42 @@ void exec_cmd(char *buf) {
             }
         }
     }
-
-    render_at(PADDING, INFO_LINE_Y, "Invalid command");
 }
 
 static void print_char(int buffer_x_pos, char c) {
     char tmp[2] = {c, '\0'};
-    render_at(buffer_x_pos, CMD_LINE_Y, tmp);
+    render_at_section(buffer_x_pos, CMD_LINE_Y, tmp, footer_id);
 }
 
 int main(void) {
-    if (resize_task_window(WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "Resizing window failed\n");
+    set_text_color(COLOR_WHITE, MAIN_WINDOW_KEY);
+    if (resize_task_window(WINDOW_WIDTH, WINDOW_HEIGTH, MAIN_WINDOW_KEY) == STATUS_ERROR) {
     }
 
-    if (move_task_window(SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "Moving task window failed\n");
+    if (move_task_window(SCREEN_CO_X, SCREEN_CO_Y, MAIN_WINDOW_KEY) == STATUS_ERROR) {
     }
 
-    set_text_color(COLOR_WHITE);
+    header_id = register_section(WINDOW_WIDTH, HEADER_BLOCK, 0, 0, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
-    if (paint_rectangle(WINDOW_WIDTH - (PADDING * 2), WINDOW_HEIGTH - (HEADER_Y + (FONT_HEIGHT * 3 + PADDING)), PADDING, HEADER_Y + (PADDING * 2), COLOR_GRAY) == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "Failed to paint main area rectange");
+    if (header_id != STATUS_ERROR) {
+        paint_section(header_id);
+        render_at_section(PADDING, PADDING, "Maccas filesystem interface", header_id);
     }
 
-    if (paint_rectangle(WINDOW_WIDTH - 2, (FONT_HEIGHT + 2), 1, CMD_LINE_Y - 1, COLOR_TEAL) == STATUS_ERROR) {
-        set_text_color(COLOR_BLACK);
-        render_at(PADDING, INFO_LINE_Y, "Failed to paint rectange to cmd line");
+    main_id = register_section(WINDOW_WIDTH, MAIN_AREA_BLOCK, 0, MAIN_AREA_START_Y,
+                               COLOR_WHITE, COLOR_DEEP_BLUE);
+
+    if (main_id != STATUS_ERROR) {
+        paint_section(main_id);
+        show_commands(0);
     }
 
-    if (paint_rectangle(WINDOW_WIDTH - 1000, HEADER_Y + 2, 1, 1, COLOR_TEAL) == STATUS_ERROR) {
-        render_at(PADDING, INFO_LINE_Y, "Failed to paint program header");
+    footer_id = register_section(WINDOW_WIDTH, FOOTER_BLOCK, 0, INFO_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
+
+    if (footer_id != STATUS_ERROR) {
+        paint_section(footer_id);
     }
 
-    set_background_color(COLOR_TEAL);
-    render_at(240, 3, "filesystem interface");
     char buf[BUF_SIZE];
     int pos = 0;
     char c;
@@ -268,18 +269,18 @@ int main(void) {
     const char *art_start = "[ --> ";
     const char *art_end   = " ] ";
 
-    while (1) {
-        set_background_color(COLOR_TEAL);
-        render_at(0, CMD_LINE_Y, "                                                                ");
+    render_at_section(PADDING, INFO_LINE_Y, "Maccas configurated and ready for use", footer_id);
 
-        int buffer_x_pos = 5;
-        render_at(buffer_x_pos, CMD_LINE_Y, art_start);
+    while (1) {
+        paint_section(footer_id);
+        int buffer_x_pos = PADDING;
+        render_at_section(buffer_x_pos, CMD_LINE_Y, art_start, footer_id);
         buffer_x_pos += strlen(art_start) * FONT_WIDTH;
 
-        render_at(buffer_x_pos, CMD_LINE_Y, dir_name);
+        render_at_section(buffer_x_pos, CMD_LINE_Y, dir_name, footer_id);
         buffer_x_pos += strlen(dir_name) * FONT_WIDTH;
 
-        render_at(buffer_x_pos, CMD_LINE_Y, art_end);
+        render_at_section(buffer_x_pos, CMD_LINE_Y, art_end, footer_id);
         buffer_x_pos += strlen(art_end) * FONT_WIDTH;
 
         pos = 0;
@@ -289,11 +290,6 @@ int main(void) {
                 continue;
             }
             if (c == '\n') {
-                set_background_color(COLOR_BLACK);
-                render_at(0, INFO_LINE_Y, "                                                                ");
-                if (paint_rectangle(WINDOW_WIDTH - (PADDING * 2), WINDOW_HEIGTH - (HEADER_Y + (FONT_HEIGHT * 3 + PADDING)), PADDING, HEADER_Y + (PADDING * 2), COLOR_GRAY) == STATUS_ERROR) {
-                    render_at(PADDING, INFO_LINE_Y, "Failed to paint main area rectange");
-                }
 
                 buf[pos] = '\0';
                 exec_cmd(buf);
@@ -302,7 +298,7 @@ int main(void) {
                 if (pos > 0) {
                     pos--;
                     buffer_x_pos -= FONT_WIDTH;
-                    render_at(buffer_x_pos, CMD_LINE_Y, " ");
+                    render_at_section(buffer_x_pos, CMD_LINE_Y, " ", footer_id);
                 }
             } else if (pos < BUF_SIZE - 1) {
                 buf[pos++] = c;

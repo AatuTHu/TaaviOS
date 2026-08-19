@@ -10,14 +10,13 @@
 - [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
 - [x] sys_caw and sys_conwi merged into single system call (sys_wi)
 - [x] sys_wi operation to draw image/sprite from ring 3 (blit user space buffer to window)
-- [50%] User space needs malloc/alloc
+- [100%] User space needs malloc/alloc
 - [ ] GUI scroll screen up and down
 - [ ] Shell arrow traversal
 - [ ] Blinking cursor
 - [ ] fs_int more complex file system management.
 - [ ] First real text editor
-- [ ] Keyboard routing fixes
-- [ ] Virtual tasks return adds random chars at the end of the list
+- [x] Virtual tasks return adds random chars at the end of the list
 
 **Concurrency / Locks** <- Not too urgent
 - Add a locking mechanism in which interrupts are disabled but only can be active at one place at a time. To prevent deadlocks

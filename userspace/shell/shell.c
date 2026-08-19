@@ -123,7 +123,7 @@ static void command_move(const char *positions) {
         ptr++;
     }
 
-    if (move_task_window(x, y) == STATUS_ERROR) {
+    if (move_task_window(x, y, MAIN_WINDOW_KEY) == STATUS_ERROR) {
         print("Failed to move window\n");
     }
 }
@@ -169,7 +169,7 @@ static void command_resize(const char *dimensions) {
         ptr++;
     }
 
-    if (resize_task_window(width, height) == STATUS_ERROR) {
+    if (resize_task_window(width, height, MAIN_WINDOW_KEY) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 }
@@ -234,15 +234,15 @@ int main(void) {
         return 1;
     }
 
-    if (resize_task_window(600, 200) == STATUS_ERROR) {
+    if (resize_task_window(600, 200, MAIN_WINDOW_KEY) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 
-    if (move_task_window(40, 750) == STATUS_ERROR) {
+    if (move_task_window(20, 750, MAIN_WINDOW_KEY) == STATUS_ERROR) {
         print("Failed to move window\n");
     }
 
-    set_text_color(COLOR_WHITE);
+    set_text_color(COLOR_WHITE, MAIN_WINDOW_KEY);
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
