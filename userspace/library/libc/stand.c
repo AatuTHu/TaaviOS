@@ -54,7 +54,7 @@ static int format_dirents(char *dirents, int dirents_size) {
 
             LOG("amount_of_spaces: %d before extension\n", amount_of_spaces);
 
-            if (amount_of_spaces == 1) {
+            if (amount_of_spaces == 0) {
                 continue;
             }
 
