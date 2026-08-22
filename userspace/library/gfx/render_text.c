@@ -9,19 +9,20 @@
 
 void render_at_section(uint32_t x, uint32_t y, const char *msg, uint32_t section_key) {
 
-    window_t *entry = window_components[section_key];
+    window_t *entry  = window_components[section_key];
+    window_t *parent = window_components[MAIN_WINDOW_KEY];
 
-    if (entry == NULL) {
+    if (entry == NULL || parent == NULL) {
         LOG("Invalid entry\n");
         return;
     }
 
-    if (x < entry->border_width) {
-        x += entry->border_width;
+    if (x < parent->border_width) {
+        x += parent->border_width;
     }
 
-    if (y < entry->border_width) {
-        y += entry->border_width;
+    if (y < parent->border_width) {
+        y += parent->border_width;
     }
 
     gui_params_pack params;

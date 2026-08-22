@@ -1,6 +1,7 @@
 #include "document.h"
 #include "folder.h"
 #include "font.h"
+#include "log.h"
 #include "op_sy.h"
 #include "render.h"
 #include "shared.h"
@@ -83,12 +84,11 @@ static void list_directories(const char *args) {
     int current_text_y = 35 + HEADER_BLOCK;
     int folder_y       = 10 + HEADER_BLOCK;
     char *entry        = dirents;
+
     for (int i = 0; i < read_size; i++) {
         if (dirents[i] == '\n' || dirents[i] == '\0') {
             dirents[i] = '\0';
-
             trim(entry);
-
             if (entry[0] != '\0') {
                 if (strlen(entry) > 8) {
                     draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)document, main_id);
@@ -179,17 +179,17 @@ static void create_dir(const char *flag_and_path) {
     }
     render_at_section(PADDING, INFO_LINE_Y, "Directory(ies) created", footer_id);
 }
-
 static void change_dir(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {
         render_at_section(PADDING, INFO_LINE_Y, "Failed to change directory", footer_id);
     }
+    list_directories(0);
 }
 
 static const Command commands[] = {
     {"help", show_commands, 0},
-    {"close", close_file, 0},
     {"ls", list_directories, 0},
+    {"close", close_file, 0},
     {"exit", quit_program, 0},
     {"read", read_file, 0},
     {"write", write_to_file, 1},
@@ -245,7 +245,7 @@ int main(void) {
 
     if (header_id != STATUS_ERROR) {
         paint_section(header_id);
-        render_at_section(PADDING, PADDING, "Maccas filesystem interface", header_id);
+        render_at_section(PADDING, 0, "Maccas filesystem interface", header_id);
     }
 
     main_id = register_section(WINDOW_WIDTH, MAIN_AREA_BLOCK, 0, MAIN_AREA_START_Y,

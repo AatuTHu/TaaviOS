@@ -5,7 +5,6 @@
 #include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
-#include <math.h>
 #include <stdint.h>
 
 window_t *window_components[MAX_SECTIONS];
@@ -51,8 +50,11 @@ static int parse_dimensions(const char *ptr, int *w, int *h) {
     return STATUS_OK;
 }
 
-static void clamp_borders_to_window(window_t *entry) {
+static void clamp_borders_to_window(uint32_t key) {
     gui_params_pack params;
+
+    window_t *entry = window_components[key];
+
     memset(&params, 0, sizeof(params));
     params.opcode     = PAINT_WINDOW;
     params.struct_key = entry->window_id;
@@ -121,7 +123,7 @@ int resize_task_window(int w, int h, uint32_t key) {
     entry->width  = w;
     entry->height = h;
 
-    // clamp_borders_to_window(entry);
+    clamp_borders_to_window(key);
 
     return result;
 }
@@ -143,10 +145,14 @@ int paint_section(uint32_t key) {
     return sys_conwi(&params);
 }
 
-int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color, uint32_t key) {
+int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    window_t *entry        = window_components[key];
+    window_t *entry = window_components[MAIN_WINDOW_KEY];
+
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
 
     uint32_t double_border = entry->border_width * 2;
 
@@ -200,8 +206,6 @@ int move_task_window(int x, int y, uint32_t key) {
     params.fg_color   = entry->fg_color;
     params.bg_color   = entry->bg_color;
 
-    //    clamp_borders_to_window();
-
     return sys_conwi(&params);
 }
 
@@ -247,10 +251,41 @@ int register_section(uint32_t width, uint32_t height, uint32_t x, uint32_t y, ui
 
     window_t *new_entry = (window_t *)malloc(sizeof(window_t));
 
+    memset(new_entry, 0, sizeof(window_t));
+
     if (new_entry == NULL) {
         LOG("Could not allocate memory for new section entry\n");
         return STATUS_ERROR;
     }
+
+    uint32_t double_border = parent->border_width * 2;
+
+    uint32_t max_w         = (parent->width > double_border) ? (parent->width - double_border) : 0;
+    uint32_t max_h         = (parent->height > double_border) ? (parent->height - double_border) : 0;
+
+    if (x < parent->border_width) {
+        x = parent->border_width;
+    }
+    if (y < parent->border_width) {
+        y = parent->border_width;
+    }
+
+    if (x >= parent->width - parent->border_width) {
+        width = 0;
+    } else if (x + width > parent->width - parent->border_width) {
+        width = (parent->width - parent->border_width) - x;
+    }
+
+    if (y >= parent->height - parent->border_width) {
+        height = 0;
+    } else if (y + height > parent->height - parent->border_width) {
+        height = (parent->height - parent->border_width) - y;
+    }
+
+    if (width > max_w)
+        width = max_w;
+    if (height > max_h)
+        height = max_h;
 
     new_entry->window_id              = parent->window_id;
     new_entry->width                  = width;
@@ -264,6 +299,7 @@ int register_section(uint32_t width, uint32_t height, uint32_t x, uint32_t y, ui
     new_entry->def_vertical_padding   = 0;
     new_entry->bg_color               = background_color;
     new_entry->fg_color               = foreground_color;
+    new_entry->border_color           = COLOR_DARKER_GRAY;
 
     window_components[slot]           = new_entry;
 
@@ -279,6 +315,7 @@ int register_section(uint32_t width, uint32_t height, uint32_t x, uint32_t y, ui
 
 int init_render() {
     // LOG("Renderer initialized\n");
+    memset(window_components, 0, sizeof(window_components));
     int window_id = create_task_window(300, 150, 10, 10, COLOR_WHITE, COLOR_BLACK);
 
     if (window_id == STATUS_ERROR) {
@@ -295,12 +332,12 @@ int init_render() {
 
     // LOG("Initializing renderer\n");
     entry->window_id                 = window_id;
-    entry->border_color              = COLOR_DARKER_GRAY;
+    entry->border_color              = COLOR_ORAGNE_MUD;
     entry->border_width              = 4;
     entry->def_vertical_padding      = 1 + entry->border_width;
     entry->def_horizontal_padding    = 1 + entry->border_width;
-    entry->width                     = 200;
-    entry->height                    = 100;
+    entry->width                     = 300;
+    entry->height                    = 150;
     entry->cursor_x_pos              = entry->def_horizontal_padding;
     entry->cursor_y_pos              = entry->def_vertical_padding;
     entry->fg_color                  = COLOR_WHITE;
@@ -308,7 +345,7 @@ int init_render() {
 
     window_components[RESERVED_SLOT] = entry;
 
-    // clamp_borders_to_window();
+    clamp_borders_to_window(MAIN_WINDOW_KEY);
 
     return STATUS_OK;
 }

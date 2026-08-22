@@ -28,7 +28,7 @@ int init_render();
 int render(const char *text, uint32_t len);
 void render_at(uint32_t x, uint32_t y, const char *msg);
 void render_at_section(uint32_t x, uint32_t y, const char *msg, uint32_t section_key);
-int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color, uint32_t key);
+int paint_rectangle(uint32_t width, uint32_t height, uint32_t x, uint32_t y, uint32_t color);
 int paint_section(uint32_t key);
 int create_task_window(int w, int h, int x, int y, uint32_t foreground_color, uint32_t background_color);
 int resize_task_window(int w, int h, uint32_t key);

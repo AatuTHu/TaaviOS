@@ -1,8 +1,10 @@
 #include "stand.h"
+#include "log.h"
+#include "malloc.h"
 #include "render.h"
-#include "shared.h"
 #include "string.h"
 #include "sys_calls.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 #define forward 0
@@ -10,67 +12,64 @@
 #define MAX_PATH_LEN 128
 static char save_path[MAX_PATH_LEN];
 
-int parse_flags_from_commands(char *command) {
-    int i          = 0;
-    uint32_t flags = 0;
-
-    if (command == NULL) {
-        return STATUS_ERROR;
+static int format_dirents(char *dirents, int dirents_size) {
+    if (dirents_size <= 0 || dirents == NULL) {
+        LOG("Dirents not found\n");
+        return STATUS_OK;
     }
 
-    while (command[i] != '\0') {
+    for (int i = 0; i < dirents_size; i++) {
 
-        if (command[i] == ' ' && command[i + 1] != '-') {
-            *command += i;
+        if (dirents[i] == '\0') {
+            break;
         }
 
-        if (command[i] == '-') {
-
-            while (command[i] == '-') {
-                i++;
-            }
-
-            int len = strlen(command) - i;
-
-            if (len <= 0) {
-                return STATUS_ERROR;
-            }
-
-            char flag[len];
-            for (int j = 0; j < len; j++) {
-                if (command[i + j] == '\0' || command[i + j] == ' ') {
-                    i += j;
-                    flag[j] = '\0';
+        if (dirents[i] == ' ') {
+            dirents[i] = '.';
+            i++;
+            int amount_of_spaces = 0;
+            bool has_extension   = false;
+            int j                = i;
+            for (j = i; j < dirents_size; j++) {
+                if (dirents[j] == '\0' || dirents[j] == '\n') {
                     break;
                 }
-                flag[j] = command[j + i];
+
+                if (dirents[j] == ' ') {
+                    amount_of_spaces++;
+                    LOG("Was a space: %d\n", amount_of_spaces);
+                }
+
+                if (dirents[j] != ' ') {
+                    has_extension = true;
+                    LOG("Has extensions\n");
+                    break;
+                }
             }
 
-            if (strcmp(flag, "a") == 0 && !(flags & O_APPEND)) {
-                flags += O_APPEND;
+            if (has_extension == false) {
+                dirents[i - 1] = ' ';
+                continue;
             }
 
-            if (strcmp(flag, "r") == 0 && !(flags & O_RDONLY)) {
-                flags += O_RDONLY;
+            LOG("amount_of_spaces: %d before extension\n", amount_of_spaces);
+
+            if (amount_of_spaces == 1) {
+                continue;
             }
 
-            if (strcmp(flag, "rw") == 0 && !(flags & O_RDWR)) {
-                flags += O_RDWR;
-            }
-
-            if (strcmp(flag, "w") == 0 && !(flags & O_WRONLY)) {
-                flags += O_WRONLY;
-            }
-
-            if (strcmp(flag, "c") == 0 && !(flags & O_CREAT)) {
-                flags += O_CREAT;
+            for (j = i; j < dirents_size; j++) {
+                if (dirents[j] == '\0') {
+                    break;
+                }
+                dirents[j] = dirents[j + amount_of_spaces];
             }
         }
-
-        i++;
     }
 
-    return flags;
+    LOG("Dirents after format: %s", dirents);
+
+    return strlen(dirents);
 }
 
 static int parse_segment_from_path(const char *path, char *dir_name, int max_dir_len) {
@@ -138,7 +137,21 @@ int change_directory(const char *path, char *directory_name) {
 }
 
 int list_dirents(char *buf, int buffer_size) {
-    return sys_getdirents(buf, buffer_size);
+    char *dirents = (char *)malloc(buffer_size);
+
+    if (dirents == NULL) {
+        LOG("Could not allocate buffer for directory entries\n");
+        return STATUS_ERROR;
+    }
+
+    if (sys_getdirents(buf, buffer_size) == STATUS_ERROR) {
+        LOG("Failed to read directory entries\n");
+        return STATUS_ERROR;
+    }
+
+    return format_dirents(buf, buffer_size);
+
+    // memcpy(buf, dirents, buffer_size);
 }
 
 void print(const char *msg) {

@@ -236,7 +236,7 @@ static int gui_paint_rectangle(request_table *req) {
         DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.y: %d req.height: %d, entry.hei: %d\n", req->y, req->height, entry->height);
 
         if (req->height > entry->height) {
-            req->height = entry->width;
+            req->height = entry->height;
         }
         req->y = entry->height - req->height;
     }
@@ -470,7 +470,7 @@ void gui_init(task_t *gui_task) {
     bg_color = COLOR_DARKER_GREEN;
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Initializing program windows\n");
-    memset(program_windows, 0, sizeof(blueprint_t));
+    memset(program_windows, 0, sizeof(program_windows));
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Creating main screen\n");
     fb_clear((uint32_t *)fb.virt_addr, fb.width, fb.height, bg_color);
