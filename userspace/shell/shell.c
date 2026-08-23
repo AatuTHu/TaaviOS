@@ -213,7 +213,7 @@ void exec_cmd(char *buf) {
                 return;
             }
         } else {
-            if (str_eq(buf, cmd->name) == 1) {
+            if (str_eq(buf, (char *)cmd->name) == 1) {
                 cmd->handler(NULL);
                 return;
             }
@@ -234,15 +234,15 @@ int main(void) {
         return 1;
     }
 
-    if (resize_task_window(600, 200, MAIN_WINDOW_KEY) == STATUS_ERROR) {
+    if (resize_task_window(MAIN_WINDOW_KEY, 600, 200) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 
-    if (move_task_window(20, 750, MAIN_WINDOW_KEY) == STATUS_ERROR) {
+    if (move_task_window(MAIN_WINDOW_KEY, 20, 750) == STATUS_ERROR) {
         print("Failed to move window\n");
     }
 
-    set_text_color(COLOR_WHITE, MAIN_WINDOW_KEY);
+    set_text_color(MAIN_WINDOW_KEY, COLOR_WHITE);
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
@@ -255,6 +255,7 @@ int main(void) {
         pos = 0;
 
         while (1) {
+            paint_cursor_position(COLOR_LIGHT_GRAY);
             if (scan(&c) <= 0) {
                 continue;
             }
@@ -264,6 +265,16 @@ int main(void) {
                 print("\n");
                 exec_cmd(buf);
                 break;
+            } else if (c == KEY_LEFT) {
+                if (pos > 0) {
+                    pos--;
+                    print_char(c);
+                }
+            } else if (c == KEY_RIGHT) {
+                if (pos < 600) {
+                    pos++;
+                    print_char(c);
+                }
             } else if (c == '\b') {
                 if (pos > 0) {
                     pos--;

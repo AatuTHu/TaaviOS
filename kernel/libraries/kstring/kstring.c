@@ -20,7 +20,7 @@ void *memmove(void *dest, const void *src, size_t n) {
         while (n--)
             *d++ = *s++;
     else {
-        char *lasts = s + (n - 1);
+        char *lasts = (char *)s + (n - 1);
         char *lastd = d + (n - 1);
         while (n--)
             *lastd-- = *lasts--;

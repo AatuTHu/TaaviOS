@@ -119,4 +119,9 @@ typedef enum {
 #define COLOR_CHARTREUSE 0x7FFF00
 #define COLOR_ORAGNE_MUD 0x90561e
 
+#define KEY_UP 0x11
+#define KEY_DOWN 0x12
+#define KEY_LEFT 0x13
+#define KEY_RIGHT 0x14
+
 #endif

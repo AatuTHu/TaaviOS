@@ -150,8 +150,6 @@ int list_dirents(char *buf, int buffer_size) {
     }
 
     return format_dirents(buf, buffer_size);
-
-    // memcpy(buf, dirents, buffer_size);
 }
 
 void print(const char *msg) {

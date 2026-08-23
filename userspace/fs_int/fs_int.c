@@ -49,26 +49,26 @@ static const char *skip_spaces(const char *str) {
 
 static void show_commands(const char *args) {
     (void)args;
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING, "Available commands:", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT, "- help         'Prints this list'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 2, "- open  [path] 'Open a file'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 3, "- write [text] 'Writes to opened file'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 4, "- mkdir [text] 'Creates a directory'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 5, "- cd    [text] 'Changes working directory'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 6, "- ls           'Lists directory contents'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 7, "- read         'Reads the opened file'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 8, "- close        'Close opened file'", main_id);
-    render_at_section(PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 9, "- exit         'Close fs_interface'", main_id);
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING, "Available commands:");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT, "- help         'Prints this list'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 2, "- open  [path] 'Open a file'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 3, "- write [text] 'Writes to opened file'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 4, "- mkdir [text] 'Creates a directory'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 5, "- cd    [text] 'Changes working directory'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 6, "- ls           'Lists directory contents'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 7, "- read         'Reads the opened file'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 8, "- close        'Close opened file'");
+    render_at_section(main_id, PADDING, MAIN_AREA_START_Y + PADDING + FONT_HEIGHT * 9, "- exit         'Close fs_interface'");
 }
 
 static void close_file(const char *args) {
     (void)args;
     if (fd == STATUS_ERROR) {
-        render_at_section(PADDING, INFO_LINE_Y, "No open file to close", footer_id);
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "No open file to close");
         return;
     }
     close(fd);
-    render_at_section(PADDING, INFO_LINE_Y, "File closed", footer_id);
+    render_at_section(footer_id, PADDING, INFO_LINE_Y, "File closed");
     fd = -1;
 }
 
@@ -91,11 +91,11 @@ static void list_directories(const char *args) {
             trim(entry);
             if (entry[0] != '\0') {
                 if (strlen(entry) > 8) {
-                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)document, main_id);
+                    draw_buffer(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)document);
                 } else {
-                    draw_buffer(32, 32, current_x, folder_y, 1, (uint32_t *)folder, main_id);
+                    draw_buffer(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)folder);
                 }
-                render_at_section(current_x, current_text_y, entry, main_id);
+                render_at_section(main_id, current_x, current_text_y, entry);
                 current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
             }
             entry = &dirents[i + 1];
@@ -115,7 +115,7 @@ static void quit_program(const char *args) {
 static void read_file(const char *args) {
     (void)args;
     if (fd == STATUS_ERROR) {
-        render_at_section(PADDING, INFO_LINE_Y, "No file currently open", footer_id);
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
 
@@ -123,19 +123,19 @@ static void read_file(const char *args) {
     int nread     = read(fd, buf, sizeof(buf) - 1);
 
     if (nread != -1) {
-        render_at_section(PADDING, MAIN_AREA_START_Y, buf, main_id);
+        render_at_section(main_id, PADDING, MAIN_AREA_START_Y, buf);
     } else {
-        render_at_section(PADDING, CMD_LINE_Y, "Read failed or file empty", footer_id);
+        render_at_section(footer_id, PADDING, CMD_LINE_Y, "Read failed or file empty");
     }
 }
 
 static void write_to_file(const char *buffer) {
     if (fd == -1) {
-        render_at_section(PADDING, INFO_LINE_Y, "No file currently open", footer_id);
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
     write(fd, buffer);
-    render_at_section(PADDING, INFO_LINE_Y, "Wrote to the file, now reading it", footer_id);
+    render_at_section(footer_id, PADDING, INFO_LINE_Y, "Wrote to the file, now reading it");
     read_file(0);
 }
 static void open_file(const char *flag_and_path) {
@@ -159,29 +159,28 @@ static void open_file(const char *flag_and_path) {
         flag = O_RDWR;
         cpy_path += 4;
     } else {
-        render_at_section(PADDING, INFO_LINE_Y, "special flag not provided opening with read_only", footer_id);
-        cpy_path += 3;
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "special flag not provided opening with read_only");
     }
 
     fd = open(cpy_path, flag);
     if (fd == -1) {
-        render_at_section(PADDING, INFO_LINE_Y, "read on opening the file", footer_id);
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "read on opening the file");
         return;
     }
-    render_at_section(PADDING, INFO_LINE_Y, "Opened the file, now reading it", footer_id);
+    render_at_section(footer_id, PADDING, INFO_LINE_Y, "Opened the file, now reading it");
     read_file(0);
 }
 
 static void create_dir(const char *flag_and_path) {
     if (mkdir(flag_and_path) == STATUS_ERROR) {
-        render_at_section(PADDING, INFO_LINE_Y, "Could not create directories", footer_id);
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "Could not create directories");
         return;
     }
-    render_at_section(PADDING, INFO_LINE_Y, "Directory(ies) created", footer_id);
+    render_at_section(footer_id, PADDING, INFO_LINE_Y, "Directory(ies) created");
 }
 static void change_dir(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {
-        render_at_section(PADDING, INFO_LINE_Y, "Failed to change directory", footer_id);
+        render_at_section(footer_id, PADDING, INFO_LINE_Y, "Failed to change directory");
     }
     list_directories(0);
 }
@@ -230,25 +229,25 @@ void exec_cmd(char *buf) {
 
 static void print_char(int buffer_x_pos, char c) {
     char tmp[2] = {c, '\0'};
-    render_at_section(buffer_x_pos, CMD_LINE_Y, tmp, footer_id);
+    render_at_section(footer_id, buffer_x_pos, CMD_LINE_Y, tmp);
 }
 
 int main(void) {
-    set_text_color(COLOR_WHITE, MAIN_WINDOW_KEY);
-    if (resize_task_window(WINDOW_WIDTH, WINDOW_HEIGTH, MAIN_WINDOW_KEY) == STATUS_ERROR) {
+    set_text_color(MAIN_WINDOW_KEY, COLOR_WHITE);
+    if (resize_task_window(MAIN_WINDOW_KEY, WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
     }
 
-    if (move_task_window(SCREEN_CO_X, SCREEN_CO_Y, MAIN_WINDOW_KEY) == STATUS_ERROR) {
+    if (move_task_window(MAIN_WINDOW_KEY, SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
     }
 
-    header_id = register_section(WINDOW_WIDTH, HEADER_BLOCK, 0, 0, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    header_id = register_section(0, 0, WINDOW_WIDTH, HEADER_BLOCK, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
     if (header_id != STATUS_ERROR) {
         paint_section(header_id);
-        render_at_section(PADDING, 0, "Maccas filesystem interface", header_id);
+        render_at_section(header_id, PADDING, 0, "Maccas filesystem interface");
     }
 
-    main_id = register_section(WINDOW_WIDTH, MAIN_AREA_BLOCK, 0, MAIN_AREA_START_Y,
+    main_id = register_section(0, MAIN_AREA_START_Y, WINDOW_WIDTH, MAIN_AREA_BLOCK,
                                COLOR_WHITE, COLOR_DEEP_BLUE);
 
     if (main_id != STATUS_ERROR) {
@@ -256,7 +255,7 @@ int main(void) {
         show_commands(0);
     }
 
-    footer_id = register_section(WINDOW_WIDTH, FOOTER_BLOCK, 0, INFO_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    footer_id = register_section(0, INFO_LINE_Y, WINDOW_WIDTH, FOOTER_BLOCK, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
     if (footer_id != STATUS_ERROR) {
         paint_section(footer_id);
@@ -269,18 +268,18 @@ int main(void) {
     const char *art_start = "[ --> ";
     const char *art_end   = " ] ";
 
-    render_at_section(PADDING, INFO_LINE_Y, "Maccas configurated and ready for use", footer_id);
+    render_at_section(footer_id, PADDING, INFO_LINE_Y, "Maccas configurated and ready for use");
 
     while (1) {
         paint_section(footer_id);
         int buffer_x_pos = PADDING;
-        render_at_section(buffer_x_pos, CMD_LINE_Y, art_start, footer_id);
+        render_at_section(footer_id, buffer_x_pos, CMD_LINE_Y, art_start);
         buffer_x_pos += strlen(art_start) * FONT_WIDTH;
 
-        render_at_section(buffer_x_pos, CMD_LINE_Y, dir_name, footer_id);
+        render_at_section(footer_id, buffer_x_pos, CMD_LINE_Y, dir_name);
         buffer_x_pos += strlen(dir_name) * FONT_WIDTH;
 
-        render_at_section(buffer_x_pos, CMD_LINE_Y, art_end, footer_id);
+        render_at_section(footer_id, buffer_x_pos, CMD_LINE_Y, art_end);
         buffer_x_pos += strlen(art_end) * FONT_WIDTH;
 
         pos = 0;
@@ -298,7 +297,7 @@ int main(void) {
                 if (pos > 0) {
                     pos--;
                     buffer_x_pos -= FONT_WIDTH;
-                    render_at_section(buffer_x_pos, CMD_LINE_Y, " ", footer_id);
+                    render_at_section(footer_id, buffer_x_pos, CMD_LINE_Y, " ");
                 }
             } else if (pos < BUF_SIZE - 1) {
                 buf[pos++] = c;

@@ -4,7 +4,8 @@
 #include "isr.h"
 #include "klog.h"
 #include "sched.h"
-
+#include "shared.h"
+#include <stdbool.h>
 /**
  * Keyboard driver & routing
  * Design & Implementation
@@ -19,6 +20,7 @@ static int ctrl_pressed                   = 0;
 static int waiting_queue_count            = 0;
 static int operator_pid                   = -1;
 static int waiting_queue[MAX_TASKS];
+static int extended_prefix = 0;
 
 int keyboard_get_foreground_pid() {
     return keyboard_buffer->foreground_pid;
@@ -125,6 +127,11 @@ void keyboard_handler(uint8_t scancode) {
         return;
     }
 
+    if (scancode == 0xE0) {
+        extended_prefix = 1;
+        return;
+    }
+
     if (scancode == 0x1D) {
         ctrl_pressed = 1;
         return;
@@ -137,6 +144,35 @@ void keyboard_handler(uint8_t scancode) {
 
     if (scancode == 0x3A) {
         caps_lock_pressed = 1 - caps_lock_pressed;
+        return;
+    }
+
+    if (extended_prefix) {
+        extended_prefix          = 0;
+        bool did_press_arrow_key = false;
+        switch (scancode) {
+        case 0x48:
+            keyboard_write_to_buffer(KEY_UP);
+            did_press_arrow_key = true;
+            break;
+        case 0x50:
+            keyboard_write_to_buffer(KEY_DOWN);
+            did_press_arrow_key = true;
+            break;
+        case 0x4B:
+            keyboard_write_to_buffer(KEY_LEFT);
+            did_press_arrow_key = true;
+            break;
+        case 0x4D:
+            keyboard_write_to_buffer(KEY_RIGHT);
+            did_press_arrow_key = true;
+            break;
+        default:
+            break;
+        }
+        if (did_press_arrow_key) {
+            scheduler_wake_task(keyboard_buffer->foreground_pid);
+        }
         return;
     }
 
