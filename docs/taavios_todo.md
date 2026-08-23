@@ -10,47 +10,14 @@
 - [x] fs task to create the virtual directory (sys_info/tasks, idle-cycle-refreshed static cache)
 - [x] sys_caw and sys_conwi merged into single system call (sys_wi)
 - [x] sys_wi operation to draw image/sprite from ring 3 (blit user space buffer to window)
-- [100%] User space needs malloc/alloc
+- [x] User space needs malloc/alloc
 - [ ] GUI scroll screen up and down
-- [ ] Shell arrow traversal
+- [50%] left and right working Shell arrow traversal
 - [ ] Blinking cursor
 - [ ] fs_int more complex file system management.
 - [ ] First real text editor
 - [x] Virtual tasks return adds random chars at the end of the list
+- [ ] Batch gfx operations. (Many requests on one sys call)
 
-**Concurrency / Locks** <- Not too urgent
-- Add a locking mechanism in which interrupts are disabled but only can be active at one place at a time. To prevent deadlocks
-
-**Fs_task**
-- if closing a file fails we set the req as failed but don't do anything to it after that -> continue.
-
-**Doctor_task**
-- Make a diagnostic tool that sends requests to other clerks and makes report to shell for now.
-- Make a diagnostics user app for this
-
-**Kernel / System calls / sched**
-- O_CREAT for files -> not started.
-- get ticks/get uptime system call not started (needed for cursor blink)
-- Look in to how to get scheduler work with the task_table array already filled at task.c
-
-**File system**
-- curr_offset open behavior not finalized
-- sys_delete -> not started
-- update dir -> not working. If used the sysbin folder that is created with make
-
-**VGA / FB**
-- VGA/FB mapped directly in paging -> should go through VMM like all other memory <- deferred mapping function added to vmm. fb goes through this. VGA  still doesn't, but it is not used anyways at the moment.
-- VGA driver poorly written -> scroll maybe broken
-- Scroll up/down on arrow key press
-- Black is not really a black. It is 0x010101 and 0x000000 is transparent. A hacky way but works for now.
-- gui draws mascot/logo, set the background at init.
-- Add print_at function that prints text to given x and y positions.
-
-**Memory**
-- Look into how we can allocate more heap if it is at the end <- Was able to build this. However
-  it can allocate more space for heap. But if the space is deallocated it should be returned?
-  That is the whole point to not have huge amount of heap at the start? <- idea cooking
-- On Task dead the VMM_FREE_USER_SPACE can make an early return. In that case parts of it is destroyed but not all. Ill cook something for this
-- kernel maps heap for user space. Only adding more not shrinking it.
 
 

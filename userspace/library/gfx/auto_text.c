@@ -5,21 +5,13 @@
 #include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
+#include <stdint.h>
 
 /**
  * TaaviOS printing manager
  * Design & Implementation:
  * @author: A.H, 2026
  */
-
-#define MAX_LINES 32
-#define LINE_LENGTH 256
-
-typedef struct line_history_t {
-    const char *line;
-} line_history_t;
-
-static line_history_t lines[MAX_LINES];
 
 /**
  * pack_params_and_send - build a gui_params_pack and send it to the kernel.
@@ -49,6 +41,7 @@ static int pack_params_and_send(uint8_t opcode, uint32_t key, uint32_t x, uint32
     params.buffer_size = strlen(buf);
     params.fg_color    = fg;
     params.bg_color    = bg;
+
     return sys_conwi(&params);
 }
 
@@ -287,6 +280,20 @@ int render(const char *text, uint32_t len) {
             if (entry->cursor_x_pos <= entry->width - FONT_WIDTH) {
                 paint_cursor_position(entry->bg_color);
                 entry->cursor_x_pos += FONT_WIDTH;
+            }
+            return STATUS_OK;
+        case KEY_UP:
+            if (entry->cursor_y_pos > 0) {
+                entry->cursor_y_pos -= FONT_HEIGHT;
+                paint_cursor_position(entry->bg_color);
+            }
+            return STATUS_OK;
+        case KEY_DOWN:
+            if ((entry->cursor_y_pos + FONT_HEIGHT) >= (entry->height - entry->def_vertical_padding)) {
+                scroll_down(entry);
+                entry->cursor_y_pos = entry->height - FONT_HEIGHT - entry->def_vertical_padding;
+            } else {
+                entry->cursor_y_pos += FONT_HEIGHT;
             }
             return STATUS_OK;
         }

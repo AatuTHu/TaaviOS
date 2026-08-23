@@ -285,11 +285,9 @@ int main(void) {
         pos = 0;
 
         while (1) {
-            if (scan(&c) <= 0) {
-                continue;
-            }
-            if (c == '\n') {
+            scan(&c);
 
+            if (c == '\n') {
                 buf[pos] = '\0';
                 exec_cmd(buf);
                 break;
