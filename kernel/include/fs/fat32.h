@@ -108,7 +108,7 @@ uint32_t fat32_write_file(const uint8_t *buf, uint32_t size);
 int fat32_write_file_at_offset(uint32_t first_cluster, uint32_t offset,
                                const uint8_t *buf, uint32_t size);
 int fat32_mkdirp(uint32_t parent_cluster, const char *path);
-int fat32_mkdir(uint32_t directory_cluster, const char *directory_name);
+int fat32_create_dirent(uint32_t directory_cluster, const char *directory_name, uint32_t entry_attributes);
 
 /* DELETE */
 

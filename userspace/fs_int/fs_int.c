@@ -50,16 +50,16 @@ static const char *skip_spaces(const char *str) {
 
 static void show_commands(const char *args) {
     (void)args;
-    render_at_section(main_id, "Available commands:\n");
-    render_at_section(main_id, "- help         'Prints this list'\n");
-    render_at_section(main_id, "- open  [path] 'Open a file'\n");
-    render_at_section(main_id, "- write [text] 'Writes to opened file'\n");
-    render_at_section(main_id, "- mkdir [text] 'Creates a directory'\n");
-    render_at_section(main_id, "- cd    [text] 'Changes working directory'\n");
-    render_at_section(main_id, "- ls           'Lists directory contents'\n");
-    render_at_section(main_id, "- read         'Reads the opened file'\n");
-    render_at_section(main_id, "- close        'Close opened file'\n");
-    render_at_section(main_id, "- exit         'Close fs_interface'\n");
+    print_at(main_id, "Available commands:\n");
+    print_at(main_id, "- help         'Prints this list'\n");
+    print_at(main_id, "- open  [path] 'Open a file'\n");
+    print_at(main_id, "- write [text] 'Writes to opened file'\n");
+    print_at(main_id, "- mkdir [text] 'Creates a directory'\n");
+    print_at(main_id, "- cd    [text] 'Changes working directory'\n");
+    print_at(main_id, "- ls           'Lists directory contents'\n");
+    print_at(main_id, "- read         'Reads the opened file'\n");
+    print_at(main_id, "- close        'Close opened file'\n");
+    print_at(main_id, "- exit         'Close fs_interface'\n");
 }
 
 static void close_file(const char *args) {
@@ -124,7 +124,7 @@ static void read_file(const char *args) {
     int nread     = read(fd, buf, sizeof(buf) - 1);
 
     if (nread != -1) {
-        render_at_section(main_id, buf);
+        print_at(main_id, buf);
     } else {
         render_at(info_id, PADDING, INFO_LINE_Y, "Read failed or file empty");
     }
@@ -159,6 +159,9 @@ static void open_file(const char *flag_and_path) {
     } else if (str_starts_with(cpy_path, "-rw ")) {
         flag = O_RDWR;
         cpy_path += 4;
+    } else if (str_starts_with(cpy_path, "-c ")) {
+        flag = O_CREAT;
+        cpy_path += 3;
     } else {
         render_at(info_id, PADDING, INFO_LINE_Y, "special flag not provided opening with read_only");
     }
@@ -177,7 +180,7 @@ static void create_dir(const char *flag_and_path) {
         render_at(info_id, PADDING, INFO_LINE_Y, "Could not create directories");
         return;
     }
-    render_at_section(info_id, "Directory(ies) created");
+    print_at(info_id, "Directory(ies) created");
 }
 static void change_dir(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {

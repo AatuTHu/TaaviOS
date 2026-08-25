@@ -228,8 +228,8 @@ static int open(request_table *req) {
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
     uint32_t starting_cluster = f32_fs.root_cluster;
+    const char *path          = req->buf;
     char filename[TASK_NAME_LENGTH];
-    const char *path     = req->buf;
 
     dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
@@ -237,8 +237,15 @@ static int open(request_table *req) {
         starting_cluster = map->current_cluster;
     }
 
-    if (fat32_find_cluster(starting_cluster, path, &file_cluster, &dir_cluster, &file_size, filename, &file_attr) ==
-        STATUS_ERROR) {
+    if (req->flags == O_CREAT) {
+        if (fat32_create_dirent(starting_cluster, req->buf, FAT32_ATTR_ARCHIVE) == STATUS_ERROR) {
+            ERROR("[FS_TASK][OPEN]: Could not create file.\n");
+            return STATUS_ERROR;
+        }
+    }
+
+    if (fat32_find_cluster(starting_cluster, path, &file_cluster,
+                           &dir_cluster, &file_size, filename, &file_attr) == STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Could not find file.\n");
         return STATUS_ERROR;
     }
@@ -280,7 +287,7 @@ static int create(const request_table *req) {
             return STATUS_ERROR;
         }
     } else {
-        if (fat32_mkdir(base_directory, req->buf) == STATUS_ERROR) {
+        if (fat32_create_dirent(base_directory, req->buf, FAT32_ATTR_DIRECTORY) == STATUS_ERROR) {
             ERROR("[FS_TASK][CREATE]: mkdir failed!\n");
             return STATUS_ERROR;
         }

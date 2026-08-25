@@ -286,10 +286,11 @@ error_case:
 } // update_dir_size
 
 /**
- * __fat32_create_mkdir() - Creates directory entry.
+ * __fat32_create_dirent() - Creates directory entry.
  *
  * @directory_cluster: starting directory cluster
  * @directory_name: directory path
+ * @entry_attributes: attributes of the endy, (folder, fili etc)
  *
  * Description:
  * This function makes a chain of directories as long as the path is
@@ -298,7 +299,7 @@ error_case:
  *
  * Return: STATUS_ERROR || STATUS_OK.
  */
-int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
+int fat32_create_dirent(uint32_t directory_cluster, const char *directory_name, uint32_t entry_attributes) {
 
     DEBUG_FAT32("[FAT32][MKDIR]: starting cluster number: %d\n", directory_cluster);
     DEBUG_FAT32("[FAT32][MKDIR]: directory_name: %s\n", directory_name);
@@ -359,7 +360,7 @@ int fat32_mkdir(uint32_t directory_cluster, const char *directory_name) {
 
             dir_entry[i].cluster_low  = new_dir_cluster & 0xFFFF;
             dir_entry[i].cluster_high = (new_dir_cluster >> 16) & 0xFFFF;
-            dir_entry[i].attributes   = FAT32_ATTR_DIRECTORY;
+            dir_entry[i].attributes   = entry_attributes;
             dir_entry[i].size         = 0;
             dir_entry[i].time         = 0;
             dir_entry[i].date         = 0;

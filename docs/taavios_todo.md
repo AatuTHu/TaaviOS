@@ -11,13 +11,20 @@
 - [x] sys_caw and sys_conwi merged into single system call (sys_wi)
 - [x] sys_wi operation to draw image/sprite from ring 3 (blit user space buffer to window)
 - [x] User space needs malloc/alloc
-- [ ] GUI scroll screen up and down
-- [50%] left and right working Shell arrow traversal
+- [50%] GUI scroll screen up and down
+- [75%] left and right working Shell arrow traversal
 - [ ] Blinking cursor
 - [ ] fs_int more complex file system management.
 - [ ] First real text editor
 - [x] Virtual tasks return adds random chars at the end of the list
-- [ ] Batch gfx operations. (Many requests on one sys call)
-
-
-
+- [ ] Batch render operations. (Many requests on one sys call)
+- [ ] refresh section and set cursor to original state
+- [ ] render.h abstractions to stand so that it doesn't have to be included.
+- [ ] rework gui to handle multiple requests before blankie protocol.
+- [ ] small self made compiler
+- [ ] system doctor clerk
+- [ ] calculate section based on x and y so that keys are not needed
+- [ ] get_dents should expose more than just the name? Attributes, size for example
+- [ ] apps launcher?
+- [ ] init should launch clerks?
+- [ ] scheduler super priority protocol?

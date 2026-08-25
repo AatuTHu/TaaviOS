@@ -5,6 +5,7 @@
 #include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
+#include <signal.h>
 #include <stdint.h>
 
 window_t *window_components[MAX_SECTIONS];
@@ -78,6 +79,10 @@ static void clamp_borders_to_window(uint32_t key) {
 
     window_t *entry = window_components[key];
 
+    if (entry == NULL) {
+        return;
+    }
+
     memset(&params, 0, sizeof(params));
     params.opcode     = PAINT_WINDOW;
     params.struct_key = entry->window_id;
@@ -127,9 +132,7 @@ int create_task_window(int x, int y, int w, int h, uint32_t fg_color, uint32_t b
 
     //  clamp_borders_to_window(entry);
 
-    int key         = sys_conwi(&params);
-
-    return key;
+    return sys_conwi(&params);
 }
 
 /**
@@ -196,9 +199,14 @@ int resize_task_window(uint32_t key, int w, int h) {
  * Return: result of sys_conwi.
  */
 int paint_section(uint32_t key) {
+    window_t *entry = window_components[key];
+
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    window_t *entry   = window_components[key];
 
     params.opcode     = PAINT_WINDOW;
     params.struct_key = entry->window_id;
@@ -289,9 +297,14 @@ int paint_rectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uin
  * Return: result of sys_conwi.
  */
 int move_task_window(uint32_t key, int x, int y) {
+    window_t *entry = window_components[key];
+
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    window_t *entry   = window_components[key];
     params.opcode     = MOVE;
     params.struct_key = entry->window_id;
     params.x          = x;
@@ -319,6 +332,11 @@ int move_task_window(uint32_t key, int x, int y) {
  */
 int draw_buffer(uint32_t key, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite) {
     window_t *entry = window_components[key];
+
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode     = DRAW;
@@ -429,6 +447,34 @@ int register_section(uint32_t x, uint32_t y, uint32_t width, uint32_t height, ui
     // paint_rectangle(x, y, width, height, background_color, slot);
 
     return slot;
+}
+
+/**
+ * delete_section - Deallocate a section and null the entry slot.
+ * @key: index of the section on the window components array.
+ *
+ * Description:
+ * Validates the key and entry behind it. Then frees the heap memory.
+ *
+ * Return: STATUS_OK or STATUS_ERROR.
+ */
+int delete_section(uint32_t key) {
+    if (key > MAX_SECTIONS) {
+        LOG("Invalid key\n");
+        return STATUS_ERROR;
+    }
+
+    window_t *entry = window_components[key];
+
+    if (entry == NULL) {
+        LOG("Invalid entry\n");
+        return STATUS_ERROR;
+    }
+
+    free(entry);
+    window_components[key] = NULL;
+
+    return STATUS_OK;
 }
 
 /**
