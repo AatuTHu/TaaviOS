@@ -153,7 +153,11 @@ int list_dirents(char *buf, int buffer_size) {
 }
 
 void print(const char *msg) {
-    render(msg, strlen(msg));
+    render(MAIN_WINDOW_KEY, msg, strlen(msg));
+}
+
+void print_at(uint32_t key, const char *msg) {
+    render_at_section(key, msg);
 }
 
 void error(const char *msg) {

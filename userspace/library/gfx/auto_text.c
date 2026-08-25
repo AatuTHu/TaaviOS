@@ -46,39 +46,6 @@ static int pack_params_and_send(uint8_t opcode, uint32_t key, uint32_t x, uint32
 }
 
 /**
- * render_at_section - print to the part of the window within a custom component.
- * @section_key: component key.
- * @x: x position on the component.
- * @y: y position on the component.
- * @msg: printable text.
- *
- * Description:
- * This function prints text with specific component style. Using its colors
- *
- * Context: It was tiresome to manually change background color and foreground color.
- * Return: void.
- */
-void render_at_section(uint32_t section_key, uint32_t x, uint32_t y, const char *msg) {
-
-    window_t *entry  = window_components[section_key];
-    window_t *parent = window_components[MAIN_WINDOW_KEY];
-
-    if (entry == NULL || parent == NULL) {
-        LOG("Invalid entry\n");
-        return;
-    }
-
-    if (x < parent->border_width) {
-        x += parent->border_width;
-    }
-
-    if (y < parent->border_width) {
-        y += parent->border_width;
-    }
-    pack_params_and_send(WRITE_AT, entry->window_id, x, y, msg, entry->fg_color, entry->bg_color);
-}
-
-/**
  * paint_cursor_position - repaint the cell at the main window's cursor.
  * @color: color to paint the cursor cell.
  *
@@ -104,29 +71,31 @@ void paint_cursor_position(uint32_t color) {
 }
 
 /**
- * render_at - use when in need of a custom x and y positioning
+ * render_at - use when in need of a custom x and y positioning without x and y calculation
+ * afterwards
  * @x: x position on the window.
  * @y: y position on the window.
  * @msg: printable text.
  *
  * Description:
  * This function prints text to the position given to it.
- * It does not parse or handle control chars and it uses main window metadata.
+ * It does not parse or handle control chars and it uses colors from the components that the key provides.
  *
  * Context: Function was made so that it would be easy to print chars to custom locations
  * withing a singe window without extra components.
  * Return: void.
  */
-void render_at(uint32_t x, uint32_t y, const char *msg) {
+void render_at(uint32_t key, uint32_t x, uint32_t y, const char *msg) {
 
-    window_t *entry = window_components[MAIN_WINDOW_KEY];
+    window_t *entry  = window_components[key];
+    window_t *parent = window_components[MAIN_WINDOW_KEY];
 
-    if (x < entry->border_width) {
-        x += entry->border_width;
+    if (x < parent->border_width) {
+        x += parent->border_width;
     }
 
-    if (y < entry->border_width) {
-        y += entry->border_width;
+    if (y < parent->border_width) {
+        y += parent->border_width;
     }
 
     pack_params_and_send(WRITE_AT, entry->window_id, x, y, msg, entry->fg_color, entry->bg_color);
@@ -148,8 +117,10 @@ static int scroll_down(window_t *entry) {
     params.opcode     = SCROLL_DOWN;
     params.struct_key = entry->window_id;
     params.bg_color   = entry->bg_color;
-    params.height     = entry->height;
-    params.width      = entry->width;
+    params.height     = entry->height - entry->border_width * 2;
+    params.width      = entry->width - entry->border_width * 2;
+    params.x          = entry->section_x_pos + entry->border_width;
+    params.y          = entry->section_y_pos + entry->border_width;
     return sys_conwi(&params);
 }
 
@@ -239,6 +210,7 @@ static int backspace_pressed(uint32_t current_i, window_t *entry, const char *te
 
 /**
  * render - automatic text renderer.
+ * @key: key to window component
  * @text: text buffer to render.
  * @len: length of the text.
  *
@@ -251,16 +223,18 @@ static int backspace_pressed(uint32_t current_i, window_t *entry, const char *te
  * Context: I wanted to provide automatic cursor position and control char parsing for the programs.
  * Return: STATUS_OK || STATUS_ERROR.
  */
-int render(const char *text, uint32_t len) {
+int render(uint32_t key, const char *text, uint32_t len) {
     uint32_t new_line_ind = 0;
 
-    window_t *entry       = window_components[MAIN_WINDOW_KEY];
+    window_t *entry       = window_components[key];
+    window_t *parent      = window_components[MAIN_WINDOW_KEY];
 
-    if (entry == NULL) {
+    if (entry == NULL || parent == NULL) {
         return STATUS_ERROR;
     }
 
     for (uint32_t i = 0; i < len; i++) {
+
         switch (text[i]) {
         case '\n':
             case_new_line(&new_line_ind, i, text, entry);
@@ -297,6 +271,8 @@ int render(const char *text, uint32_t len) {
             }
             return STATUS_OK;
         }
+        // clamp_horizontal(entry, parent);
+        // clamp_vertical(entry, parent);
     }
 
     uint32_t buffer_size = len - new_line_ind;
@@ -320,7 +296,26 @@ int render(const char *text, uint32_t len) {
             }
             entry->cursor_y_pos += FONT_HEIGHT;
             entry->cursor_x_pos = entry->def_horizontal_padding;
+            clamp_horizontal(entry, parent);
+            clamp_vertical(entry, parent);
         }
     }
     return STATUS_OK;
+}
+
+/**
+ * render_at_section - automatic text renderer with custom component styling.
+ * @section_key: component key.
+ * @msg: printable text.
+ *
+ * Description:
+ * This function prints text with specific component style. It calls render inside.
+ * 'render' function then parses the msg for control chars and automatically updates cursor
+ * position;
+ *
+ * Context: It was tiresome to manually change background color and foreground color.
+ * Return: void.
+ */
+void render_at_section(uint32_t section_key, const char *msg) {
+    render(section_key, msg, strlen(msg));
 }

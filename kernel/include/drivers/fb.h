@@ -23,5 +23,5 @@ uint32_t fb_pack_color(uint8_t r, uint8_t g, uint8_t b);
 int fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t rect_width, uint32_t rect_height, uint32_t stride, uint32_t buf_height, uint32_t color);
 void fb_draw_string(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t width, const char *str, uint32_t fg_color, uint32_t bg_color);
 int fb_clear(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t color);
-int fb_scroll_down(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t color);
+int fb_scroll_down(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t stride, uint32_t color);
 #endif

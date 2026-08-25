@@ -25,15 +25,27 @@ typedef struct window_t {
 
 extern window_t *window_components[MAX_SECTIONS];
 
+static inline void clamp_horizontal(window_t *entry, window_t *parent) {
+    if (entry->cursor_x_pos < parent->border_width + parent->def_horizontal_padding) {
+        entry->cursor_x_pos += parent->border_width + parent->def_horizontal_padding;
+    }
+}
+
+static inline void clamp_vertical(window_t *entry, window_t *parent) {
+    if (entry->cursor_y_pos < parent->border_width + parent->def_vertical_padding) {
+        entry->cursor_y_pos += parent->border_width + parent->def_vertical_padding;
+    }
+}
+
 int init_render(void);
 int create_task_window(int x, int y, int w, int h, uint32_t fg_color, uint32_t bg_color);
 int register_section(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t fg_color, uint32_t bg_color);
 int resize_task_window(uint32_t key, int w, int h);
 int move_task_window(uint32_t key, int x, int y);
 
-int render(const char *text, uint32_t len);
-void render_at(uint32_t x, uint32_t y, const char *msg);
-void render_at_section(uint32_t section_key, uint32_t x, uint32_t y, const char *msg);
+int render(uint32_t key, const char *text, uint32_t len);
+void render_at(uint32_t key, uint32_t x, uint32_t y, const char *msg);
+void render_at_section(uint32_t section_key, const char *msg);
 int paint_section(uint32_t key);
 int paint_rectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color);
 int draw_buffer(uint32_t key, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite);

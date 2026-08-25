@@ -153,6 +153,10 @@ int resize_task_window(uint32_t key, int w, int h) {
     // to middle and a '\0' to end.
     window_t *entry = window_components[key];
 
+    if (entry == NULL) {
+        return STATUS_ERROR;
+    }
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode      = RESIZE;
@@ -371,13 +375,12 @@ int register_section(uint32_t x, uint32_t y, uint32_t width, uint32_t height, ui
 
     window_t *new_entry = (window_t *)malloc(sizeof(window_t));
 
-    memset(new_entry, 0, sizeof(window_t));
-
     if (new_entry == NULL) {
         LOG("Could not allocate memory for new section entry\n");
         return STATUS_ERROR;
     }
 
+    memset(new_entry, 0, sizeof(window_t));
     uint32_t double_border = parent->border_width * 2;
 
     uint32_t max_w         = (parent->width > double_border) ? (parent->width - double_border) : 0;
@@ -415,8 +418,8 @@ int register_section(uint32_t x, uint32_t y, uint32_t width, uint32_t height, ui
     new_entry->cursor_x_pos           = x;
     new_entry->cursor_y_pos           = y;
     new_entry->border_width           = 0;
-    new_entry->def_horizontal_padding = 0;
-    new_entry->def_vertical_padding   = 0;
+    new_entry->def_horizontal_padding = parent->border_width + parent->def_horizontal_padding;
+    new_entry->def_vertical_padding   = parent->border_width + parent->def_vertical_padding;
     new_entry->bg_color               = bg_color;
     new_entry->fg_color               = fg_color;
     new_entry->border_color           = COLOR_DARKER_GRAY;

@@ -47,17 +47,23 @@ int fb_clear(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t c
     return fb_fill_rect(pixel_buffer, 0, 0, width, height, width, height, color);
 }
 
-int fb_scroll_down(uint32_t *pixel_buffer, uint32_t width, uint32_t height, uint32_t color) {
-
-    if (width > fb.width || height > fb.height || pixel_buffer == NULL) {
+int fb_scroll_down(uint32_t *pixel_buffer, uint32_t x, uint32_t y,
+                   uint32_t width, uint32_t height, uint32_t stride,
+                   uint32_t color) {
+    if (pixel_buffer == NULL || height <= FONT_HEIGHT) {
         return STATUS_ERROR;
     }
 
-    uint32_t *buf = (uint32_t *)pixel_buffer;
-    memmove(buf, buf + width * FONT_HEIGHT, (height - FONT_HEIGHT) * width * sizeof(uint32_t));
+    for (uint32_t row = 0; row < height - FONT_HEIGHT; row++) {
+        memmove(
+            pixel_buffer + (y + row) * stride + x,
+            pixel_buffer + (y + row + FONT_HEIGHT) * stride + x,
+            width * sizeof(uint32_t));
+    }
+
     for (uint32_t row = height - FONT_HEIGHT; row < height; row++)
         for (uint32_t col = 0; col < width; col++)
-            fb_put_pixel(pixel_buffer, col, row, width, color);
+            fb_put_pixel(pixel_buffer, x + col, y + row, stride, color);
 
     return STATUS_OK;
 }

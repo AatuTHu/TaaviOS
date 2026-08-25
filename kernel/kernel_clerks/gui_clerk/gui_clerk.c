@@ -204,8 +204,7 @@ static int gui_scroll_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    return fb_scroll_down(entry->pixels, entry->width,
-                          entry->height, req->bg_color);
+    return fb_scroll_down(entry->pixels, req->x, req->y, req->width, req->height, entry->width, req->bg_color);
 }
 
 static int gui_paint_rectangle(request_table *req) {

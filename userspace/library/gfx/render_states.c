@@ -40,7 +40,12 @@ void set_height(uint32_t key, uint32_t h) {
  * Return: void.
  */
 void set_horizontal_padding(uint32_t key, uint32_t hp) {
-    window_components[key]->def_horizontal_padding = hp + window_components[key]->border_width;
+    if (key == MAIN_WINDOW_KEY) {
+        window_components[key]->def_horizontal_padding = hp + window_components[key]->border_width;
+        return;
+    }
+    window_t *parent                               = window_components[MAIN_WINDOW_KEY];
+    window_components[key]->def_horizontal_padding = hp + window_components[key]->border_width + parent->border_width + parent->def_horizontal_padding;
 }
 
 /**
@@ -55,7 +60,13 @@ void set_horizontal_padding(uint32_t key, uint32_t hp) {
  * Return: void.
  */
 void set_vertical_padding(uint32_t key, uint32_t vp) {
-    window_components[key]->def_vertical_padding = vp + window_components[key]->border_width;
+
+    if (key == MAIN_WINDOW_KEY) {
+        window_components[key]->def_vertical_padding = vp + window_components[key]->border_width;
+        return;
+    }
+    window_t *parent                             = window_components[MAIN_WINDOW_KEY];
+    window_components[key]->def_vertical_padding = vp + window_components[key]->border_width + parent->border_width + parent->def_vertical_padding;
 }
 
 /**
