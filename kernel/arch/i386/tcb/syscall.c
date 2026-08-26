@@ -192,6 +192,23 @@ static int32_t sys_close(struct registers *r) {
     return ledger_collect(current->pid, fs_task_pid, NULL);
 }
 
+static int32_t sys_unlink(struct registers *r) {
+    DEBUG_SYSCALL("[SYSCALL][SYS_UNLINK]\n");
+    const char *path      = (char *)r->ebx;
+    const task_t *current = scheduler_get_current_task();
+
+    if (path == NULL || current == NULL) {
+        ERROR("[SYS_UNLINK]: path or current task was invalid\n");
+        return STATUS_ERROR;
+    }
+
+    ledger_add_fs_req(current->pid, DELETE, 0, path, strlen(path), 0);
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_yield(r);
+
+    return ledger_collect(current->pid, fs_task_pid, NULL);
+}
+
 static int32_t sys_getpid(struct registers *r) {
     (void)r;
     const task_t *task = scheduler_get_current_task();
@@ -534,4 +551,5 @@ void syscall_init() {
     syscall_table[SYS_WI]       = sys_window;
     syscall_table[SYS_IOCTL]    = sys_ioctl;
     syscall_table[SYS_SBRK]     = sys_sbrk;
+    syscall_table[SYS_UNLINK]   = sys_unlink;
 }

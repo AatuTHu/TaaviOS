@@ -10,7 +10,7 @@
 - get ticks/get uptime system call
 
 **File system**
-- sys_delete -> not started
+- delete start deletion from the base cluster of the target progressing till end. Should start at end and approach start?
 
 **VGA / FB**
 - VGA driver poorly written -> scroll maybe broken

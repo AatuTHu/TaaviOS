@@ -111,6 +111,7 @@ int fat32_mkdirp(uint32_t parent_cluster, const char *path);
 int fat32_create_dirent(uint32_t directory_cluster, const char *directory_name, uint32_t entry_attributes);
 
 /* DELETE */
+int fat32_delete_dirent(uint32_t target_cluster);
 
 /* HELPERS */
 uint32_t __fat32_calculate_lba(uint32_t cluster);

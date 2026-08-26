@@ -172,6 +172,10 @@ int open(const char *path, uint32_t flags) {
     return sys_open(path, strlen(path), flags);
 }
 
+int delete_file(const char *path) {
+    return sys_unlink(path);
+}
+
 void close(uint32_t fd) {
     sys_close(fd);
 }

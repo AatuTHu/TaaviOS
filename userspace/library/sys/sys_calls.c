@@ -28,6 +28,14 @@ int sys_open(const char *path, uint32_t len, uint32_t flags) {
     return fd;
 }
 
+int sys_unlink(const char *path) {
+    int result = -1;
+    __asm__ __volatile__("int $0x80"
+                         : "=a"(result)
+                         : "a"(SYS_UNLINK), "b"(path));
+    return result;
+}
+
 int sys_chdir(const char *path, uint32_t len) {
     int result = -1;
     __asm__ __volatile__("int $0x80"

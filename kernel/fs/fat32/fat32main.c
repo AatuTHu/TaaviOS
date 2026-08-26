@@ -9,8 +9,8 @@ fat32_fs_t f32_fs;
  * __fat32_find_cluster() - Finds the specific file.
  *
  * @path:        holds the route of the file
- * @out_cluster: after the function this should hold the root cluster of the
- * file
+ * @out_file_cluster: after the function this should hold the root cluster of the file
+ * @out_dir_cluster: on success this hold the files directory cluster
  * @out_size:    after the function this should hold the size of the file
  *
  * Description:

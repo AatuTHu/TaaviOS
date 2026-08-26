@@ -1,5 +1,9 @@
+#include "ata.h"
+#include "config.h"
 #include "fat32.h"
 #include "klog.h"
+#include "kmalloc.h"
+#include <stdint.h>
 
 /**
 * __fat32_list_dir() - lists all directories
@@ -388,6 +392,47 @@ int fat32_create_dirent(uint32_t directory_cluster, const char *directory_name, 
         return STATUS_OK;
     } else {
         return STATUS_ERROR;
+    }
+
+error_case:
+    kfree(buf);
+    return STATUS_ERROR;
+}
+
+int fat32_delete_dirent(uint32_t target_cluster) {
+
+    uint32_t current_cluster = target_cluster;
+    uint8_t *buf             = __fat32_allocate_buffer();
+    if (buf == INVALID_BUFFER)
+        return STATUS_ERROR;
+
+    while (1) {
+        if (__fat32_read_cluster(current_cluster, buf) == STATUS_ERROR) {
+            ERROR("[FAT32][DELETE_DIRENT]: There was error with reading the clusters data\n");
+            goto error_case;
+        }
+
+        fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
+        uint32_t dir_entries      = __fat32_calculate_max_dir_entries();
+
+        for (uint32_t i = 0; i < dir_entries; i++) {
+            dir_entry[i].name[0] = FAT32_DIRENT_FREE;
+        }
+
+        if (__fat32_write_cluster(current_cluster, buf) == STATUS_ERROR) {
+            ERROR("Failed to write changes to disk\n");
+            goto error_case;
+        }
+
+        uint32_t next_cluster = __fat32_next_cluster(current_cluster);
+
+        if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
+            DEBUG_FS_TASK("[FAT32][DELETE_DIRENT]: Next cluster was end of the chain.\n");
+            kfree(buf);
+            return STATUS_OK;
+        }
+
+        current_cluster = next_cluster;
     }
 
 error_case:

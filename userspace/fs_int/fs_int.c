@@ -51,15 +51,25 @@ static const char *skip_spaces(const char *str) {
 static void show_commands(const char *args) {
     (void)args;
     print_at(main_id, "Available commands:\n");
-    print_at(main_id, "- help         'Prints this list'\n");
-    print_at(main_id, "- open  [path] 'Open a file'\n");
-    print_at(main_id, "- write [text] 'Writes to opened file'\n");
-    print_at(main_id, "- mkdir [text] 'Creates a directory'\n");
-    print_at(main_id, "- cd    [text] 'Changes working directory'\n");
-    print_at(main_id, "- ls           'Lists directory contents'\n");
-    print_at(main_id, "- read         'Reads the opened file'\n");
-    print_at(main_id, "- close        'Close opened file'\n");
-    print_at(main_id, "- exit         'Close fs_interface'\n");
+    print_at(main_id, "- help          'Prints this list'\n");
+    print_at(main_id, "- open   [path] 'Open a file'\n");
+    print_at(main_id, "- write  [text] 'Writes to opened file'\n");
+    print_at(main_id, "- mkdir  [path] 'Creates a directory'\n");
+    print_at(main_id, "- delete [path] 'Deletes a file\n'");
+    print_at(main_id, "- cd     [path] 'Changes working directory'\n");
+    print_at(main_id, "- ls            'Lists directory contents'\n");
+    print_at(main_id, "- read          'Reads the opened file'\n");
+    print_at(main_id, "- close         'Close opened file'\n");
+    print_at(main_id, "- exit          'Close fs_interface'\n");
+}
+
+static void delete(const char *path) {
+    if (delete_file(path) == STATUS_ERROR) {
+        render_at(info_id, PADDING, INFO_LINE_Y, "Failed to delete file!");
+        return;
+    }
+
+    render_at(info_id, PADDING, INFO_LINE_Y, "File deleted!");
 }
 
 static void close_file(const char *args) {
@@ -199,6 +209,7 @@ static const Command commands[] = {
     {"open", open_file, 1},
     {"mkdir", create_dir, 1},
     {"cd", change_dir, 1},
+    {"delete", delete, 1},
 };
 
 void exec_cmd(char *buf) {

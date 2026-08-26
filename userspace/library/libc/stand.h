@@ -13,6 +13,7 @@ void error(const char *msg);
 int scan(char *buf);
 
 int open(const char *path, uint32_t flags);
+int delete_file(const char *path);
 int read(int fd, char *buf, int buffer_size);
 void write(int fd, const char *msg);
 void close(uint32_t fd);

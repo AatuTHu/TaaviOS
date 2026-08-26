@@ -565,6 +565,43 @@ static int free(request_table *req) {
     return STATUS_OK;
 }
 
+static int delete(request_table *req) {
+    DEBUG_FS_TASK("[FS_TASK][DELETE]: Deleting directory entry: %s\n", req->buf);
+    uint32_t out_file_cluster = 0;
+    uint32_t out_dir_cluster  = 0;
+
+    uint32_t file_size        = 0;
+    uint8_t file_attr         = 0;
+    uint32_t starting_cluster = f32_fs.root_cluster;
+    const char *path          = req->buf;
+    char filename[TASK_NAME_LENGTH];
+
+    dir_traversal_t *map = dir_get_direction(req->caller_pid);
+
+    if (map != NULL) {
+        DEBUG_FS_TASK("[FS_TASK][DELETE]: directions found. starting cluster %d\n", map->current_cluster);
+        starting_cluster = map->current_cluster;
+    }
+
+    if (fat32_find_cluster(starting_cluster, path, &out_file_cluster, &out_dir_cluster,
+                           &file_size, filename, &file_attr) == STATUS_ERROR) {
+        ERROR("[FS_TASK][DELETE]: Could not find the target cluster\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG_FS_TASK("[FS_TASK][DELETE]: Target found, now deleting it.\n");
+
+    uint32_t target_cluster = out_dir_cluster == 0 ? out_file_cluster : out_dir_cluster;
+
+    if (fat32_delete_dirent(target_cluster) == STATUS_ERROR) {
+        ERROR("[FS_TASK][DELETE]: Failed to delete entry.\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG_FS_TASK("[FS_TASK][DELETE]: Target deleted\n");
+    return STATUS_OK;
+}
+
 /**
  * fs_handle_request - Dispatches incoming file system requests.
  * @param req: pointer to an request_table entry
@@ -631,6 +668,12 @@ void fs_handle_request(request_table *req) {
         fs_task->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         return;
+    case DELETE:
+        req->status       = (delete(req) == STATUS_OK) ? COMPLETE : FAILED;
+        fs_task->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
+        return;
+
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
         req->status = TERMINATED;

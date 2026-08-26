@@ -8,7 +8,7 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 
 **Blankie Protocol** After all requests are completed, the clerk uses the blankie protocol to reset its context (EIP, ESP, EBP). This resets it to its entry point with a clean stack. Then it sleeps until the next request arrives. Reason for this reset is to prevent stack overflow should the clerk run for days and also have a predictable starting point for the clerks.
 
-**Hail Mary Protocol** If a kernel clerk triggers an exception, the isr_handler intercepts the fault before it can panic and shutdown the system. The exception vector routes to activate_hail_mary, which invokes the clerk's registered recovery fallback (fs_recovery). This purges the exact ledger request that caused the crash, marks it TERMINATED to release the blocked user process with an error, and triggers a Blankie reset. The clerk restarts with a clean stack and the kernel survives.
+**Hail Mary Protocol** If a kernel clerk triggers an exception, the isr_handler intercepts the fault before it can panic and shutdown the system. The exception vector routes to activate_hail_mary, which invokes the clerk's registered recovery fallback. This purges the exact ledger request that caused the crash, marks it TERMINATED to release the blocked user process with an error, and triggers a Blankie reset for the clerk
 
 ### Clerks
 
@@ -22,23 +22,9 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 
 ## Status
 
-* [x] Protected mode, paging, GDT/IDT/TSS
-* [x] PMM, VMM, kmalloc/kfree with dynamic heap expansion
-* [x] Preemptive priority-aware round-robin scheduler (1000Hz)
-* [x] FAT32 read/write, mkdir, mkdirp, path resolver
-* [x] ELF loader, userspace, interactive shell
-* [x] System calls: sys_open, sys_read, sys_write, sys_close, sys_exec, sys_mkdir, sys_chdir, sys_getdents
-* [x] Clerks: Fs_task, Reaper_task, Gui_task, Idle_task
-* [x] Blankie, Hail Mary, and Ledger protocols
-* [x] GUI with window management, text rendering, and sprite drawing
-* [x] Keyboard driver with foreground/background routing
-* [x] ATA PIO disk driver with MBR partition detection
-* [x] Framebuffer graphics via multiboot VBE
-* [x] Virtual SYS_INFO/TASKS directory for live process listing
-* [ ] Userspace malloc
-* [ ] Proper locking / synchronization
-* [ ] Arrow key history, blinking cursor
-* [ ] File creation (O_CREAT), file deletion
+After grub successfully hands control to the kernel, the kernel then initialized GDT, IDT, ISR, TSS, PAGING, PMM and transitions to protected mode.
+After that it creates clerks, inits file system, programmable interrupt timer and heap memory manager and finally creates init task and jump to ring 3
+execute its stack.
 
 ## Tradeoffs of Microlithic Kernel Model
 In its essence, the microlithic kernel is a monolith with the organization of a microkernel.

@@ -28,3 +28,5 @@
 - [ ] apps launcher?
 - [ ] init should launch clerks?
 - [ ] scheduler super priority protocol?
+- [ ] Nothing stops from writing to directory. Directories should not be able to be opened/closed/written to?
+- [ ] FAT32 delete dir/file.
