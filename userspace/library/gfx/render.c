@@ -5,10 +5,9 @@
 #include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
-#include <signal.h>
 #include <stdint.h>
 
-window_t *window_components[MAX_SECTIONS];
+gfx_region_t *gfx_regions[MAX_REGIONS];
 
 /**
  * TaaviOS window manager
@@ -64,20 +63,20 @@ static int parse_dimensions(const char *ptr, int *w, int *h) {
 }
 
 /**
- * clamp_borders_to_window - repaint a window's border and interior.
- * @key: window component whose border should be repainted.
+ * clamp_borders_to_window - repaint a region's border and interior.
+ * @region_id: region whose border should be repainted.
  *
  * Description:
- * Paints the full window area with the border color, then paints the
+ * Paints the full region area with the border color, then paints the
  * inner area (inset by border_width on each side) with the background
  * color, producing a visible border frame.
  *
  * Return: void.
  */
-static void clamp_borders_to_window(uint32_t key) {
+static void clamp_borders_to_window(uint32_t region_id) {
     gui_params_pack params;
 
-    window_t *entry = window_components[key];
+    gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
         return;
@@ -85,7 +84,7 @@ static void clamp_borders_to_window(uint32_t key) {
 
     memset(&params, 0, sizeof(params));
     params.opcode     = PAINT_WINDOW;
-    params.struct_key = entry->window_id;
+    params.struct_key = entry->id;
 
     params.width      = entry->width;
     params.height     = entry->height;
@@ -103,22 +102,22 @@ static void clamp_borders_to_window(uint32_t key) {
 }
 
 /**
- * create_task_window - request a new top-level window from the kernel.
- * @x: x position of the window.
- * @y: y position of the window.
- * @w: width of the window.
- * @h: height of the window.
+ * gfx_create_viewport - request a new top-level viewport from the kernel.
+ * @x: x position of the viewport.
+ * @y: y position of the viewport.
+ * @w: width of the viewport.
+ * @h: height of the viewport.
  * @fg_color: foreground color.
  * @bg_color: background color.
  *
  * Description:
- * Sends a CREATE request; the kernel allocates the window and returns
- * its key. This key is then passed pack to kernel when making changes to window
- * so that it can correctly identify which window to modify
+ * Sends a CREATE request; the kernel allocates the viewport and returns
+ * its ID. This ID is then passed back to kernel when making changes so that it can
+ * correctly identify which viewport to modify.
  *
- * Return: new window key, or STATUS_ERROR.
+ * Return: new viewport ID, or STATUS_ERROR.
  */
-int create_task_window(int x, int y, int w, int h, uint32_t fg_color, uint32_t bg_color) {
+int gfx_create_viewport(int x, int y, int w, int h, uint32_t fg_color, uint32_t bg_color) {
 
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
@@ -130,14 +129,12 @@ int create_task_window(int x, int y, int w, int h, uint32_t fg_color, uint32_t b
     params.fg_color = fg_color;
     params.bg_color = bg_color;
 
-    //  clamp_borders_to_window(entry);
-
     return sys_conwi(&params);
 }
 
 /**
- * resize_task_window - request a resize of an existing window.
- * @key: window component to resize.
+ * gfx_resize_viewport - request a resize of an existing viewport.
+ * @region_id: region component to resize.
  * @w: requested width.
  * @h: requested height.
  *
@@ -146,15 +143,14 @@ int create_task_window(int x, int y, int w, int h, uint32_t fg_color, uint32_t b
  * response back into the component, then repaints its border to match.
  *
  * Kernel gives back new w and h because there is a chance it has to clamp
- * the requested paint inside the main window.
+ * the requested paint inside the primary viewport.
  *
  * Return: result of sys_conwi.
  */
-int resize_task_window(uint32_t key, int w, int h) {
+int gfx_resize_viewport(uint32_t region_id, int w, int h) {
 
-    char dimensions_buffer[22]; // 22 because that give 10 digits to left side and 10 to right. A dot
-    // to middle and a '\0' to end.
-    window_t *entry = window_components[key];
+    char dimensions_buffer[22];
+    gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -163,7 +159,7 @@ int resize_task_window(uint32_t key, int w, int h) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode      = RESIZE;
-    params.struct_key  = entry->window_id;
+    params.struct_key  = entry->id;
     params.width       = w;
     params.height      = h;
     params.fg_color    = entry->fg_color;
@@ -183,23 +179,23 @@ int resize_task_window(uint32_t key, int w, int h) {
     entry->width  = w;
     entry->height = h;
 
-    clamp_borders_to_window(key);
+    clamp_borders_to_window(region_id);
 
     return result;
 }
 
 /**
- * paint_section - repaint a window component using its own metadata.
- * @key: window component to repaint.
+ * gfx_clear_region - repaint a region using its own metadata.
+ * @region_id: region component to repaint.
  *
  * Description:
- * Paints the component's full area at its current section position using
+ * Paints the component's full area at its current position using
  * its own background and foreground colors.
  *
  * Return: result of sys_conwi.
  */
-int paint_section(uint32_t key) {
-    window_t *entry = window_components[key];
+int gfx_clear_region(uint32_t region_id) {
+    gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -209,11 +205,11 @@ int paint_section(uint32_t key) {
     memset(&params, 0, sizeof(params));
 
     params.opcode     = PAINT_WINDOW;
-    params.struct_key = entry->window_id;
+    params.struct_key = entry->id;
     params.width      = entry->width;
     params.height     = entry->height;
-    params.x          = entry->section_x_pos;
-    params.y          = entry->section_y_pos;
+    params.x          = entry->offset_x;
+    params.y          = entry->offset_y;
     params.bg_color   = entry->bg_color;
     params.fg_color   = entry->fg_color;
 
@@ -221,7 +217,7 @@ int paint_section(uint32_t key) {
 }
 
 /**
- * paint_rectangle - paint a color-filled rectangle within the main window.
+ * gfx_fill_rect - paint a color-filled rectangle within the primary viewport.
  * @x: x position of the rectangle.
  * @y: y position of the rectangle.
  * @width: requested width.
@@ -229,16 +225,16 @@ int paint_section(uint32_t key) {
  * @color: fill color.
  *
  * Description:
- * Clamps the requested rectangle to stay inside the main window's border,
+ * Clamps the requested rectangle to stay inside the primary viewport's border,
  * shrinking width/height (or zeroing them) if the position or size would
  * otherwise overflow the drawable area.
  *
- * Return: result of sys_conwi, or STATUS_ERROR if there is no main window.
+ * Return: result of sys_conwi, or STATUS_ERROR if there is no primary viewport.
  */
-int paint_rectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color) {
+int gfx_fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
-    window_t *entry = window_components[MAIN_WINDOW_KEY];
+    gfx_region_t *entry = gfx_regions[PRIMARY_VIEWPORT_ID];
 
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -274,7 +270,7 @@ int paint_rectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uin
         height = max_h;
 
     params.opcode     = PAINT_WINDOW;
-    params.struct_key = entry->window_id;
+    params.struct_key = entry->id;
     params.width      = width;
     params.height     = height;
     params.x          = x;
@@ -286,8 +282,8 @@ int paint_rectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uin
 }
 
 /**
- * move_task_window - request a move of an existing window.
- * @key: window component to move.
+ * gfx_move_viewport - request a move of an existing viewport.
+ * @region_id: region component to move.
  * @x: new x position.
  * @y: new y position.
  *
@@ -296,8 +292,8 @@ int paint_rectangle(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uin
  *
  * Return: result of sys_conwi.
  */
-int move_task_window(uint32_t key, int x, int y) {
-    window_t *entry = window_components[key];
+int gfx_move_viewport(uint32_t region_id, int x, int y) {
+    gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -306,7 +302,7 @@ int move_task_window(uint32_t key, int x, int y) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode     = MOVE;
-    params.struct_key = entry->window_id;
+    params.struct_key = entry->id;
     params.x          = x;
     params.y          = y;
     params.fg_color   = entry->fg_color;
@@ -316,8 +312,8 @@ int move_task_window(uint32_t key, int x, int y) {
 }
 
 /**
- * draw_buffer - blit a pixel buffer into a window component.
- * @key: window component to draw into.
+ * gfx_draw_sprite - blit a pixel buffer into a region.
+ * @region_id: region component to draw into.
  * @x: x position of the draw.
  * @y: y position of the draw.
  * @width: buffer width.
@@ -330,8 +326,8 @@ int move_task_window(uint32_t key, int x, int y) {
  *
  * Return: result of sys_conwi.
  */
-int draw_buffer(uint32_t key, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite) {
-    window_t *entry = window_components[key];
+int gfx_draw_sprite(uint32_t region_id, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite) {
+    gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -340,7 +336,7 @@ int draw_buffer(uint32_t key, int x, int y, int width, int height, uint32_t scal
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode     = DRAW;
-    params.struct_key = entry->window_id;
+    params.struct_key = entry->id;
     params.width      = width;
     params.height     = height;
     params.x          = x;
@@ -353,52 +349,52 @@ int draw_buffer(uint32_t key, int x, int y, int width, int height, uint32_t scal
 }
 
 /**
- * register_section - allocate and register a new child window component.
- * @x: x position of the section, within the parent.
- * @y: y position of the section, within the parent.
+ * gfx_register_region - allocate and register a new child region.
+ * @x: x position of the region, within the parent.
+ * @y: y position of the region, within the parent.
  * @width: requested width.
  * @height: requested height.
  * @fg_color: foreground color.
  * @bg_color: background color.
  *
  * Description:
- * Finds a free slot in window_components, clamps the requested geometry
- * to fit inside the main window's drawable area, and allocates a new
- * window_t sharing the main window's window_id.
+ * Finds a free slot in gfx_regions, clamps the requested geometry
+ * to fit inside the primary viewport's drawable area, and allocates a new
+ * gfx_region_t sharing the primary viewport's id.
  *
  * Return: allocated slot index, or STATUS_ERROR.
  */
-int register_section(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t fg_color, uint32_t bg_color) {
+int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t fg_color, uint32_t bg_color) {
 
     int slot = -1;
 
-    for (int i = RESERVED_SLOT; i < MAX_SECTIONS; i++) {
-        if (window_components[i] == NULL) {
+    for (int i = RESERVED_REGION_ID; i < MAX_REGIONS; i++) {
+        if (gfx_regions[i] == NULL) {
             slot = i;
             break;
         }
     }
 
     if (slot == -1) {
-        LOG("Could not find free slot from the window\n");
+        LOG("Could not find free slot for region\n");
         return STATUS_ERROR;
     }
 
-    window_t *parent = window_components[MAIN_WINDOW_KEY];
+    gfx_region_t *parent = gfx_regions[PRIMARY_VIEWPORT_ID];
 
     if (parent == NULL) {
-        LOG("Cant register a section if there is not parent window\n");
+        LOG("Cant register a region if there is no parent viewport\n");
         return STATUS_ERROR;
     }
 
-    window_t *new_entry = (window_t *)malloc(sizeof(window_t));
+    gfx_region_t *new_entry = (gfx_region_t *)malloc(sizeof(gfx_region_t));
 
     if (new_entry == NULL) {
-        LOG("Could not allocate memory for new section entry\n");
+        LOG("Could not allocate memory for new region entry\n");
         return STATUS_ERROR;
     }
 
-    memset(new_entry, 0, sizeof(window_t));
+    memset(new_entry, 0, sizeof(gfx_region_t));
     uint32_t double_border = parent->border_width * 2;
 
     uint32_t max_w         = (parent->width > double_border) ? (parent->width - double_border) : 0;
@@ -428,43 +424,43 @@ int register_section(uint32_t x, uint32_t y, uint32_t width, uint32_t height, ui
     if (height > max_h)
         height = max_h;
 
-    new_entry->window_id              = parent->window_id;
-    new_entry->width                  = width;
-    new_entry->height                 = height;
-    new_entry->section_x_pos          = x;
-    new_entry->section_y_pos          = y;
-    new_entry->cursor_x_pos           = x;
-    new_entry->cursor_y_pos           = y;
-    new_entry->border_width           = 0;
-    new_entry->def_horizontal_padding = parent->border_width + parent->def_horizontal_padding;
-    new_entry->def_vertical_padding   = parent->border_width + parent->def_vertical_padding;
-    new_entry->bg_color               = bg_color;
-    new_entry->fg_color               = fg_color;
-    new_entry->border_color           = COLOR_DARKER_GRAY;
+    new_entry->id           = parent->id;
+    new_entry->width        = width;
+    new_entry->height       = height;
+    new_entry->offset_x     = x;
+    new_entry->offset_y     = y;
+    new_entry->cursor_x     = x;
+    new_entry->cursor_y     = y;
+    new_entry->border_width = 0;
+    new_entry->padding_x    = parent->border_width + parent->padding_x;
+    new_entry->padding_y    = parent->border_width + parent->padding_y;
+    new_entry->bg_color     = bg_color;
+    new_entry->fg_color     = fg_color;
+    new_entry->border_color = COLOR_DARKER_GRAY;
 
-    window_components[slot]           = new_entry;
+    gfx_regions[slot]       = new_entry;
 
-    // paint_rectangle(x, y, width, height, background_color, slot);
+    gfx_clear_region(slot);
 
     return slot;
 }
 
 /**
- * delete_section - Deallocate a section and null the entry slot.
- * @key: index of the section on the window components array.
+ * gfx_delete_region - Deallocate a region and null the entry slot.
+ * @region_id: index of the region on the gfx_regions array.
  *
  * Description:
- * Validates the key and entry behind it. Then frees the heap memory.
+ * Validates the ID and entry behind it. Then frees the heap memory.
  *
  * Return: STATUS_OK or STATUS_ERROR.
  */
-int delete_section(uint32_t key) {
-    if (key > MAX_SECTIONS) {
-        LOG("Invalid key\n");
+int gfx_delete_region(uint32_t region_id) {
+    if (region_id >= MAX_REGIONS) {
+        LOG("Invalid region_id\n");
         return STATUS_ERROR;
     }
 
-    window_t *entry = window_components[key];
+    gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
         LOG("Invalid entry\n");
@@ -472,54 +468,70 @@ int delete_section(uint32_t key) {
     }
 
     free(entry);
-    window_components[key] = NULL;
+    gfx_regions[region_id] = NULL;
 
     return STATUS_OK;
 }
 
 /**
- * init_render - initialize the renderer and create the main window.
+ * gfx_init - initialize the renderer and create the primary viewport.
  *
  * Description:
- * Clears the window_components table, creates the main task window via
- * the kernel, allocates and populates its window_t metadata (colors,
+ * Clears the gfx_regions table, creates the primary viewport via
+ * the kernel, allocates and populates its gfx_region_t metadata (colors,
  * border, padding, cursor start), then paints its initial border.
  *
  * Return: STATUS_OK || STATUS_ERROR.
  */
-int init_render(void) {
-    // LOG("Renderer initialized\n");
-    memset(window_components, 0, sizeof(window_components));
-    int window_id = create_task_window(10, 10, 300, 150, COLOR_WHITE, COLOR_BLACK);
+int gfx_init(void) {
+    memset(gfx_regions, 0, sizeof(gfx_regions));
+    int id = gfx_create_viewport(10, 10, 300, 150, COLOR_WHITE, COLOR_BLACK);
 
-    if (window_id == STATUS_ERROR) {
-        //    LOG("Failed to create window\n");
+    if (id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
-    window_t *entry = (window_t *)malloc(sizeof(window_t));
+    gfx_region_t *entry = (gfx_region_t *)malloc(sizeof(gfx_region_t));
 
     if (entry == NULL) {
-        LOG("Cant allocate entry for the main window\n");
+        LOG("Cant allocate entry for the primary viewport\n");
         return STATUS_ERROR;
     }
 
-    // LOG("Initializing renderer\n");
-    entry->window_id                 = window_id;
+    entry->id                        = id;
     entry->border_color              = COLOR_ORAGNE_MUD;
     entry->border_width              = 4;
-    entry->def_vertical_padding      = 1 + entry->border_width;
-    entry->def_horizontal_padding    = 1 + entry->border_width;
+    entry->padding_y                 = 1 + entry->border_width;
+    entry->padding_x                 = 1 + entry->border_width;
     entry->width                     = 300;
     entry->height                    = 150;
-    entry->cursor_x_pos              = entry->def_horizontal_padding;
-    entry->cursor_y_pos              = entry->def_vertical_padding;
+    entry->cursor_x                  = entry->padding_x;
+    entry->cursor_y                  = entry->padding_y;
     entry->fg_color                  = COLOR_WHITE;
     entry->bg_color                  = COLOR_BLACK;
 
-    window_components[RESERVED_SLOT] = entry;
+    gfx_regions[PRIMARY_VIEWPORT_ID] = entry;
 
-    clamp_borders_to_window(MAIN_WINDOW_KEY);
+    clamp_borders_to_window(PRIMARY_VIEWPORT_ID);
+
+    return STATUS_OK;
+}
+
+int gfx_reset_cursor(uint32_t region_id) {
+    if (region_id >= MAX_REGIONS) {
+        LOG("Invalid region_id\n");
+        return STATUS_ERROR;
+    }
+
+    gfx_region_t *entry = gfx_regions[region_id];
+
+    if (entry == NULL) {
+        LOG("Invalid entry\n");
+        return STATUS_ERROR;
+    }
+
+    entry->cursor_x = entry->offset_x;
+    entry->cursor_y = entry->offset_y;
 
     return STATUS_OK;
 }

@@ -1,7 +1,5 @@
-#include "log.h"
 #include "malloc.h"
 #include "op_sy.h"
-#include "render.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -130,7 +128,7 @@ static void command_move(const char *positions) {
         ptr++;
     }
 
-    if (move_task_window(x, y, MAIN_WINDOW_KEY) == STATUS_ERROR) {
+    if (move_viewport(x, y) == STATUS_ERROR) {
         print("Failed to move window\n");
     }
 }
@@ -176,7 +174,7 @@ static void command_resize(const char *dimensions) {
         ptr++;
     }
 
-    if (resize_task_window(width, height, MAIN_WINDOW_KEY) == STATUS_ERROR) {
+    if (resize_viewport(width, height) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 }
@@ -262,15 +260,14 @@ int main(void) {
         return 1;
     }
 
-    if (resize_task_window(MAIN_WINDOW_KEY, 600, 200) == STATUS_ERROR) {
+    if (resize_viewport(600, 200) == STATUS_ERROR) {
         print("Failed to resize window\n");
     }
 
-    if (move_task_window(MAIN_WINDOW_KEY, 20, 750) == STATUS_ERROR) {
+    if (move_viewport(20, 750) == STATUS_ERROR) {
         print("Failed to move window\n");
     }
 
-    set_text_color(MAIN_WINDOW_KEY, COLOR_WHITE);
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
@@ -283,7 +280,7 @@ int main(void) {
         pos = 0;
 
         while (1) {
-            paint_cursor_position(COLOR_LIGHT_GRAY);
+            //  paint_cursor_position(COLOR_LIGHT_GRAY);
             scan(&c);
 
             switch (c) {

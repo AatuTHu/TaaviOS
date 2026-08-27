@@ -1,9 +1,7 @@
 #include "document.h"
 #include "folder.h"
 #include "font.h"
-#include "log.h"
 #include "op_sy.h"
-#include "render.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -50,36 +48,36 @@ static const char *skip_spaces(const char *str) {
 
 static void show_commands(const char *args) {
     (void)args;
-    print_at(main_id, "Available commands:\n");
-    print_at(main_id, "- help          'Prints this list'\n");
-    print_at(main_id, "- open   [path] 'Open a file'\n");
-    print_at(main_id, "- write  [text] 'Writes to opened file'\n");
-    print_at(main_id, "- mkdir  [path] 'Creates a directory'\n");
-    print_at(main_id, "- delete [path] 'Deletes a file\n'");
-    print_at(main_id, "- cd     [path] 'Changes working directory'\n");
-    print_at(main_id, "- ls            'Lists directory contents'\n");
-    print_at(main_id, "- read          'Reads the opened file'\n");
-    print_at(main_id, "- close         'Close opened file'\n");
-    print_at(main_id, "- exit          'Close fs_interface'\n");
+    print_to_region(main_id, "Available commands:\n");
+    print_to_region(main_id, "- help          'Prints this list'\n");
+    print_to_region(main_id, "- open   [path] 'Open a file'\n");
+    print_to_region(main_id, "- write  [text] 'Writes to opened file'\n");
+    print_to_region(main_id, "- mkdir  [path] 'Creates a directory'\n");
+    print_to_region(main_id, "- delete [path] 'Deletes a file\n'");
+    print_to_region(main_id, "- cd     [path] 'Changes working directory'\n");
+    print_to_region(main_id, "- ls            'Lists directory contents'\n");
+    print_to_region(main_id, "- read          'Reads the opened file'\n");
+    print_to_region(main_id, "- close         'Close opened file'\n");
+    print_to_region(main_id, "- exit          'Close fs_interface'\n");
 }
 
 static void delete(const char *path) {
     if (delete_file(path) == STATUS_ERROR) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "Failed to delete file!");
+        print_at(info_id, PADDING, INFO_LINE_Y, "Failed to delete file!");
         return;
     }
 
-    render_at(info_id, PADDING, INFO_LINE_Y, "File deleted!");
+    print_at(info_id, PADDING, INFO_LINE_Y, "File deleted!");
 }
 
 static void close_file(const char *args) {
     (void)args;
     if (fd == STATUS_ERROR) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "No open file to close");
+        print_at(info_id, PADDING, INFO_LINE_Y, "No open file to close");
         return;
     }
     close(fd);
-    render_at(info_id, PADDING, INFO_LINE_Y, "File closed");
+    print_at(info_id, PADDING, INFO_LINE_Y, "File closed");
     fd = -1;
 }
 
@@ -102,11 +100,11 @@ static void list_directories(const char *args) {
             trim(entry);
             if (entry[0] != '\0') {
                 if (strlen(entry) > 8) {
-                    draw_buffer(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)document);
+                    draw_sprite(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)document);
                 } else {
-                    draw_buffer(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)folder);
+                    draw_sprite(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)folder);
                 }
-                render_at(main_id, current_x, current_text_y, entry);
+                print_at(main_id, current_x, current_text_y, entry);
                 current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
             }
             entry = &dirents[i + 1];
@@ -126,7 +124,7 @@ static void quit_program(const char *args) {
 static void read_file(const char *args) {
     (void)args;
     if (fd == STATUS_ERROR) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "No file currently open");
+        print_at(info_id, PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
 
@@ -134,19 +132,19 @@ static void read_file(const char *args) {
     int nread     = read(fd, buf, sizeof(buf) - 1);
 
     if (nread != -1) {
-        print_at(main_id, buf);
+        print_to_region(main_id, buf);
     } else {
-        render_at(info_id, PADDING, INFO_LINE_Y, "Read failed or file empty");
+        print_at(info_id, PADDING, INFO_LINE_Y, "Read failed or file empty");
     }
 }
 
 static void write_to_file(const char *buffer) {
     if (fd == -1) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "No file currently open");
+        print_at(info_id, PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
     write(fd, buffer);
-    render_at(info_id, PADDING, INFO_LINE_Y, "Wrote to the file, now reading it");
+    print_at(info_id, PADDING, INFO_LINE_Y, "Wrote to the file, now reading it");
     read_file(0);
 }
 static void open_file(const char *flag_and_path) {
@@ -173,28 +171,28 @@ static void open_file(const char *flag_and_path) {
         flag = O_CREAT;
         cpy_path += 3;
     } else {
-        render_at(info_id, PADDING, INFO_LINE_Y, "special flag not provided opening with read_only");
+        print_at(info_id, PADDING, INFO_LINE_Y, "special flag not provided opening with read_only");
     }
 
     fd = open(cpy_path, flag);
     if (fd == -1) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "read on opening the file");
+        print_at(info_id, PADDING, INFO_LINE_Y, "read on opening the file");
         return;
     }
-    render_at(info_id, PADDING, INFO_LINE_Y, "Opened the file, now reading it");
+    print_at(info_id, PADDING, INFO_LINE_Y, "Opened the file, now reading it");
     read_file(0);
 }
 
 static void create_dir(const char *flag_and_path) {
     if (mkdir(flag_and_path) == STATUS_ERROR) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "Could not create directories");
+        print_at(info_id, PADDING, INFO_LINE_Y, "Could not create directories");
         return;
     }
-    print_at(info_id, "Directory(ies) created");
+    print_to_region(info_id, "Directory(ies) created");
 }
 static void change_dir(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {
-        render_at(info_id, PADDING, INFO_LINE_Y, "Failed to change directory");
+        print_at(info_id, PADDING, INFO_LINE_Y, "Failed to change directory");
     }
     list_directories(0);
 }
@@ -213,8 +211,8 @@ static const Command commands[] = {
 };
 
 void exec_cmd(char *buf) {
-    paint_section(cmd_id);
-    paint_section(main_id);
+    refresh_region(cmd_id);
+    refresh_region(main_id);
 
     const char *trimmed = skip_spaces(buf);
     if (*trimmed == '\0') {
@@ -245,53 +243,49 @@ void exec_cmd(char *buf) {
 
 static void print_char(int buffer_x_pos, char c) {
     char tmp[2] = {c, '\0'};
-    render_at(cmd_id, buffer_x_pos, CMD_LINE_Y, tmp);
+    print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, tmp);
 }
 
 int main(void) {
-    set_text_color(MAIN_WINDOW_KEY, COLOR_WHITE);
-    set_background_color(MAIN_WINDOW_KEY, COLOR_DEEP_BLUE);
-    if (resize_task_window(MAIN_WINDOW_KEY, WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
+    set_viewport_text_color(COLOR_WHITE);
+    set_viewport_background_color(COLOR_DEEP_BLUE);
+    if (resize_viewport(WINDOW_WIDTH, WINDOW_HEIGTH) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
-    if (move_task_window(MAIN_WINDOW_KEY, SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
+    if (move_viewport(SCREEN_CO_X, SCREEN_CO_Y) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
-    header_id = register_section(0, 0, WINDOW_WIDTH, HEADER_BLOCK, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    header_id = create_region(WINDOW_WIDTH, HEADER_BLOCK, 0, 0, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
     if (header_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
-    paint_section(header_id);
-    render_at(header_id, PADDING, 0, "Maccas filesystem interface");
+    print_at(header_id, PADDING, 0, "Maccas filesystem interface");
 
-    main_id = register_section(0, MAIN_AREA_START_Y, WINDOW_WIDTH - 2, MAIN_AREA_BLOCK - FONT_HEIGHT,
-                               COLOR_WHITE, COLOR_DEEP_BLUE);
+    main_id = create_region(WINDOW_WIDTH - 2, MAIN_AREA_BLOCK - FONT_HEIGHT, 0, MAIN_AREA_START_Y,
+                            COLOR_WHITE, COLOR_DEEP_BLUE);
 
     if (main_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
-    set_horizontal_padding(main_id, PADDING);
-    paint_section(main_id);
+    set_region_padding_x(main_id, PADDING);
     show_commands(0);
 
-    info_id = register_section(0, INFO_LINE_Y, WINDOW_WIDTH, FONT_HEIGHT + PADDING, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    info_id = create_region(WINDOW_WIDTH, FONT_HEIGHT + PADDING, 0, INFO_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
     if (info_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
-    set_horizontal_padding(info_id, PADDING);
-    paint_section(info_id);
+    set_region_padding_x(info_id, PADDING);
 
-    cmd_id = register_section(0, CMD_LINE_Y, WINDOW_WIDTH, FONT_HEIGHT + PADDING, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    cmd_id = create_region(WINDOW_WIDTH, FONT_HEIGHT + PADDING, 0, CMD_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
     if (cmd_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
-    set_horizontal_padding(cmd_id, PADDING);
-    paint_section(cmd_id);
+    set_region_padding_x(cmd_id, PADDING);
     char buf[BUF_SIZE];
     int pos = 0;
     char c;
@@ -299,17 +293,17 @@ int main(void) {
     const char *art_start = "[ --> ";
     const char *art_end   = " ] ";
 
-    render_at(info_id, PADDING, INFO_LINE_Y, "Maccas configurated and ready for use");
+    print_at(info_id, PADDING, INFO_LINE_Y, "Maccas configurated and ready for use");
 
     while (1) {
         int buffer_x_pos = PADDING;
-        render_at(cmd_id, buffer_x_pos, CMD_LINE_Y, art_start);
+        print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, art_start);
         buffer_x_pos += strlen(art_start) * FONT_WIDTH;
 
-        render_at(cmd_id, buffer_x_pos, CMD_LINE_Y, dir_name);
+        print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, dir_name);
         buffer_x_pos += strlen(dir_name) * FONT_WIDTH;
 
-        render_at(cmd_id, buffer_x_pos, CMD_LINE_Y, art_end);
+        print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, art_end);
         buffer_x_pos += strlen(art_end) * FONT_WIDTH;
 
         pos = 0;
@@ -325,7 +319,7 @@ int main(void) {
                 if (pos > 0) {
                     pos--;
                     buffer_x_pos -= FONT_WIDTH;
-                    render_at(cmd_id, buffer_x_pos, CMD_LINE_Y, " ");
+                    print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, " ");
                 }
             } else if (pos < BUF_SIZE - 1) {
                 buf[pos++] = c;

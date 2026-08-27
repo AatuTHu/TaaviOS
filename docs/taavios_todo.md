@@ -12,14 +12,14 @@
 - [x] sys_wi operation to draw image/sprite from ring 3 (blit user space buffer to window)
 - [x] User space needs malloc/alloc
 - [50%] GUI scroll screen up and down
-- [75%] left and right working Shell arrow traversal
+- [x] left and right working Shell arrow traversal
 - [ ] Blinking cursor
 - [ ] fs_int more complex file system management.
 - [ ] First real text editor
 - [x] Virtual tasks return adds random chars at the end of the list
 - [ ] Batch render operations. (Many requests on one sys call)
-- [ ] refresh section and set cursor to original state
-- [ ] render.h abstractions to stand so that it doesn't have to be included.
+- [x] refresh section and set cursor to original state
+- [x] render.h abstractions to stand so that it doesn't have to be included.
 - [ ] rework gui to handle multiple requests before blankie protocol.
 - [ ] small self made compiler
 - [ ] system doctor clerk
@@ -29,4 +29,4 @@
 - [ ] init should launch clerks?
 - [ ] scheduler super priority protocol?
 - [ ] Nothing stops from writing to directory. Directories should not be able to be opened/closed/written to?
-- [ ] FAT32 delete dir/file.
+- [x] FAT32 delete dir/file.

@@ -52,7 +52,7 @@ int __init_task() {
 
     malloc_init((void *)heap_start, current_heap_end);
 
-    if (init_render() == -1) {
+    if (gfx_init() == -1) {
         return -1;
     }
 
