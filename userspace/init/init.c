@@ -10,7 +10,7 @@ void main(void) {
 
     sys_yield();
 
-    if (exec("/sysbin/fs_int") != 0)
+    if (exec("/sysbin/teditor") != 0)
         return;
 
     //  if (exec("/sysbin/fs_int") != 0)

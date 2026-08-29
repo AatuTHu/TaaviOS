@@ -63,7 +63,7 @@ static int parse_dimensions(const char *ptr, int *w, int *h) {
 }
 
 /**
- * clamp_borders_to_window - repaint a region's border and interior.
+ * gfx_draw_borders - repaint a region's border and interior.
  * @region_id: region whose border should be repainted.
  *
  * Description:
@@ -73,7 +73,7 @@ static int parse_dimensions(const char *ptr, int *w, int *h) {
  *
  * Return: void.
  */
-static void clamp_borders_to_window(uint32_t region_id) {
+static void gfx_draw_borders(uint32_t region_id) {
     gui_params_pack params;
 
     gfx_region_t *entry = gfx_regions[region_id];
@@ -179,7 +179,7 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h) {
     entry->width  = w;
     entry->height = h;
 
-    clamp_borders_to_window(region_id);
+    gfx_draw_borders(region_id);
 
     return result;
 }
@@ -512,7 +512,7 @@ int gfx_init(void) {
 
     gfx_regions[PRIMARY_VIEWPORT_ID] = entry;
 
-    clamp_borders_to_window(PRIMARY_VIEWPORT_ID);
+    gfx_draw_borders(PRIMARY_VIEWPORT_ID);
 
     return STATUS_OK;
 }

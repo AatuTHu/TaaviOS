@@ -280,7 +280,7 @@ int main(void) {
         pos = 0;
 
         while (1) {
-            //  paint_cursor_position(COLOR_LIGHT_GRAY);
+            mark_cursor_position(COLOR_LIGHT_GRAY);
             scan(&c);
 
             switch (c) {

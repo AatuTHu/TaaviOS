@@ -259,3 +259,7 @@ void set_region_padding_y(uint32_t region_id, uint32_t padding) {
 int draw_sprite(uint32_t region_id, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite) {
     return gfx_draw_sprite(region_id, x, y, width, height, scale, sprite);
 }
+
+void mark_cursor_position(uint32_t background_color) {
+    gfx_paint_cursor_position(background_color);
+}

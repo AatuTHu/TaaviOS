@@ -55,7 +55,7 @@ static int pack_params_and_send(uint8_t opcode, uint32_t region_id, uint32_t x, 
  *
  * Return: void.
  */
-void paint_cursor_position(uint32_t color) {
+void gfx_paint_cursor_position(uint32_t color) {
     gfx_region_t *entry = gfx_regions[PRIMARY_VIEWPORT_ID];
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
@@ -197,6 +197,7 @@ static int backspace_pressed(uint32_t current_i, gfx_region_t *entry, const char
     if (entry->cursor_y == entry->padding_y && entry->cursor_x == entry->padding_x) {
         return STATUS_OK;
     }
+    gfx_paint_cursor_position(entry->bg_color);
 
     if (entry->cursor_y >= (entry->padding_y + FONT_HEIGHT) && entry->cursor_x <= entry->padding_x) {
         entry->cursor_y -= FONT_HEIGHT;
@@ -247,27 +248,29 @@ int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len) {
             break;
         case KEY_LEFT:
             if (entry->cursor_x > 0) {
+                gfx_paint_cursor_position(entry->bg_color);
                 entry->cursor_x -= FONT_WIDTH;
-                // paint_cursor_position(entry->bg_color);
             }
             return STATUS_OK;
         case KEY_RIGHT:
             if (entry->cursor_x <= entry->width - FONT_WIDTH) {
-                // paint_cursor_position(entry->bg_color);
+                gfx_paint_cursor_position(entry->bg_color);
                 entry->cursor_x += FONT_WIDTH;
             }
             return STATUS_OK;
         case KEY_UP:
             if (entry->cursor_y > 0) {
+                gfx_paint_cursor_position(entry->bg_color);
                 entry->cursor_y -= FONT_HEIGHT;
-                // paint_cursor_position(entry->bg_color);
             }
             return STATUS_OK;
         case KEY_DOWN:
             if ((entry->cursor_y + FONT_HEIGHT) >= (entry->height - entry->padding_y)) {
+                gfx_paint_cursor_position(entry->bg_color);
                 scroll_down(entry);
                 entry->cursor_y = entry->height - FONT_HEIGHT - entry->padding_y;
             } else {
+                gfx_paint_cursor_position(entry->bg_color);
                 entry->cursor_y += FONT_HEIGHT;
             }
             return STATUS_OK;
@@ -297,8 +300,8 @@ int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len) {
             }
             entry->cursor_y += FONT_HEIGHT;
             entry->cursor_x = entry->padding_x;
-            gfx_clamp_horizontal(entry, parent);
-            gfx_clamp_vertical(entry, parent);
+            //  gfx_clamp_horizontal(entry, parent);
+            // gfx_clamp_vertical(entry, parent);
         }
     }
     return STATUS_OK;
