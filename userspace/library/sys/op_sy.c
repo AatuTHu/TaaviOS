@@ -27,6 +27,7 @@ int exec(const char *filename) {
 }
 
 void terminate_program() {
+    gfx_release_regions_and_viewport();
     sys_exit();
 }
 

@@ -6,6 +6,7 @@
 #include "string.h"
 #include "sys_calls.h"
 #include <stdint.h>
+#include <string.h>
 
 gfx_region_t *gfx_regions[MAX_REGIONS];
 
@@ -364,7 +365,7 @@ int gfx_draw_sprite(uint32_t region_id, int x, int y, int width, int height, uin
  *
  * Return: allocated slot index, or STATUS_ERROR.
  */
-int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t fg_color, uint32_t bg_color) {
+int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t fg_color, uint32_t bg_color, const char *str) {
 
     int slot = -1;
 
@@ -424,6 +425,18 @@ int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
     if (height > max_h)
         height = max_h;
 
+    if (str != NULL) {
+        uint32_t str_len = strlen(str);
+        new_entry->str   = (char *)malloc(str_len + 1);
+
+        if (new_entry->str == NULL) {
+            return STATUS_ERROR;
+        }
+
+        memcpy(new_entry->str, str, str_len);
+        new_entry->str[str_len] = '\0';
+    }
+
     new_entry->id           = parent->id;
     new_entry->width        = width;
     new_entry->height       = height;
@@ -439,8 +452,6 @@ int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
     new_entry->border_color = COLOR_DARKER_GRAY;
 
     gfx_regions[slot]       = new_entry;
-
-    gfx_clear_region(slot);
 
     return slot;
 }
@@ -465,6 +476,10 @@ int gfx_delete_region(uint32_t region_id) {
     if (entry == NULL) {
         LOG("Invalid entry\n");
         return STATUS_ERROR;
+    }
+
+    if (entry->str != NULL) {
+        free(entry->str);
     }
 
     free(entry);
@@ -509,6 +524,7 @@ int gfx_init(void) {
     entry->cursor_y                  = entry->padding_y;
     entry->fg_color                  = COLOR_WHITE;
     entry->bg_color                  = COLOR_BLACK;
+    entry->str                       = NULL;
 
     gfx_regions[PRIMARY_VIEWPORT_ID] = entry;
 
@@ -534,4 +550,12 @@ int gfx_reset_cursor(uint32_t region_id) {
     entry->cursor_y = entry->offset_y;
 
     return STATUS_OK;
+}
+
+void gfx_release_regions_and_viewport() {
+    for (int i = MAX_REGIONS - 1; i >= 0; i--) {
+        if (gfx_regions[i] != NULL) {
+            gfx_delete_region(i);
+        }
+    }
 }

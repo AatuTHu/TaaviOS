@@ -3,6 +3,7 @@
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
+#include "ui.h"
 #include <stddef.h>
 #include <stdint.h>
 

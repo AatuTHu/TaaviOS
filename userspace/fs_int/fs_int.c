@@ -5,6 +5,7 @@
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
+#include "ui.h"
 #include <stdint.h>
 
 #define PADDING_BETWEEN_FILES 8
@@ -257,15 +258,15 @@ int main(void) {
         return STATUS_ERROR;
     }
 
-    header_id = create_region(WINDOW_WIDTH, HEADER_BLOCK, 0, 0, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    header_id = create_container(WINDOW_WIDTH, HEADER_BLOCK, 0, 0, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
     if (header_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
     print_at(header_id, PADDING, 0, "Maccas filesystem interface");
 
-    main_id = create_region(WINDOW_WIDTH - 2, MAIN_AREA_BLOCK - FONT_HEIGHT, 0, MAIN_AREA_START_Y,
-                            COLOR_WHITE, COLOR_DEEP_BLUE);
+    main_id = create_container(WINDOW_WIDTH - 2, MAIN_AREA_BLOCK - FONT_HEIGHT, 0, MAIN_AREA_START_Y,
+                               COLOR_WHITE, COLOR_DEEP_BLUE);
 
     if (main_id == STATUS_ERROR) {
         return STATUS_ERROR;
@@ -273,14 +274,14 @@ int main(void) {
     set_region_padding_x(main_id, PADDING);
     show_commands(0);
 
-    info_id = create_region(WINDOW_WIDTH, FONT_HEIGHT + PADDING, 0, INFO_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    info_id = create_container(WINDOW_WIDTH, FONT_HEIGHT + PADDING, 0, INFO_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
 
     if (info_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
     set_region_padding_x(info_id, PADDING);
 
-    cmd_id = create_region(WINDOW_WIDTH, FONT_HEIGHT + PADDING, 0, CMD_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
+    cmd_id = create_container(WINDOW_WIDTH, FONT_HEIGHT + PADDING, 0, CMD_LINE_Y, COLOR_BLACK, COLOR_LIGHT_GRAY);
     if (cmd_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }

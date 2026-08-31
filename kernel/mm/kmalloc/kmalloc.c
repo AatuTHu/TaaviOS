@@ -25,7 +25,7 @@ static void update_remaining_heap_size() {
         current = current->next;
     }
     remaining_heap_size = total_free;
-    DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
+    // DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
 }
 
 void kmalloc_init(void *heap_start, uint32_t heap_size) {

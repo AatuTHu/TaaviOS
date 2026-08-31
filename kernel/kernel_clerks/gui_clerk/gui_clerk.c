@@ -139,12 +139,10 @@ static int gui_create_window_entry(request_table *req) {
 
     int slot = -1;
 
-    if (slot == -1) {
-        for (int i = 0; i < MAX_TASKS; i++) {
-            if (program_windows[i] == NULL) {
-                slot = i;
-                break;
-            }
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] == NULL) {
+            slot = i;
+            break;
         }
     }
 
@@ -160,6 +158,14 @@ static int gui_create_window_entry(request_table *req) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: Reserving memory for the window table failed. Aborting\n");
         req->struct_key = STATUS_ERROR;
         return STATUS_ERROR;
+    }
+
+    if (req->width > fb.width) {
+        req->width = fb.width;
+    }
+
+    if (req->height > fb.height) {
+        req->height = fb.height;
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
@@ -296,6 +302,14 @@ int gui_resize_window(request_table *req) {
         return STATUS_ERROR;
     }
 
+    if (req->width > fb.width) {
+        req->width = fb.width;
+    }
+
+    if (req->height > fb.height) {
+        req->height = fb.height;
+    }
+
     DEBUG_GUI_TASK("[GUI_TASK]: %d asking for resize\n", entry->owner_pid);
     if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
                      entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
@@ -339,7 +353,7 @@ int gui_resize_window(request_table *req) {
         DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New height goes over the screen in vertical direction. Moving it inside\n");
         DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.height = %d, req.height = %d, fb.height = %d\n", entry->height, req->height, fb.height);
 
-        if (req->height > fb.width) {
+        if (req->height > fb.height) {
             req->height = fb.height;
         } else {
             entry->screen_y = fb.height - req->height;
@@ -456,7 +470,8 @@ void gui_task_loop() {
 }
 
 static void gui_recovery() {
-    ERROR("[GUI_TASK][RECOVERY]: activated %d times\n", hail_mary_act_count);
+    ERROR("\n[GUI_TASK][RECOVERY]: activated %d times\n", hail_mary_act_count);
+
     hail_mary_act_count++;
     ledger_check_request(gui_task_pid);
     blankie_activate(gui_task_pid);

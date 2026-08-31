@@ -14,6 +14,7 @@ static inline int queue_req(request_table *new_request, uint32_t caller_pid) {
         scheduler_wake_task(caller_pid);
         return STATUS_ERROR;
     }
+    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
     return STATUS_OK;
 }
 
@@ -74,11 +75,10 @@ int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params) {
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: clerkpid: %d\n", new_request->clerk_pid);
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
-    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
-    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
-    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
-    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: width: %d\n", new_request->width);
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: height: %d\n", new_request->height);
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: x: %d\n", new_request->x);
+    // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
     //  DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
     return queue_req(new_request, caller_pid);
