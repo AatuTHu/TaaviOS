@@ -14,6 +14,8 @@ int create_button(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const
 
 void show(uint32_t region_id);
 
+int delete_region(uint32_t region_id);
+
 void set_viewport_text_color(uint32_t color);
 void set_viewport_background_color(uint32_t color);
 void set_region_text_color(uint32_t region_id, uint32_t color);

@@ -7,32 +7,34 @@
 #include "string.h"
 #include <stdint.h>
 
-int create_button(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *title) {
+static int force_to_fit_and_register_region(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *str, uint32_t txt_col, uint32_t bg_col) {
 
-    if (title == NULL) {
+    if (str == NULL) {
         return STATUS_ERROR;
     }
 
-    uint32_t title_width = strlen(title) * FONT_WIDTH;
+    uint32_t str_width = strlen(str) * FONT_WIDTH;
 
-    if (width < title_width) {
-        width = title_width;
+    if (width < str_width) {
+        width = str_width;
     }
 
     if (height < FONT_HEIGHT) {
         height = FONT_HEIGHT;
     }
 
-    int button_id = gfx_register_region(x, y, width, height, COLOR_WHITE, COLOR_DEEP_BLUE, title);
+    return gfx_register_region(x, y, width, height, txt_col, bg_col, str);
+}
+
+int create_button(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *title) {
+
+    int button_id = force_to_fit_and_register_region(width, height, x, y, title, COLOR_WHITE, COLOR_DEEP_BLUE);
 
     if (button_id == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
     gfx_region_t *button = gfx_regions[button_id];
-
-    gfx_clamp_horizontal(button, gfx_regions[PRIMARY_VIEWPORT_ID]);
-    gfx_clamp_vertical(button, gfx_regions[PRIMARY_VIEWPORT_ID]);
 
     button->cursor_x += (button->width / 2) - ((strlen(title) * FONT_WIDTH / 2));
     button->cursor_y += (button->height - FONT_HEIGHT) / 2;
@@ -56,21 +58,8 @@ int create_container(uint32_t width, uint32_t height, uint32_t x, uint32_t y, ui
 }
 
 int create_label(uint32_t width, uint32_t height, uint32_t label_x, uint32_t label_y, uint32_t text_x, uint32_t text_y, uint32_t text_color, uint32_t background_color, const char *text) {
-    if (text == NULL) {
-        return STATUS_ERROR;
-    }
 
-    uint32_t text_width = strlen(text) * FONT_WIDTH;
-
-    if (width < text_width) {
-        width = text_width;
-    }
-
-    if (height < FONT_HEIGHT) {
-        height = FONT_HEIGHT;
-    }
-
-    int label_id = gfx_register_region(label_x, label_y, width, height, text_color, background_color, text);
+    int label_id = force_to_fit_and_register_region(width, height, label_x, label_y, text, text_color, background_color);
 
     if (label_id == STATUS_ERROR) {
         return STATUS_ERROR;
@@ -79,10 +68,8 @@ int create_label(uint32_t width, uint32_t height, uint32_t label_x, uint32_t lab
     gfx_clear_region(label_id);
     gfx_region_t *label = gfx_regions[label_id];
 
-    gfx_clamp_horizontal(label, gfx_regions[PRIMARY_VIEWPORT_ID]);
-    gfx_clamp_vertical(label, gfx_regions[PRIMARY_VIEWPORT_ID]);
-    label->cursor_x = text_x;
-    label->cursor_y = text_y;
+    label->cursor_x     = text_x;
+    label->cursor_y     = text_y;
 
     return label_id;
 }
@@ -151,4 +138,8 @@ int draw_sprite(uint32_t region_id, int x, int y, int width, int height, uint32_
 
 void mark_cursor_position(uint32_t background_color) {
     gfx_paint_cursor_position(background_color);
+}
+
+int delete_region(uint32_t region_id) {
+    return gfx_delete_region(region_id);
 }
