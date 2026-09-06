@@ -47,6 +47,7 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h);
 int gfx_move_viewport(uint32_t region_id, int x, int y);
 void gfx_release_regions_and_viewport();
 int gfx_delete_region(uint32_t region_id);
+int gfx_draw_borders(uint32_t region_id);
 
 void gfx_paint_cursor_position(uint32_t color);
 int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len);

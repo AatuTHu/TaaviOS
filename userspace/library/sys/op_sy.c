@@ -1,4 +1,5 @@
 #include "op_sy.h"
+#include "log.h"
 #include "malloc.h"
 #include "render.h"
 #include "shared.h"
@@ -48,12 +49,14 @@ int __init_task() {
     int current_heap_end = sys_sbrk(64);
 
     if (heap_start == -1 || current_heap_end == -1) {
+        LOG("Failed to initialize heap\n");
         return -1;
     }
 
     malloc_init((void *)heap_start, current_heap_end);
 
     if (gfx_init() == -1) {
+        LOG("Failed to initialize graphics\n");
         return -1;
     }
 

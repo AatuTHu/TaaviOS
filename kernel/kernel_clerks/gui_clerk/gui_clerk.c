@@ -197,8 +197,6 @@ static int gui_scroll_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG_GUI_TASK("[GUI_TASK][SCROLL] %d is asking to scroll its the window down\n", req->caller_pid);
-
     blueprint_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL) {
@@ -215,7 +213,6 @@ static int gui_scroll_window(request_table *req) {
 
 static int gui_paint_rectangle(request_table *req) {
 
-    DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Painting a window for %d to screen!\n", req->caller_pid);
     blueprint_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
@@ -253,7 +250,7 @@ static int gui_paint_rectangle(request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Window painted successfully to screen!\n");
+    //  DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Window painted successfully to screen!\n");
     return STATUS_OK;
 }
 
@@ -310,7 +307,6 @@ int gui_resize_window(request_table *req) {
         req->height = fb.height;
     }
 
-    DEBUG_GUI_TASK("[GUI_TASK]: %d asking for resize\n", entry->owner_pid);
     if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
                      entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
         return STATUS_ERROR;
@@ -367,7 +363,7 @@ int gui_resize_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
+    //    DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
     return STATUS_OK;
 }
 
@@ -408,14 +404,12 @@ int gui_move_task_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
+    //  DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
     return STATUS_OK;
 }
 
 static void gui_handle_request(request_table *req) {
     task_t *gui_task = task_get(gui_task_pid);
-
-    DEBUG_GUI_TASK("[GUI_TASK][HANDLE]: servicing struct_key: %d\n", req->struct_key);
 
     if (gui_task == NULL || req == NULL)
         return;

@@ -1,4 +1,5 @@
 #include "malloc.h"
+#include "log.h"
 
 /**
  * Heap allocator
@@ -57,6 +58,8 @@ void *malloc(uint32_t size) {
         prev    = current;
         current = current->next;
     }
+
+    LOG("No heap memory left\n");
     return NULL;
 }
 static void merge() {
@@ -84,6 +87,7 @@ void free(void *ptr) {
     block_header_t *addr =
         (block_header_t *)((uint8_t *)ptr - sizeof(block_header_t));
     if (addr->magic != HEAP_MAGIC) {
+        LOG("Invalid heap magic\n");
         return;
     } else {
         block_header_t *prev    = NULL;

@@ -1,11 +1,23 @@
 #include "ui.h"
 #include "font.h"
 #include "log.h"
+#include "malloc.h"
 #include "render.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include <stdint.h>
+
+container_info_t *container_list[MAX_REGIONS];
+
+static container_info_t *find_container(uint32_t region_id) {
+    for (int i = 0; i < MAX_REGIONS; i++) {
+        if (container_list[i] != NULL && container_list[i]->region_id == region_id) {
+            return container_list[i];
+        }
+    }
+    return NULL;
+}
 
 static int force_to_fit_and_register_region(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *str, uint32_t txt_col, uint32_t bg_col) {
 
@@ -26,7 +38,7 @@ static int force_to_fit_and_register_region(uint32_t width, uint32_t height, uin
     return gfx_register_region(x, y, width, height, txt_col, bg_col, str);
 }
 
-int create_button(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *title) {
+int create_button(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *title, void (*cb)(void)) {
 
     int button_id = force_to_fit_and_register_region(width, height, x, y, title, COLOR_WHITE, COLOR_DEEP_BLUE);
 
@@ -34,7 +46,25 @@ int create_button(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const
         return STATUS_ERROR;
     }
 
+    for (int i = 0; i < MAX_REGIONS; i++) {
+        if (container_list[i] == NULL) {
+            container_info_t *entry = (container_info_t *)malloc(sizeof(container_info_t));
+            if (entry == NULL) {
+                gfx_delete_region(button_id);
+                return STATUS_ERROR;
+            }
+
+            entry->region_id  = button_id;
+            entry->cb         = cb;
+            container_list[i] = entry;
+            break;
+        }
+    }
+
     gfx_region_t *button = gfx_regions[button_id];
+
+    button->border_width = 2;
+    button->border_color = COLOR_DARKER_GRAY;
 
     button->cursor_x += (button->width / 2) - ((strlen(title) * FONT_WIDTH / 2));
     button->cursor_y += (button->height - FONT_HEIGHT) / 2;
@@ -75,15 +105,28 @@ int create_label(uint32_t width, uint32_t height, uint32_t label_x, uint32_t lab
 }
 
 void show(uint32_t region_id) {
-    if (region_id > MAX_REGIONS) {
+    if (region_id >= MAX_REGIONS) {
         return;
     }
 
-    gfx_clear_region(region_id);
+    if (gfx_regions[region_id]->border_width > 0) {
+        gfx_draw_borders(region_id);
+    } else {
+        gfx_clear_region(region_id);
+    }
 
     if (gfx_regions[region_id]->str != NULL) {
         gfx_region_t *region = gfx_regions[region_id];
         gfx_draw_text_at(region_id, region->cursor_x, region->cursor_y, region->str);
+    }
+}
+
+void button_press(uint32_t region_id) {
+    for (int i = 0; i < MAX_REGIONS; i++) {
+        if (container_list[i] != NULL && container_list[i]->region_id == region_id) {
+            container_list[i]->cb();
+            return;
+        }
     }
 }
 
@@ -141,5 +184,23 @@ void mark_cursor_position(uint32_t background_color) {
 }
 
 int delete_region(uint32_t region_id) {
+    for (int i = 0; i < MAX_REGIONS; i++) {
+        if (container_list[i] != NULL && container_list[i]->region_id == region_id) {
+            free(container_list[i]);
+            container_list[i] = NULL;
+            break;
+        }
+    }
     return gfx_delete_region(region_id);
+}
+
+void set_region_border_color(uint32_t region_id, uint32_t color) {
+
+    if (gfx_regions[region_id] == NULL) {
+        LOG("Invalid region ID\n");
+        return;
+    }
+
+    gfx_set_border_color(region_id, color);
+    show(region_id);
 }

@@ -1,5 +1,6 @@
 #include "malloc.h"
 #include "op_sy.h"
+#include "readline.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -8,11 +9,6 @@
 #include <stdint.h>
 
 #define BUF_SIZE 256
-#define MAX_SAVED_LINES 32
-
-static char lines[MAX_SAVED_LINES][BUF_SIZE];
-static int saved_cmds_count  = 0;
-static int current_cmd_index = 0;
 
 typedef void (*cmd_handler_t)(const char *arg);
 
@@ -203,22 +199,10 @@ static const Command commands[] = {
     {"resize ", command_resize, 1},
 };
 
-static void save_cmd(const char *buf) {
-    if (saved_cmds_count == MAX_SAVED_LINES) {
-        saved_cmds_count = 0;
-    }
-
-    strcpy(lines[saved_cmds_count], buf);
-    current_cmd_index = saved_cmds_count;
-    saved_cmds_count++;
-}
-
 void exec_cmd(char *buf) {
     if (buf[0] == '\0') {
         return;
     }
-
-    save_cmd(buf);
 
     size_t cmd_count = sizeof(commands) / sizeof(commands[0]);
 
@@ -241,21 +225,7 @@ void exec_cmd(char *buf) {
     print("Invalid command\n");
 }
 
-static void print_char(char c) {
-    char tmp[2] = {c, '\0'};
-    print(tmp);
-}
-
-static void clear_input_line(int current_pos) {
-    for (int i = 0; i < current_pos; i++) {
-        print("\b \b");
-    }
-}
-
 int main(void) {
-
-    memset(lines, 0, sizeof(lines));
-
     if (set_operator_task() == -1) {
         print("Failed to set operator task\n");
         return 1;
@@ -273,67 +243,11 @@ int main(void) {
     print("Type 'help' to see all commands\n");
 
     char buf[BUF_SIZE];
-    int pos = 0;
-    char c;
 
     while (1) {
         print("-> ");
-        pos = 0;
-
-        while (1) {
-            mark_cursor_position(COLOR_LIGHT_GRAY);
-            scan(&c);
-
-            switch (c) {
-            case KEY_LEFT:
-                if (pos > 0) {
-                    pos--;
-                    print_char(c);
-                }
-                continue;
-            case KEY_RIGHT:
-                if (pos < BUF_SIZE - 1) {
-                    pos++;
-                    print_char(c);
-                }
-                continue;
-            case KEY_UP:
-                if (saved_cmds_count > 0) {
-                    clear_input_line(pos);
-                    int len = strlen(lines[current_cmd_index]);
-                    strcpy(buf, lines[current_cmd_index]);
-                    pos = len;
-                    print(buf);
-
-                    if (current_cmd_index <= 0) {
-                        current_cmd_index = saved_cmds_count;
-                        continue;
-                    }
-
-                    current_cmd_index--;
-                }
-
-                continue;
-            case KEY_DOWN:
-                clear_input_line(pos);
-                continue;
-            }
-
-            if (c == '\n') {
-                buf[pos] = '\0';
-                print_char(c);
-                exec_cmd(buf);
-                break;
-            } else if (c == '\b') {
-                if (pos > 0) {
-                    pos--;
-                    print_char(c);
-                }
-            } else if (pos < BUF_SIZE - 1) {
-                buf[pos++] = c;
-                print_char(c);
-            }
-        }
+        readline(buf, BUF_SIZE);
+        exec_cmd(buf);
     }
 
     return 0;

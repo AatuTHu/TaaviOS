@@ -72,15 +72,15 @@ static int parse_dimensions(const char *ptr, int *w, int *h) {
  * inner area (inset by border_width on each side) with the background
  * color, producing a visible border frame.
  *
- * Return: void.
+ * Return: Result of sys_conwi || STATUS_ERROR.
  */
-static void gfx_draw_borders(uint32_t region_id) {
+int gfx_draw_borders(uint32_t region_id) {
     gui_params_pack params;
 
     gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
-        return;
+        return STATUS_ERROR;
     }
 
     memset(&params, 0, sizeof(params));
@@ -89,17 +89,21 @@ static void gfx_draw_borders(uint32_t region_id) {
 
     params.width      = entry->width;
     params.height     = entry->height;
-    params.x          = 0;
-    params.y          = 0;
+    params.x          = entry->offset_x;
+    params.y          = entry->offset_y;
     params.bg_color   = entry->border_color;
-    sys_conwi(&params);
+    int status        = sys_conwi(&params);
+
+    if (status == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
     params.width    = entry->width - (entry->border_width * 2);
     params.height   = entry->height - (entry->border_width * 2);
-    params.x        = entry->border_width;
-    params.y        = entry->border_width;
+    params.x        = entry->offset_x + entry->border_width;
+    params.y        = entry->offset_y + entry->border_width;
     params.bg_color = entry->bg_color;
-    sys_conwi(&params);
+    return sys_conwi(&params);
 }
 
 /**
@@ -445,8 +449,8 @@ int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
     new_entry->cursor_x     = x;
     new_entry->cursor_y     = y;
     new_entry->border_width = 0;
-    new_entry->padding_x    = parent->border_width + parent->padding_x;
-    new_entry->padding_y    = parent->border_width + parent->padding_y;
+    new_entry->padding_x    = 0;
+    new_entry->padding_y    = 0;
     new_entry->bg_color     = bg_color;
     new_entry->fg_color     = fg_color;
     new_entry->border_color = COLOR_DARKER_GRAY;
@@ -503,6 +507,7 @@ int gfx_init(void) {
     int id = gfx_create_viewport(10, 10, 300, 150, COLOR_WHITE, COLOR_BLACK);
 
     if (id == STATUS_ERROR) {
+        LOG("Creating the main viewport failed\n");
         return STATUS_ERROR;
     }
 

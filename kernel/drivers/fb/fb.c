@@ -4,7 +4,6 @@
 #include "klog.h"
 #include "kstring.h"
 #include "paging.h"
-#include "shared.h"
 #include <stdint.h>
 
 fb_t fb;
@@ -19,15 +18,6 @@ uint32_t fb_pack_color(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 int fb_fill_rect(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t rect_width, uint32_t rect_height, uint32_t stride, uint32_t buf_height, uint32_t color) {
-
-    //   DEBUG_FB("[FB][FILL_REXT]: given buffer: 0x%x\n", pixel_buffer);
-    // DEBUG_FB("[FB][FILL_RECT]: given x %d\n", x);
-    // DEBUG_FB("[FB][FILL_RECT]: given y %d\n", y);
-    // DEBUG_FB("[FB][FILL_RECT]: given w %d\n", rect_width);
-    // DEBUG_FB("[FB][FILL_RECT]: given h %d\n", rect_height);
-    //   DEBUG_FB("[FB][FILL_RECT]: given color %d\n", color);
-    // DEBUG_FB("[FB][FILL_RECT]: stride %d\n", stride);
-    // DEBUG_FB("[FB][FILL_RECT]: buf_height %d\n", buf_height);
 
     if (x + rect_width > stride || y + rect_height > buf_height) {
         ERROR("[FB][FILL_RECT]: x + width or y + height are higher than boundaries\n");

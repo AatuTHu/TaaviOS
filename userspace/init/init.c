@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 void main(void) {
-    release_window();
+
     if (exec("/sysbin/shell") != 0)
-        return;
+         return;
 
     sys_yield();
 
