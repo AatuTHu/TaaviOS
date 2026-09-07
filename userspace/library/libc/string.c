@@ -135,6 +135,20 @@ void strcpy(char *dest, const char *src) {
     *dest = '\0';
 }
 
+void strncpy(char *dest, const char *src, uint32_t size) {
+    uint32_t i;
+    for (i = 0; i < size; i++) {
+        if (src[i] != '\0') {
+            dest[i] = src[i];
+        } else {
+            while (i < size) {
+                dest[i++] = '\0';
+            }
+            break;
+        }
+    }
+}
+
 int atoi(const char *str) {
     int res = 0;
     int i   = 0;

@@ -1,3 +1,4 @@
+#include "history.h"
 #include "malloc.h"
 #include "op_sy.h"
 #include "readline.h"
@@ -239,6 +240,8 @@ int main(void) {
         print("Failed to move window\n");
     }
 
+    history_init();
+
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
@@ -247,7 +250,11 @@ int main(void) {
     while (1) {
         print("-> ");
         readline(buf, BUF_SIZE);
-        exec_cmd(buf);
+
+        if (buf[0] != '\0') {
+            history_add(buf);
+            exec_cmd(buf);
+        }
     }
 
     return 0;

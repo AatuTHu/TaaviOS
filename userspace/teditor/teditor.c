@@ -1,4 +1,5 @@
 #include "font.h"
+#include "log.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -9,10 +10,14 @@
 #define WINDOW_WIDTH 450
 #define WINDOW_HEIGHT 450
 
+static int curret_selected_id = -1;
+
 void on_open_click() {
+    LOG("open_clicked\n");
 }
 
 void on_exit_click() {
+    LOG("exit_clicked");
 }
 
 int main(void) {
@@ -38,8 +43,6 @@ int main(void) {
     int b_open = create_button(100, 30, 175, 200, "Open file", on_open_click);
     int b_exit = create_button(100, 30, 175, 240, "Exit", on_exit_click);
 
-    // char buf[BUF_SIZE];
-    //  int pos = 0;
     char c;
 
     show(header_reg_id);
@@ -52,10 +55,17 @@ int main(void) {
 
         switch (c) {
         case KEY_UP:
+            set_region_border_color(b_exit, COLOR_DARK_GRAY);
             set_region_border_color(b_open, COLOR_WHITE);
+            curret_selected_id = b_open;
             break;
         case KEY_DOWN:
-            set_region_border_color(b_open, COLOR_RED);
+            set_region_border_color(b_open, COLOR_DARK_GRAY);
+            set_region_border_color(b_exit, COLOR_WHITE);
+            curret_selected_id = b_exit;
+            break;
+        case '\n':
+            button_press(curret_selected_id);
             break;
         }
     }

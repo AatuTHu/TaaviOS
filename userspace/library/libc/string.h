@@ -12,6 +12,7 @@ int strnlen(const char *s, int n);
 int strcmp(const char *a, const char *b);
 int str_eq(char *a, char *b);
 void strcpy(char *dest, const char *src);
+void strncpy(char *dest, const char *src, uint32_t size);
 void itoa(int n, char *buf);
 int atoi(const char *str);
 int str_starts_with(const char *str, const char *prefix);
