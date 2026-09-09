@@ -46,7 +46,7 @@ int release_window() {
 int __init_task() {
 
     int heap_start       = sys_sbrk(0);
-    int current_heap_end = sys_sbrk(64);
+    int current_heap_end = sys_sbrk(256);
 
     if (heap_start == -1 || current_heap_end == -1) {
         LOG("Failed to initialize heap\n");

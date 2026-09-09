@@ -1,19 +1,34 @@
 #include "font.h"
 #include "log.h"
+#include "malloc.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include "ui.h"
 #include <stdint.h>
+#include <string.h>
 
 #define BUF_SIZE 128
 #define WINDOW_WIDTH 450
 #define WINDOW_HEIGHT 450
+#define BUFFER_SIZE 512
 
 static int curret_selected_id = -1;
+static int main_req_id        = -1;
 
 void on_open_click() {
-    LOG("open_clicked\n");
+
+    char *buf = (char *)malloc(BUFFER_SIZE);
+
+    list_dirents(buf, BUFFER_SIZE);
+
+    if (strlen(buf) <= 0) {
+        free(buf);
+        return;
+    }
+
+    print_to_region(main_req_id, buf);
+    free(buf);
 }
 
 void on_exit_click() {
@@ -34,7 +49,7 @@ int main(void) {
         return 0;
     }
 
-    int main_req_id = create_container(450, 430, 0, 21, COLOR_WHITE, COLOR_DARK_GRAY);
+    main_req_id = create_container(450, 430, 0, 21, COLOR_WHITE, COLOR_DARK_GRAY);
 
     if (main_req_id == -1) {
         return 0;
@@ -51,6 +66,7 @@ int main(void) {
     show(b_exit);
 
     while (1) {
+        reset_region(main_req_id);
         scan(&c);
 
         switch (c) {

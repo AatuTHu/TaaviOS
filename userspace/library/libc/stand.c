@@ -38,12 +38,10 @@ static int format_dirents(char *dirents, int dirents_size) {
 
                 if (dirents[j] == ' ') {
                     amount_of_spaces++;
-                    LOG("Was a space: %d\n", amount_of_spaces);
                 }
 
                 if (dirents[j] != ' ') {
                     has_extension = true;
-                    LOG("Has extensions\n");
                     break;
                 }
             }
@@ -52,8 +50,6 @@ static int format_dirents(char *dirents, int dirents_size) {
                 dirents[i - 1] = ' ';
                 continue;
             }
-
-            LOG("amount_of_spaces: %d before extension\n", amount_of_spaces);
 
             if (amount_of_spaces == 0) {
                 continue;
@@ -67,8 +63,6 @@ static int format_dirents(char *dirents, int dirents_size) {
             }
         }
     }
-
-    LOG("Dirents after format: %s", dirents);
 
     return strlen(dirents);
 }
@@ -138,12 +132,6 @@ int change_directory(const char *path, char *directory_name) {
 }
 
 int list_dirents(char *buf, int buffer_size) {
-    char *dirents = (char *)malloc(buffer_size);
-
-    if (dirents == NULL) {
-        LOG("Could not allocate buffer for directory entries\n");
-        return STATUS_ERROR;
-    }
 
     if (sys_getdirents(buf, buffer_size) == STATUS_ERROR) {
         LOG("Failed to read directory entries\n");
