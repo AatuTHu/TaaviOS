@@ -17,6 +17,29 @@ gfx_region_t *gfx_regions[MAX_REGIONS];
  */
 
 /**
+ * gfx_home_cursor - compute and set a region's cursor to its home position.
+ * @entry: region whose cursor should be set.
+ *
+ * Description:
+ * Home position is the region's top-left drawable corner: offset plus
+ * border plus padding. Clamped so the cursor can never land outside the
+ * region even if border_width/padding exceed width/height (degenerate
+ * or misconfigured regions).
+ *
+ * Return: void.
+ */
+static void gfx_home_cursor(gfx_region_t *entry) {
+    uint32_t home_x = entry->offset_x + entry->border_width + entry->padding_x;
+    uint32_t home_y = entry->offset_y + entry->border_width + entry->padding_y;
+
+    uint32_t max_x  = entry->offset_x + (entry->width > 0 ? entry->width - 1 : 0);
+    uint32_t max_y  = entry->offset_y + (entry->height > 0 ? entry->height - 1 : 0);
+
+    entry->cursor_x = (home_x > max_x) ? max_x : home_x;
+    entry->cursor_y = (home_y > max_y) ? max_y : home_y;
+}
+
+/**
  * parse_dimensions - parse a "W.H" formatted string into width/height.
  * @ptr: buffer containing the dimension string.
  * @w: output width.
@@ -424,9 +447,9 @@ int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         height = (parent->height - parent->border_width) - y;
     }
 
-    if (width > max_w)
+    if (width >= max_w)
         width = max_w;
-    if (height > max_h)
+    if (height >= max_h)
         height = max_h;
 
     if (str != NULL) {
@@ -446,16 +469,17 @@ int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
     new_entry->height       = height;
     new_entry->offset_x     = x;
     new_entry->offset_y     = y;
-    new_entry->cursor_x     = x;
-    new_entry->cursor_y     = y;
     new_entry->border_width = 0;
     new_entry->padding_x    = 0;
     new_entry->padding_y    = 0;
+    new_entry->offset_x     = x;
+    new_entry->offset_y     = y;
     new_entry->bg_color     = bg_color;
     new_entry->fg_color     = fg_color;
     new_entry->border_color = COLOR_DARKER_GRAY;
+    gfx_home_cursor(new_entry);
 
-    gfx_regions[slot]       = new_entry;
+    gfx_regions[slot] = new_entry;
 
     return slot;
 }
@@ -518,18 +542,17 @@ int gfx_init(void) {
         return STATUS_ERROR;
     }
 
-    entry->id                        = id;
-    entry->border_color              = COLOR_ORAGNE_MUD;
-    entry->border_width              = 4;
-    entry->padding_y                 = 1 + entry->border_width;
-    entry->padding_x                 = 1 + entry->border_width;
-    entry->width                     = 300;
-    entry->height                    = 150;
-    entry->cursor_x                  = entry->padding_x;
-    entry->cursor_y                  = entry->padding_y;
-    entry->fg_color                  = COLOR_WHITE;
-    entry->bg_color                  = COLOR_BLACK;
-    entry->str                       = NULL;
+    entry->id           = id;
+    entry->border_color = COLOR_ORAGNE_MUD;
+    entry->border_width = 4;
+    entry->padding_y    = 1 + entry->border_width;
+    entry->padding_x    = 1 + entry->border_width;
+    entry->width        = 300;
+    entry->height       = 150;
+    entry->fg_color     = COLOR_WHITE;
+    entry->bg_color     = COLOR_BLACK;
+    entry->str          = NULL;
+    gfx_home_cursor(entry);
 
     gfx_regions[PRIMARY_VIEWPORT_ID] = entry;
 
@@ -551,9 +574,7 @@ int gfx_reset_cursor(uint32_t region_id) {
         return STATUS_ERROR;
     }
 
-    entry->cursor_x = entry->offset_x;
-    entry->cursor_y = entry->offset_y;
-
+    gfx_home_cursor(entry);
     return STATUS_OK;
 }
 

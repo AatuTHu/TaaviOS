@@ -153,13 +153,12 @@ static void case_new_line(uint32_t *nwlind, uint32_t current_i, const char *text
     }
 
     entry->cursor_y += FONT_HEIGHT;
-    entry->cursor_x = entry->padding_x;
+    entry->cursor_x = entry->padding_x + entry->border_width + entry->offset_x;
     *nwlind         = current_i + 1;
 
     if ((entry->cursor_y + FONT_HEIGHT) >= (entry->height - entry->padding_y)) {
         scroll_down(entry);
         entry->cursor_y = entry->height - FONT_HEIGHT - entry->padding_y;
-        entry->cursor_x = entry->padding_x;
     }
 }
 
@@ -275,8 +274,8 @@ int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len) {
             }
             return STATUS_OK;
         }
-        // gfx_clamp_horizontal(entry, parent);
-        // gfx_clamp_vertical(entry, parent);
+        gfx_clamp_horizontal(entry);
+        gfx_clamp_vertical(entry);
     }
 
     uint32_t buffer_size = len - new_line_ind;
@@ -292,16 +291,16 @@ int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len) {
         entry->cursor_x += buffer_size * FONT_WIDTH;
 
         if (entry->cursor_x >= entry->width) {
+            entry->cursor_x = entry->padding_x + entry->border_width + entry->offset_x;
+
             if ((entry->cursor_y + FONT_HEIGHT) >= (entry->height - entry->padding_y)) {
                 scroll_down(entry);
                 entry->cursor_y = entry->height - FONT_HEIGHT - entry->padding_y;
-                entry->cursor_x = entry->padding_x;
                 return STATUS_OK;
             }
             entry->cursor_y += FONT_HEIGHT;
-            entry->cursor_x = entry->padding_x;
-            //  gfx_clamp_horizontal(entry, parent);
-            // gfx_clamp_vertical(entry, parent);
+            gfx_clamp_horizontal(entry);
+            gfx_clamp_vertical(entry);
         }
     }
     return STATUS_OK;

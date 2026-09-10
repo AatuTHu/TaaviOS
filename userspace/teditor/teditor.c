@@ -1,12 +1,12 @@
 #include "font.h"
 #include "log.h"
 #include "malloc.h"
+#include "op_sy.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include "ui.h"
 #include <stdint.h>
-#include <string.h>
 
 #define BUF_SIZE 128
 #define WINDOW_WIDTH 450
@@ -32,7 +32,7 @@ void on_open_click() {
 }
 
 void on_exit_click() {
-    LOG("exit_clicked");
+    terminate_program();
 }
 
 int main(void) {

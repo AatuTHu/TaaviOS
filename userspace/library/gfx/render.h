@@ -26,18 +26,24 @@ typedef struct gfx_region_t {
 
 extern gfx_region_t *gfx_regions[MAX_REGIONS];
 
-static inline void gfx_clamp_horizontal(gfx_region_t *child, gfx_region_t *parent) {
-    uint32_t min_x = parent->border_width + parent->padding_x;
-    if (child->cursor_x < min_x) {
-        child->cursor_x += min_x;
-    }
+static inline void gfx_clamp_horizontal(gfx_region_t *child) {
+    uint32_t min_x = child->offset_x + child->border_width + child->padding_x;
+    uint32_t max_x = child->offset_x + child->width - child->border_width - child->padding_x;
+
+    if (child->cursor_x < min_x)
+        child->cursor_x = min_x;
+    if (child->cursor_x > max_x)
+        child->cursor_x = max_x;
 }
 
-static inline void gfx_clamp_vertical(gfx_region_t *child, gfx_region_t *parent) {
-    uint32_t min_y = parent->border_width + parent->padding_y;
-    if (child->cursor_y < min_y) {
-        child->cursor_y += min_y;
-    }
+static inline void gfx_clamp_vertical(gfx_region_t *child) {
+    uint32_t min_y = child->offset_y + child->border_width + child->padding_y;
+    uint32_t max_y = child->offset_y + child->height - child->border_width - child->padding_y;
+
+    if (child->cursor_y < min_y)
+        child->cursor_y = min_y;
+    if (child->cursor_y > max_y)
+        child->cursor_y = max_y;
 }
 
 int gfx_init(void);
