@@ -1,7 +1,9 @@
 #include "document.h"
 #include "folder.h"
 #include "font.h"
+#include "history.h"
 #include "op_sy.h"
+#include "readline.h"
 #include "shared.h"
 #include "stand.h"
 #include "string.h"
@@ -235,11 +237,6 @@ void exec_cmd(char *buf) {
     }
 }
 
-static void print_char(int buffer_x_pos, char c) {
-    char tmp[2] = {c, '\0'};
-    print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, tmp);
-}
-
 int main(void) {
     set_viewport_text_color(COLOR_WHITE);
     set_viewport_background_color(COLOR_DEEP_BLUE);
@@ -281,8 +278,6 @@ int main(void) {
 
     set_region_padding_x(cmd_id, PADDING);
     char buf[BUF_SIZE];
-    int pos = 0;
-    char c;
 
     const char *art_start = "[ --> ";
     const char *art_end   = " ] ";
@@ -300,26 +295,11 @@ int main(void) {
         print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, art_end);
         buffer_x_pos += strlen(art_end) * FONT_WIDTH;
 
-        pos = 0;
+        readline_at(cmd_id, buf, BUF_SIZE, buffer_x_pos, CMD_LINE_Y);
 
-        while (1) {
-            scan(&c);
-
-            if (c == '\n') {
-                buf[pos] = '\0';
-                exec_cmd(buf);
-                break;
-            } else if (c == '\b') {
-                if (pos > 0) {
-                    pos--;
-                    buffer_x_pos -= FONT_WIDTH;
-                    print_at(cmd_id, buffer_x_pos, CMD_LINE_Y, " ");
-                }
-            } else if (pos < BUF_SIZE - 1) {
-                buf[pos++] = c;
-                print_char(buffer_x_pos, c);
-                buffer_x_pos += FONT_WIDTH;
-            }
+        if (buf[0] != '\0') {
+            history_add(buf);
+            exec_cmd(buf);
         }
     }
 

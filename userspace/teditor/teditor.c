@@ -14,6 +14,9 @@
 static int curret_selected_id = -1;
 static int main_req_id        = -1;
 
+void on_press_dirent() {
+}
+
 void on_open_click() {
 
     dirent_info_t dirents[20];
@@ -23,13 +26,30 @@ void on_open_click() {
     if (dirents_added <= 0) {
         return;
     }
+    refresh_region(main_req_id);
 
     for (int i = 0; i < dirents_added; i++) {
+        char number[10];
+        itoa(i, number);
+        print_to_region(main_req_id, number);
+        print_to_region(main_req_id, " ");
         print_to_region(main_req_id, dirents[i].name);
-        if (dirents[i].type == DIRECTORY) {
-            print_to_region(main_req_id, " directory\n");
-        } else {
-            print_to_region(main_req_id, " File\n");
+        print_to_region(main_req_id, "\n");
+    }
+
+    char c;
+    print_to_region(main_req_id, "Select -> \n");
+    while (1) {
+        scan(&c);
+
+        switch (c) {
+        case KEY_UP:
+            break;
+        case KEY_DOWN:
+            break;
+        case '\n':
+            button_press(curret_selected_id);
+            break;
         }
     }
 }

@@ -507,9 +507,11 @@ int gfx_delete_region(uint32_t region_id) {
     }
 
     if (entry->str != NULL) {
+        LOG("Releasing entry str\n");
         free(entry->str);
     }
 
+    LOG("Relesing entry\n");
     free(entry);
     gfx_regions[region_id] = NULL;
 
