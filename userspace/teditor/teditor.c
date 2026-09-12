@@ -1,6 +1,4 @@
 #include "font.h"
-#include "log.h"
-#include "malloc.h"
 #include "op_sy.h"
 #include "shared.h"
 #include "stand.h"
@@ -18,17 +16,22 @@ static int main_req_id        = -1;
 
 void on_open_click() {
 
-    char *buf = (char *)malloc(BUFFER_SIZE);
+    dirent_info_t dirents[20];
 
-    list_dirents(buf, BUFFER_SIZE);
+    int dirents_added = list_dirents(dirents, 20);
 
-    if (strlen(buf) <= 0) {
-        free(buf);
+    if (dirents_added <= 0) {
         return;
     }
 
-    print_to_region(main_req_id, buf);
-    free(buf);
+    for (int i = 0; i < dirents_added; i++) {
+        print_to_region(main_req_id, dirents[i].name);
+        if (dirents[i].type == DIRECTORY) {
+            print_to_region(main_req_id, " directory\n");
+        } else {
+            print_to_region(main_req_id, " File\n");
+        }
+    }
 }
 
 void on_exit_click() {

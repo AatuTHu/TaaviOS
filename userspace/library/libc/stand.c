@@ -6,8 +6,9 @@
 #include "sys_calls.h"
 #include <stdbool.h>
 #include <stdint.h>
-#include <sys/types.h>
+#include <string.h>
 
+#define MAX_SEGMENT_LEN 64
 #define forward 0
 #define backward -1
 #define MAX_PATH_LEN 128
@@ -131,16 +132,75 @@ int change_directory(const char *path, char *directory_name) {
     return parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN);
 }
 
-int list_dirents(char *buf, int buffer_size) {
+int list_dirents(dirent_info_t *out_dirents, uint32_t max_dirents) {
+    char buf[512]   = {0};
+    uint32_t slot   = 0;
+    int buffer_size = sys_getdirents(buf, sizeof(buf) - 1);
 
-    if (sys_getdirents(buf, buffer_size) == STATUS_ERROR) {
+    if (buffer_size <= 0) {
         LOG("Failed to read directory entries\n");
         return STATUS_ERROR;
     }
 
-    return format_dirents(buf, buffer_size);
-}
+    buf[buffer_size] = '\0';
+    int line_start   = 0;
 
+    for (int i = 0; i <= buffer_size && slot < max_dirents; i++) {
+        if (buf[i] == '\n' || buf[i] == '\0') {
+            if (i > line_start) {
+                buf[i] = '\0';
+
+                memset(&out_dirents[slot], 0, sizeof(dirent_info_t));
+
+                char *segment_start = &buf[line_start];
+
+                for (int j = line_start; j <= i; j++) {
+                    if (buf[j] == '/' || buf[j] == '\0') {
+                        buf[j] = '\0';
+
+                        while (*segment_start == ' ' || *segment_start == '\t') {
+                            segment_start++;
+                        }
+
+                        if (*segment_start != '\0') {
+
+                            if (str_starts_with(segment_start, "ID:") == 1) {
+                                out_dirents[slot].type = (segment_start[3] == 'D') ? DIRECTORY : FILE;
+                            }
+
+                            if (str_starts_with(segment_start, "N:") == 1) {
+                                char *name_src = segment_start + 2;
+
+                                format_dirents(name_src, strlen(name_src));
+
+                                int idx = 0;
+                                while (idx != strlen(name_src)) {
+                                    if (name_src[idx] != ' ') {
+                                        out_dirents[slot].name[idx] = name_src[idx];
+                                    }
+                                    idx++;
+                                }
+                                out_dirents[slot].name[idx] = '\0';
+                            }
+
+                            if (str_starts_with(segment_start, "S:") == 1) {
+                                char *size_src         = segment_start + 2;
+                                out_dirents[slot].size = atoi(size_src);
+                            }
+                        }
+
+                        segment_start = &buf[j + 1];
+                    }
+                }
+
+                slot++;
+            }
+            line_start = i + 1;
+        }
+    }
+
+    return slot;
+}
 void print(const char *msg) {
     gfx_draw_text(PRIMARY_VIEWPORT_ID, msg, strlen(msg));
 }

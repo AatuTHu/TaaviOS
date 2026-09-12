@@ -510,21 +510,22 @@ static int list(request_table *req) {
         base_cluster = map->current_cluster;
     }
 
-    uint8_t *names_buffer = (uint8_t *)kmalloc(req->buffer_size);
+    uint8_t *dirents = (uint8_t *)kmalloc(req->buffer_size);
 
-    if (names_buffer == NULL) {
+    if (dirents == NULL) {
         ERROR("[FS_TASK][LIST]: Could not allocate a buffer at this time.\n");
         return STATUS_ERROR;
     }
 
-    fat32_list_dir(base_cluster, names_buffer, &read_size);
+    fat32_list_dir(base_cluster, dirents, &read_size);
 
     if (read_size > 0) {
-        memcpy(req->buf, names_buffer, read_size);
+        memcpy(req->buf, dirents, read_size);
+        DEBUG_FS_TASK("[FS_TASK][LIST]: Copied: %s\n", req->buf);
     }
 
     req->buffer_size = read_size;
-    kfree(names_buffer);
+    kfree(dirents);
 
     return STATUS_OK;
 }

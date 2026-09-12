@@ -3,7 +3,16 @@
 #include "fat32.h"
 #include "klog.h"
 #include "kmalloc.h"
+#include "kstring.h"
+#include <stdbool.h>
 #include <stdint.h>
+
+static void append_str(uint8_t *out_buf, uint32_t *out_size, const char *str) {
+    while (*str) {
+        out_buf[(*out_size)++] = (uint8_t)*str++;
+    }
+    out_buf[*out_size] = '\0';
+}
 
 /**
 * __fat32_list_dir() - lists all directories
@@ -11,9 +20,10 @@
 * @cluster: starting directory cluster.
 
 * Description:
-* Function starts searching directories from the given cluster. Printing them
-directly to screen
+* This function creates a string form dirents of all the entries on the given cluster.
+* Formatting the string as ID:identifier:/N:name/S:size/T:timestamp\n\0
 *
+* return void;
 */
 void fat32_list_dir(uint32_t cluster, uint8_t *out_buf, uint32_t *out_size) {
     uint32_t current_cluster = cluster;
@@ -38,24 +48,25 @@ void fat32_list_dir(uint32_t cluster, uint8_t *out_buf, uint32_t *out_size) {
             break;
         if (dir_entry[i].name[0] == FAT32_DIRENT_DELETED)
             continue;
-        if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) ==
-            FAT32_LONG_FILE_NAME)
+        if ((dir_entry[i].attributes & FAT32_LONG_FILE_NAME) == FAT32_LONG_FILE_NAME)
             continue;
         if (memcmp(dir_entry[i].name, ".          ", 11) == 0 ||
             memcmp(dir_entry[i].name, "..         ", 11) == 0)
             continue;
 
+        bool is_dir = dir_entry[i].attributes & FAT32_ATTR_DIRECTORY;
+        append_str(out_buf, out_size, is_dir ? "ID:D/N:" : "ID:F/N:");
+
         char name_buf[12];
         memcpy(name_buf, dir_entry[i].name, 11);
-        name_buf[11]      = '\0';
+        name_buf[11] = '\0';
+        append_str(out_buf, out_size, name_buf);
+        append_str(out_buf, out_size, "/S:");
 
-        uint32_t name_len = strlen(name_buf);
-        memcpy(&out_buf[*out_size], name_buf, name_len);
-
-        *out_size += name_len;
-        out_buf[*out_size] = '\n';
-        *out_size += 1;
-        out_buf[*out_size] = '\0';
+        char size_buf[11];
+        itoa(dir_entry[i].size, size_buf);
+        append_str(out_buf, out_size, size_buf);
+        append_str(out_buf, out_size, "/\n");
 
         DEBUG_FAT32("[FAT32][LIST_DIR]: name: %s\n", name_buf);
         DEBUG_FAT32("[FAT32][LIST_DIR]: out_size: %d\n", *out_size);

@@ -84,32 +84,25 @@ static void close_file(const char *args) {
 
 static void list_directories(const char *args) {
     (void)args;
-    char dirents[512] = {0};
-    int read_size     = list_dirents(dirents, sizeof(dirents) - 1);
-    if (read_size <= 0) {
+
+    dirent_info_t dirents[20];
+    int slots = list_dirents(dirents, 20);
+    if (slots <= 0) {
         return;
     }
 
     int current_x      = PADDING_BETWEEN_FILES;
     int current_text_y = 35 + HEADER_BLOCK;
     int folder_y       = 10 + HEADER_BLOCK;
-    char *entry        = dirents;
 
-    for (int i = 0; i < read_size; i++) {
-        if (dirents[i] == '\n' || dirents[i] == '\0') {
-            dirents[i] = '\0';
-            trim(entry);
-            if (entry[0] != '\0') {
-                if (strlen(entry) > 8) {
-                    draw_sprite(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)document);
-                } else {
-                    draw_sprite(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)folder);
-                }
-                print_at(main_id, current_x, current_text_y, entry);
-                current_x += (strlen(entry) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
-            }
-            entry = &dirents[i + 1];
+    for (int i = 0; i < slots; i++) {
+        if (dirents[i].type == FILE) {
+            draw_sprite(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)document);
+        } else {
+            draw_sprite(main_id, current_x, folder_y, 32, 32, 1, (uint32_t *)folder);
         }
+        print_at(main_id, current_x, current_text_y, dirents[i].name);
+        current_x += (strlen(dirents[i].name) * FONT_WIDTH) + PADDING_BETWEEN_FILES;
     }
 }
 
