@@ -186,6 +186,7 @@ static void create_dir(const char *flag_and_path) {
     }
     print_to_region(info_id, "Directory(ies) created");
 }
+
 static void change_dir(const char *path) {
     if (change_directory(path, dir_name) == STATUS_ERROR) {
         print_at(info_id, PADDING, INFO_LINE_Y, "Failed to change directory");

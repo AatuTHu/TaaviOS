@@ -153,7 +153,7 @@ int atoi(const char *str) {
         i++;
     }
 
-    while (str[i] >= '0' && str[i] <= '9') {
+    while (str[i] != '\0' && str[i] >= '0' && str[i] <= '9') {
         res = res * 10 + (str[i] - '0');
         i++;
     }

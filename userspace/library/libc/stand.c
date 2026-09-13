@@ -69,6 +69,11 @@ static int format_dirents(char *dirents, int dirents_size) {
 }
 
 static int parse_segment_from_path(const char *path, char *dir_name, int max_dir_len) {
+
+    if (dir_name == NULL) {
+        return 0;
+    }
+
     int len = strlen(path);
 
     if (len == 0) {

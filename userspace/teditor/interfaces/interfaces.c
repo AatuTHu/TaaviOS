@@ -7,12 +7,17 @@
 #include "string.h"
 #include "ui.h"
 #include <stdbool.h>
+#include <stdint.h>
 
 static int curret_selected_id = -1;
 static int main_req_id        = -1;
 static int b_open             = -1;
 static int b_exit             = -1;
+static int fd                 = -1;
 static bool has_initialized   = false;
+
+void display_file() {
+}
 
 static void init_widgets() {
     main_req_id = create_container(450, 430, 0, 21, COLOR_WHITE, COLOR_DARK_GRAY);
@@ -23,6 +28,25 @@ static void init_widgets() {
     if (b_open == STATUS_ERROR || b_exit == STATUS_ERROR || main_req_id == STATUS_ERROR) {
         terminate_program();
     }
+}
+
+static int handle_answer(const char *answer) {
+
+    int answer_len = strlen(answer);
+
+    for (int i = 0; i < answer_len; i++) {
+        if (answer[i] == 'b') {
+            return STATUS_ERROR;
+        }
+    }
+
+    int converted_answer = atoi(answer);
+
+    if (converted_answer == 0) {
+        return STATUS_ERROR;
+    }
+
+    return converted_answer;
 }
 
 void display_open_project() {
@@ -58,9 +82,26 @@ void display_open_project() {
     print_at(main_req_id, advance_x, advance_y, readline_start_msg);
     advance_x += strlen(readline_start_msg) * FONT_WIDTH;
     readline_at(main_req_id, buf, 3, advance_x, advance_y);
-}
 
-void display_file() {
+    int selected_option = handle_answer(buf);
+
+    if (selected_option == STATUS_ERROR) {
+        return;
+    }
+
+    if (dirents[selected_option].type == DIRECTORY) {
+        change_directory(dirents[selected_option].name, NULL);
+        display_open_project(); // <-- RECURSION;
+        return;
+    }
+
+    fd = open(dirents[selected_option].name, O_RDWR);
+
+    if (fd == STATUS_ERROR) {
+        return;
+    }
+
+    display_file();
 }
 
 void display_main_view() {
