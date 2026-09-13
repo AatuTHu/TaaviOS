@@ -208,8 +208,8 @@ static const Command commands[] = {
 };
 
 void exec_cmd(char *buf) {
-    refresh_region(cmd_id);
-    refresh_region(main_id);
+    reset_region(cmd_id);
+    reset_region(main_id);
 
     const char *trimmed = skip_spaces(buf);
     if (*trimmed == '\0') {

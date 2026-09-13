@@ -1,5 +1,7 @@
 #include "interfaces.h"
 #include "font.h"
+#include "log.h"
+#include "malloc.h"
 #include "op_sy.h"
 #include "readline.h"
 #include "shared.h"
@@ -9,14 +11,34 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define FILE_BUFFER_SIZE 1024
+
 static int curret_selected_id = -1;
 static int main_req_id        = -1;
 static int b_open             = -1;
 static int b_exit             = -1;
-static int fd                 = -1;
 static bool has_initialized   = false;
 
-void display_file() {
+void display_file(int fd) {
+    char *file = (char *)malloc(FILE_BUFFER_SIZE);
+
+    if (file == NULL) {
+        return;
+    }
+
+    int bytes_read = read(fd, file, FILE_BUFFER_SIZE);
+
+    if (bytes_read == STATUS_ERROR) {
+        return;
+    }
+
+    reset_region(main_req_id);
+    print_to_region(main_req_id, file);
+
+    char c;
+    while (1) {
+        scan(&c);
+    }
 }
 
 static void init_widgets() {
@@ -42,10 +64,6 @@ static int handle_answer(const char *answer) {
 
     int converted_answer = atoi(answer);
 
-    if (converted_answer == 0) {
-        return STATUS_ERROR;
-    }
-
     return converted_answer;
 }
 
@@ -58,7 +76,7 @@ void display_open_project() {
     if (dirents_added <= 0) {
         return;
     }
-    refresh_region(main_req_id);
+    reset_region(main_req_id);
     int advance_x = 175;
     int advance_y = 200;
     for (int i = 0; i < dirents_added; i++) {
@@ -85,23 +103,19 @@ void display_open_project() {
 
     int selected_option = handle_answer(buf);
 
-    if (selected_option == STATUS_ERROR) {
-        return;
-    }
-
     if (dirents[selected_option].type == DIRECTORY) {
         change_directory(dirents[selected_option].name, NULL);
         display_open_project(); // <-- RECURSION;
         return;
     }
 
-    fd = open(dirents[selected_option].name, O_RDWR);
+    int fd = open(dirents[selected_option].name, O_RDWR);
 
     if (fd == STATUS_ERROR) {
+        LOG("Invalid file\n");
         return;
     }
-
-    display_file();
+    display_file(fd);
 }
 
 void display_main_view() {
@@ -113,7 +127,7 @@ void display_main_view() {
     char c;
 
     while (1) {
-        refresh_region(main_req_id);
+        reset_region(main_req_id);
         show(main_req_id);
         show(b_open);
         show(b_exit);

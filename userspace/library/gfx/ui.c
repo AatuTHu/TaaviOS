@@ -138,12 +138,8 @@ int move_viewport(uint32_t x, uint32_t y) {
     return gfx_move_viewport(PRIMARY_VIEWPORT_ID, x, y);
 }
 
-int refresh_region(uint32_t region_id) {
-    return gfx_clear_region(region_id);
-}
-
 int reset_region(uint32_t region_id) {
-    return gfx_reset_cursor(region_id);
+    return gfx_clear_region(region_id);
 }
 
 void set_viewport_text_color(uint32_t color) {
