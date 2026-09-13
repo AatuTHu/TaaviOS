@@ -234,10 +234,12 @@ int main(void) {
 
     if (resize_viewport(600, 200) == STATUS_ERROR) {
         print("Failed to resize window\n");
+        return 1;
     }
 
     if (move_viewport(20, 750) == STATUS_ERROR) {
         print("Failed to move window\n");
+        return 1;
     }
 
     history_init();

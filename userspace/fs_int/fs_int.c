@@ -282,6 +282,8 @@ int main(void) {
     const char *art_start = "[ --> ";
     const char *art_end   = " ] ";
 
+    history_init();
+
     print_at(info_id, PADDING, INFO_LINE_Y, "Maccas configurated and ready for use");
 
     while (1) {
