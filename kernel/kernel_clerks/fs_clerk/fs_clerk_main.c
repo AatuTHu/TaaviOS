@@ -17,14 +17,12 @@ static uint32_t maintenance_counter = 0;
  * fs_task_loop - Entry point function used when clerk is created at boot.
  *
  * Description:
- * When a request is made by userspace task fs_task is woken and start handling
+ * When a request is made by userspace task fs_task is woken and starts handling
  * requests from this function afeter all the requests have been handled it goes
  * to thru the blankie protocol
  *
- * Context: Runs besides other tasks to achieve asynchronous feeling.
  */
 void fs_task_loop() {
-    DEBUG_FS_TASK("[FS_TASK]: \n");
     fs_maintain_virt_dir();
     while (1) {
         request_table *req = ledger_fetch_next_req(fs_task_pid);

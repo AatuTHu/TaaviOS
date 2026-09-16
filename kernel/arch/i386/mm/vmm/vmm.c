@@ -48,7 +48,10 @@ int vmm_alloc(page_directory_t *dir, uint32_t virt, uint32_t size,
                 if (phys_addr != INVALID_PHYSICAL_PAGE) {
                     pmm_free(phys_addr);
                 }
-                paging_unmap(dir, virt);
+
+                if (paging_unmap(dir, virt) == STATUS_ERROR) {
+                    ERROR("[VMM]: Unable  to unmap pages\n");
+                }
             }
             ERROR("[VMM]: ROLLBACK SUCCESSFUL\n");
             return STATUS_ERROR;

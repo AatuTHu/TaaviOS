@@ -39,12 +39,12 @@ int fat32_read_file(uint32_t start_cluster, uint32_t size, uint8_t *buf) {
 
         bytes_read += bytes_to_copy;
 
-        DEBUG_FAT32("[FAT32][READ_FILE]: Loop bytes_left: %d\n", size - bytes_read);
-        DEBUG_FAT32("[FAT32][READ_FILE]: Loop bytes_read: %d\n", bytes_read);
-        DEBUG_FAT32("[FAT32][READ_FILE]: Loop bytes_to_copied: %d\n", bytes_to_copy);
+        //  DEBUG_FAT32("[FAT32][READ_FILE]: Loop bytes_left: %d\n", size - bytes_read);
+        //  DEBUG_FAT32("[FAT32][READ_FILE]: Loop bytes_read: %d\n", bytes_read);
+        //  DEBUG_FAT32("[FAT32][READ_FILE]: Loop bytes_to_copied: %d\n", bytes_to_copy);
 
         if (bytes_read >= size) {
-            DEBUG_FAT32("[FAT32][READ_FILE]: Bytes read higher or equal to size now.\n");
+            DEBUG_FAT32("[FAT32][READ_FILE]: File read fully. Size: %d.\n", bytes_read);
             break;
         }
 

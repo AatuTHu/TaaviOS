@@ -105,7 +105,6 @@ void ledger_remove_request() {
                 kfree(q->table[i]);
                 q->table[i] = NULL;
                 //  DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper removed one request\n");
-                return;
             }
         }
     }
@@ -189,7 +188,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                 if (out != NULL) {
                     memcpy(out, req->buf, req->buffer_size);
                     out[req->buffer_size] = '\0';
-                    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d containing: %s\n", caller_pid, req->buffer_size, req->buf);
+                    // DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d containing: %s\n", caller_pid, req->buffer_size, req->buf);
                 }
                 req->status = TERMINATED;
                 return req->buffer_size;
@@ -258,15 +257,6 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
         }
     }
 
-    /*for (int i = 0; i < q->max_entries; i++) {
-        if (q->table[i] != NULL && q->table[i]->status == FAILED) {
-            *q->last_idx = i;
-            DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: PENDING_FOUND AT %d\n", i);
-            q->table[i]->status = IN_PROGRESS;
-            return q->table[i];
-        }
-    }*/
-
     // DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: No tasks found for :%d\n", clerk_pid);
     return NULL;
 }
@@ -279,7 +269,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
         return STATUS_ERROR;
     }
 
-    clerk_queue *q = ledger_get_queue(clerk_pid);
+    const clerk_queue *q = ledger_get_queue(clerk_pid);
     if (q == NULL) {
         ERROR("[LEDGER][CONUT CLERKS]: clerk pid is invalid\n");
         return 0;
@@ -299,7 +289,7 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
 int ledger_count_active_reqs() {
     int req_count = 0;
     for (uint32_t clerk_pid = 0; clerk_pid < CLERK_COUNT; clerk_pid++) {
-        clerk_queue *q = ledger_get_queue(clerk_pid);
+        const clerk_queue *q = ledger_get_queue(clerk_pid);
         if (q == NULL) {
             continue;
         }
@@ -315,7 +305,7 @@ int ledger_count_active_reqs() {
 
 int ledger_has_killable_reqs() {
     for (uint32_t clerk_pid = 0; clerk_pid < CLERK_COUNT; clerk_pid++) {
-        clerk_queue *q = ledger_get_queue(clerk_pid);
+        const clerk_queue *q = ledger_get_queue(clerk_pid);
         if (q == NULL) {
             continue;
         }

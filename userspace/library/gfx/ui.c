@@ -10,15 +10,6 @@
 
 container_info_t *container_list[MAX_REGIONS];
 
-static container_info_t *find_container(uint32_t region_id) {
-    for (int i = 0; i < MAX_REGIONS; i++) {
-        if (container_list[i] != NULL && container_list[i]->region_id == region_id) {
-            return container_list[i];
-        }
-    }
-    return NULL;
-}
-
 static int force_to_fit_and_register_region(uint32_t width, uint32_t height, uint32_t x, uint32_t y, const char *str, uint32_t txt_col, uint32_t bg_col) {
 
     if (str == NULL) {
@@ -179,15 +170,26 @@ void mark_cursor_position(uint32_t background_color) {
     gfx_paint_cursor_position(background_color);
 }
 
-int delete_region(uint32_t region_id) {
+int delete_container(uint32_t region_id) {
     for (int i = 0; i < MAX_REGIONS; i++) {
         if (container_list[i] != NULL && container_list[i]->region_id == region_id) {
+            free(container_list[i]);
+            container_list[i] = NULL;
+            return gfx_delete_region(region_id);
+        }
+    }
+
+    return STATUS_ERROR;
+}
+
+void delete_all_containers() {
+    for (int i = 0; i < MAX_REGIONS; i++) {
+        if (container_list[i] != NULL) {
             free(container_list[i]);
             container_list[i] = NULL;
             break;
         }
     }
-    return gfx_delete_region(region_id);
 }
 
 void set_region_border_color(uint32_t region_id, uint32_t color) {

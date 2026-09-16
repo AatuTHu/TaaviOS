@@ -13,7 +13,8 @@
 
 task_t *task_table[MAX_TASKS];
 
-task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const char *name, page_directory_t *page_dir, uint8_t task_mode) {
+task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const char *name,
+                    page_directory_t *page_dir, uint8_t task_mode) {
 
     if (page_dir == NULL) {
         return NULL;

@@ -182,7 +182,7 @@ static int read(request_table *req) {
      * Dont fucking touch this function ever again.
      */
 
-    fd_entry_t *entry = fd_entry_table[req->struct_key];
+    const fd_entry_t *entry = fd_entry_table[req->struct_key];
     if (entry == NULL) {
         ERROR("[FS_TASK][READ]: entry not found\n");
         return STATUS_ERROR;
@@ -231,7 +231,7 @@ static int open(request_table *req) {
     const char *path          = req->buf;
     char filename[TASK_NAME_LENGTH];
 
-    dir_traversal_t *map = dir_get_direction(req->caller_pid);
+    const dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
         starting_cluster = map->current_cluster;
@@ -273,8 +273,8 @@ static int open(request_table *req) {
  */
 static int create(const request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][CREATE]: Creating a new directory for %s\n", req->buf);
-    uint32_t base_directory = f32_fs.root_cluster;
-    dir_traversal_t *map    = dir_get_direction(req->caller_pid);
+    uint32_t base_directory    = f32_fs.root_cluster;
+    const dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
         DEBUG_FS_TASK("[FS_TASK][CREATE]: Using base_directory_cluster: %d\n", map->current_cluster);
@@ -394,7 +394,7 @@ static int find(const request_table *req) {
         direction = backwards;
     }
 
-    dir_traversal_t *map = dir_get_direction(req->caller_pid);
+    const dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
         DEBUG_FS_TASK("[FS_TASK][FIND]: directions found. starting cluster %d\n", map->current_cluster);
@@ -436,7 +436,7 @@ static int find(const request_table *req) {
  *
  * Return: STATUS_OK || STATUS_ERROR
  */
-int fs_return_vdir_tasks(request_table *req) {
+static int fs_return_vdir_tasks(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][R_VIRT_DIR_TASKS]: Returning vdir tasks\n");
     int read_size     = 0;
 
@@ -501,31 +501,30 @@ int fs_return_vdir_tasks(request_table *req) {
  */
 static int list(request_table *req) {
 
-    uint32_t base_cluster = f32_fs.root_cluster;
-    uint32_t read_size    = 0;
-    dir_traversal_t *map  = dir_get_direction(req->caller_pid);
+    uint32_t base_cluster      = f32_fs.root_cluster;
+    uint32_t read_size         = 0;
+    const dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
         DEBUG_FS_TASK("[FS_TASK][LIST]: directions found. starting cluster %d\n", map->current_cluster);
         base_cluster = map->current_cluster;
     }
 
-    uint8_t *dirents = (uint8_t *)kmalloc(req->buffer_size);
+    uint8_t *names_buffer = (uint8_t *)kmalloc(req->buffer_size);
 
-    if (dirents == NULL) {
+    if (names_buffer == NULL) {
         ERROR("[FS_TASK][LIST]: Could not allocate a buffer at this time.\n");
         return STATUS_ERROR;
     }
 
-    fat32_list_dir(base_cluster, dirents, &read_size);
+    fat32_list_dir(base_cluster, names_buffer, &read_size);
 
     if (read_size > 0) {
-        memcpy(req->buf, dirents, read_size);
-        DEBUG_FS_TASK("[FS_TASK][LIST]: Copied: %s\n", req->buf);
+        memcpy(req->buf, names_buffer, read_size);
     }
 
     req->buffer_size = read_size;
-    kfree(dirents);
+    kfree(names_buffer);
 
     return STATUS_OK;
 }
@@ -568,16 +567,15 @@ static int free(request_table *req) {
 
 static int delete(request_table *req) {
     DEBUG_FS_TASK("[FS_TASK][DELETE]: Deleting directory entry: %s\n", req->buf);
+    uint32_t starting_cluster = f32_fs.root_cluster;
     uint32_t out_file_cluster = 0;
     uint32_t out_dir_cluster  = 0;
-
     uint32_t file_size        = 0;
     uint8_t file_attr         = 0;
-    uint32_t starting_cluster = f32_fs.root_cluster;
     const char *path          = req->buf;
     char filename[TASK_NAME_LENGTH];
 
-    dir_traversal_t *map = dir_get_direction(req->caller_pid);
+    const dir_traversal_t *map = dir_get_direction(req->caller_pid);
 
     if (map != NULL) {
         DEBUG_FS_TASK("[FS_TASK][DELETE]: directions found. starting cluster %d\n", map->current_cluster);
@@ -699,7 +697,7 @@ void fs_maintain_virt_dir() {
     memset(virt_tasks_dir, 0, sizeof(virt_tasks_dir));
 
     for (int i = 0; i < MAX_TASKS; i++) {
-        task_t *temp_task = task_get(i);
+        const task_t *temp_task = task_get(i);
 
         if (temp_task == NULL || temp_task->task_mode == KERNEL_TASK || temp_task->state == TASK_DEAD) {
             continue;

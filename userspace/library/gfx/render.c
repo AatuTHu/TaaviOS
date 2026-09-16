@@ -6,7 +6,13 @@
 #include "string.h"
 #include "sys_calls.h"
 #include <stdint.h>
-#include <string.h>
+
+#define DIMENSIONS_BUFFER_LEN 22
+#define DEFAULT_WINDOW_X 10
+#define DEFAULT_WINDOW_Y 10
+#define DEFAULT_WINDOW_WIDTH 300
+#define DEFAULT_WINDOW_HEIGHT 150
+#define default_border_width 4
 
 gfx_region_t *gfx_regions[MAX_REGIONS];
 
@@ -115,9 +121,8 @@ int gfx_draw_borders(uint32_t region_id) {
     params.x          = entry->offset_x;
     params.y          = entry->offset_y;
     params.bg_color   = entry->border_color;
-    int status        = sys_conwi(&params);
 
-    if (status == STATUS_ERROR) {
+    if (sys_conwi(&params) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
@@ -167,17 +172,17 @@ int gfx_create_viewport(int x, int y, int w, int h, uint32_t fg_color, uint32_t 
  * @h: requested height.
  *
  * Description:
- * Sends a RESIZE request and parses the kernel's confirmed "W . H"
+ * Sends a RESIZE request and parses the kernel's confirmed "W.H"
  * response back into the component, then repaints its border to match.
  *
  * Kernel gives back new w and h because there is a chance it has to clamp
  * the requested paint inside the primary viewport.
  *
- * Return: result of sys_conwi.
+ * Return: on success STATUS_OK and on error STATUS_ERROR.
  */
 int gfx_resize_viewport(uint32_t region_id, int w, int h) {
 
-    char dimensions_buffer[22];
+    char dimensions_buffer[DIMENSIONS_BUFFER_LEN];
     gfx_region_t *entry = gfx_regions[region_id];
 
     if (entry == NULL) {
@@ -193,11 +198,10 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h) {
     params.fg_color    = entry->fg_color;
     params.bg_color    = entry->bg_color;
     params.buf         = dimensions_buffer;
-    params.buffer_size = 22;
-    int result         = sys_conwi(&params);
+    params.buffer_size = DIMENSIONS_BUFFER_LEN;
 
-    if (result == -1) {
-        return result;
+    if (sys_conwi(&params) == STATUS_ERROR) {
+        return STATUS_ERROR;
     }
 
     const char *ptr = params.buf;
@@ -209,7 +213,7 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h) {
 
     gfx_draw_borders(region_id);
 
-    return result;
+    return STATUS_OK;
 }
 
 /**
@@ -457,6 +461,7 @@ int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         new_entry->str   = (char *)malloc(str_len + 1);
 
         if (new_entry->str == NULL) {
+            free(new_entry);
             return STATUS_ERROR;
         }
 
@@ -511,7 +516,7 @@ int gfx_delete_region(uint32_t region_id) {
         free(entry->str);
     }
 
-    LOG("Relesing entry\n");
+    LOG("Releasing %d\n", region_id);
     free(entry);
     gfx_regions[region_id] = NULL;
 
@@ -530,7 +535,8 @@ int gfx_delete_region(uint32_t region_id) {
  */
 int gfx_init(void) {
     memset(gfx_regions, 0, sizeof(gfx_regions));
-    int id = gfx_create_viewport(10, 10, 300, 150, COLOR_WHITE, COLOR_BLACK);
+    int id = gfx_create_viewport(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y,
+                                 DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, COLOR_WHITE, COLOR_BLACK);
 
     if (id == STATUS_ERROR) {
         LOG("Creating the main viewport failed\n");
@@ -546,11 +552,11 @@ int gfx_init(void) {
 
     entry->id           = id;
     entry->border_color = COLOR_ORAGNE_MUD;
-    entry->border_width = 4;
-    entry->padding_y    = 1 + entry->border_width;
-    entry->padding_x    = 1 + entry->border_width;
-    entry->width        = 300;
-    entry->height       = 150;
+    entry->border_width = default_border_width;
+    entry->padding_y    = entry->border_width;
+    entry->padding_x    = entry->border_width;
+    entry->width        = DEFAULT_WINDOW_WIDTH;
+    entry->height       = DEFAULT_WINDOW_HEIGHT;
     entry->fg_color     = COLOR_WHITE;
     entry->bg_color     = COLOR_BLACK;
     entry->str          = NULL;
@@ -581,8 +587,9 @@ int gfx_reset_cursor(uint32_t region_id) {
 }
 
 void gfx_release_regions_and_viewport() {
-    for (int i = MAX_REGIONS - 1; i >= 0; i--) {
+    for (int i = 0; i < MAX_REGIONS; i++) {
         if (gfx_regions[i] != NULL) {
+            LOG("Deletable region found at %d\n", i);
             gfx_delete_region(i);
         }
     }

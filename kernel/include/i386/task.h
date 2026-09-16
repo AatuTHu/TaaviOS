@@ -36,7 +36,7 @@ typedef struct task_t {
 extern task_t *task_table[MAX_TASKS];
 task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const char *name,
                     page_directory_t *page_dir, uint8_t task_mode);
-task_t *task_get(uint32_t pid);
+task_t *task_get(uint32_t index);
 int task_destroy(task_t *task);
 void task_sync_kernel_entries_to_all_tasks();
 #endif

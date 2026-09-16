@@ -14,7 +14,7 @@ static inline int queue_req(request_table *new_request, uint32_t caller_pid) {
         scheduler_wake_task(caller_pid);
         return STATUS_ERROR;
     }
-    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
+    //    DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: request added\n");
     return STATUS_OK;
 }
 
@@ -28,7 +28,7 @@ static inline int queue_req(request_table *new_request, uint32_t caller_pid) {
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params) {
+int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
 
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {

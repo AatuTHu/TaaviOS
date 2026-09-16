@@ -59,7 +59,7 @@ int fb_scroll_down(uint32_t *pixel_buffer, uint32_t x, uint32_t y,
 }
 
 static void fb_draw_char(uint32_t *pixel_buffer, uint32_t x, uint32_t y, uint32_t width, char c, uint32_t fg_color, uint32_t bg_color) {
-    uint8_t *glyph = (uint8_t *)PC_FACE_MODERNDOS_8x16[(uint8_t)c];
+    const uint8_t *glyph = (uint8_t *)PC_FACE_MODERNDOS_8x16[(uint8_t)c];
 
     if (c == '\0' || c == '\n' || c == '\t' || x >= width) {
         return;

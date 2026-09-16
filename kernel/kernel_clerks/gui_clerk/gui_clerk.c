@@ -22,6 +22,36 @@ static blueprint_t *program_windows[MAX_TASKS];
 static uint32_t bg_color       = 0;
 static int hail_mary_act_count = 0;
 
+static inline void clamp_dimensions(uint16_t *width, uint16_t *height, uint32_t max_w, uint32_t max_h) {
+    if (*width > max_w)
+        *width = max_w;
+    if (*height > max_h)
+        *height = max_h;
+}
+
+static void clamp_bounds(uint16_t *x, uint16_t *y, uint16_t *w, uint16_t *h, uint32_t max_w, uint32_t max_h) {
+    clamp_dimensions(w, h, max_w, max_h);
+
+    if (*x + *w > max_w) {
+        *x = max_w - *w;
+    }
+    if (*y + *h > max_h) {
+        *y = max_h - *h;
+    }
+}
+
+static void clip_rect(uint16_t *x, uint16_t *y, uint16_t *w, uint16_t *h, uint32_t max_w, uint32_t max_h) {
+    if (*x >= max_w || *y >= max_h) {
+        *w = 0;
+        *h = 0;
+        return;
+    }
+    if (*x + *w > max_w)
+        *w = max_w - *x;
+    if (*y + *h > max_h)
+        *h = max_h - *y;
+}
+
 static int copy_pixels_to_screen(blueprint_t *entry) {
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -49,7 +79,7 @@ static int copy_pixels_to_screen(blueprint_t *entry) {
  *
  * Return: If successful return STATUS_OK || if unsuccessful return STATUS_ERROR.
  */
-static int gui_draw_string(request_table *req) {
+static int gui_draw_string(const request_table *req) {
     // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
     //  DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s\n", req->buf);
     blueprint_t *entry = program_windows[req->struct_key];
@@ -70,11 +100,7 @@ static int gui_draw_string(request_table *req) {
     fb_draw_string(entry->pixels, req->x, req->y, entry->width, req->buf,
                    req->fg_color, req->bg_color);
 
-    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    return STATUS_OK;
+    return copy_pixels_to_screen(entry);
 }
 
 /**
@@ -118,7 +144,7 @@ static int gui_delete_window(uint32_t target_pid) {
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: No window found with given %d\n", target_pid);
-    return STATUS_OK;
+    return STATUS_ERROR;
 }
 
 /**
@@ -160,16 +186,10 @@ static int gui_create_window_entry(request_table *req) {
         return STATUS_ERROR;
     }
 
-    if (req->width > fb.width) {
-        req->width = fb.width;
-    }
-
-    if (req->height > fb.height) {
-        req->height = fb.height;
-    }
-
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
-    entry->owner_pid     = req->caller_pid;
+    entry->owner_pid = req->caller_pid;
+
+    clamp_bounds(&req->x, &req->y, &req->width, &req->height, fb.width, fb.height);
     entry->width         = req->width;
     entry->height        = req->height;
     entry->screen_x      = req->x;
@@ -181,6 +201,7 @@ static int gui_create_window_entry(request_table *req) {
     if (entry->pixels == NULL) {
         DEBUG_GUI_TASK("[GUI_TASK][PAINT_WINDOW]: Unable to allocate memory for pixels\n");
         req->struct_key = STATUS_ERROR;
+        kfree(entry);
         return STATUS_ERROR;
     }
     memset(entry->pixels, 0, pixels_size);
@@ -208,6 +229,8 @@ static int gui_scroll_window(request_table *req) {
         return STATUS_ERROR;
     }
 
+    clamp_dimensions(&req->width, &req->height, fb.width, fb.height);
+
     return fb_scroll_down(entry->pixels, req->x, req->y, req->width, req->height, entry->width, req->bg_color);
 }
 
@@ -224,24 +247,7 @@ static int gui_paint_rectangle(request_table *req) {
         return STATUS_ERROR;
     }
 
-    if (req->x + req->width > entry->width) {
-        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it horizontal\n");
-        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.x: %d req.width: %d, entry.width: %d\n", req->x, req->width, entry->width);
-        if (req->width > entry->width) {
-            req->width = entry->width;
-        }
-        req->x = entry->width - req->width;
-    }
-
-    if (req->y + req->height > entry->height) {
-        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Rectangle would go over the window. Moving it verticaly\n");
-        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: req.y: %d req.height: %d, entry.hei: %d\n", req->y, req->height, entry->height);
-
-        if (req->height > entry->height) {
-            req->height = entry->height;
-        }
-        req->y = entry->height - req->height;
-    }
+    clip_rect(&req->x, &req->y, &req->width, &req->height, fb.width, fb.height);
 
     fb_fill_rect(entry->pixels, req->x, req->y, req->width,
                  req->height, entry->width, entry->height, req->bg_color);
@@ -258,7 +264,7 @@ static int gui_draw_sprite(request_table *req) {
 
     blueprint_t *entry = program_windows[req->struct_key];
 
-    if (entry == NULL) {
+    if (entry == NULL || entry->pixels == NULL || req->pixels == NULL) {
         return STATUS_ERROR;
     }
 
@@ -287,7 +293,8 @@ static int gui_draw_sprite(request_table *req) {
     return STATUS_OK;
 }
 
-int gui_resize_window(request_table *req) {
+static int gui_resize_window(request_table *req) {
+
     blueprint_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
@@ -299,18 +306,7 @@ int gui_resize_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    if (req->width > fb.width) {
-        req->width = fb.width;
-    }
-
-    if (req->height > fb.height) {
-        req->height = fb.height;
-    }
-
-    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
+    clamp_dimensions(&req->width, &req->height, fb.width, fb.height);
 
     uint32_t pixels_size       = req->width * req->height * 4;
     uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixels_size);
@@ -318,8 +314,12 @@ int gui_resize_window(request_table *req) {
         ERROR("[GUI_TASK][RESIZE]: Could not allocate new pixel buffer\n");
         return STATUS_ERROR;
     }
-
     memset(new_pixel_buffer, 0, pixels_size);
+
+    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
     uint32_t copy_width  = (entry->width < req->width) ? entry->width : req->width;
     uint32_t copy_height = (entry->height < req->height) ? entry->height : req->height;
@@ -334,30 +334,11 @@ int gui_resize_window(request_table *req) {
     kfree(entry->pixels);
     entry->pixels = new_pixel_buffer;
 
-    if (entry->screen_x + req->width > fb.width) {
-        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New width goes over the screen in horizontal direction. Moving it inside\n");
-        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.width = %d, req.width = %d, fb.width = %d\n", entry->width, req->width, fb.width);
-
-        if (req->width > fb.width) {
-            req->width = fb.width;
-        } else {
-            entry->screen_x = fb.width - req->width;
-        }
-    }
-
-    if (entry->screen_y + req->height > fb.height) {
-        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: New height goes over the screen in vertical direction. Moving it inside\n");
-        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: entry.height = %d, req.height = %d, fb.height = %d\n", entry->height, req->height, fb.height);
-
-        if (req->height > fb.height) {
-            req->height = fb.height;
-        } else {
-            entry->screen_y = fb.height - req->height;
-        }
-    }
-
     entry->width  = req->width;
     entry->height = req->height;
+
+    clamp_bounds(&entry->screen_x, &entry->screen_y, &req->width,
+                 &req->height, fb.width, fb.height);
 
     if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
         return STATUS_ERROR;
@@ -367,7 +348,7 @@ int gui_resize_window(request_table *req) {
     return STATUS_OK;
 }
 
-int gui_move_task_window(request_table *req) {
+static int gui_move_task_window(const request_table *req) {
     blueprint_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
@@ -387,18 +368,7 @@ int gui_move_task_window(request_table *req) {
     entry->screen_x = req->x;
     entry->screen_y = req->y;
 
-    if (entry->width + req->x > fb.width) {
-        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: New horizontal position goes over the screen. Moving it inside\n");
-        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: entry.width = %d, req.x = %d, fb.width = %d\n", entry->width, req->x, fb.width);
-
-        entry->screen_x = fb.width - entry->width;
-    }
-
-    if (entry->height + req->y > fb.height) {
-        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: New vertical position goes over the screen. Moving it inside\n");
-        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: entry.height = %d, req.y = %d, fb.height= %d\n", entry->height, req->y, fb.height);
-        entry->screen_y = fb.height - entry->height;
-    }
+    clamp_bounds(&entry->screen_x, &entry->screen_y, &entry->width, &entry->height, fb.width, fb.height);
 
     if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
         return STATUS_ERROR;
@@ -442,8 +412,7 @@ static void gui_handle_request(request_table *req) {
 
     default:
         req->status = FAILED;
-        scheduler_wake_task(req->caller_pid);
-        return;
+        goto after_req_steps;
     }
 after_req_steps:
     gui_task->priority = PRIORITY_NORMAL;
@@ -471,7 +440,7 @@ static void gui_recovery() {
     blankie_activate(gui_task_pid);
 }
 
-void gui_init(task_t *gui_task) {
+void gui_init(const task_t *gui_task) {
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Initializing GUI\n");
     blankie_register(gui_task_pid, gui_task->context.eip, gui_task->kernel_stack);
     register_hail_mary_function(gui_task_pid, gui_recovery);

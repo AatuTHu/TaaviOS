@@ -1,11 +1,9 @@
 #include "idt.h"
 #include "klog.h"
 
-static inline void print_registers_to_console(struct registers *r) {
-    uint32_t is_user = (r->cs & 0x3) == 3;
+static inline void print_registers_to_console(const struct registers *r) {
 
     DEBUG("\n--- CPU Execution State ---\n");
-    DEBUG("Execution Mode  : %s Mode\n", is_user ? "User space" : "Kernel space");
     DEBUG("Instruction Ptr : 0x%x\n", r->eip);
     DEBUG("User Stack Ptr  : 0x%x\n", r->useresp);
     DEBUG("Code Segment    : 0x%x\n", r->cs);

@@ -46,24 +46,25 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     new_request->struct_key   = fd;
     new_request->buffer_size  = buffer_size;
 
-    if (buffer_size > 0) {
+    if (buffer_size > 0 && buf != NULL) {
         new_request->buf = (char *)kmalloc(buffer_size + 1);
-        if (new_request->buf != NULL) {
-
-            if (buf != NULL) {
-                memcpy(new_request->buf, buf, buffer_size);
-            }
-            new_request->buffer_size      = buffer_size;
-            new_request->buf[buffer_size] = '\0';
-            DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST] buffer: %s\n", new_request->buf);
+        if (new_request->buf == NULL) {
+            ERROR("Could not allocate buffer for the message\n");
+            kfree(new_request);
+            return STATUS_ERROR;
         }
+        memcpy(new_request->buf, buf, buffer_size);
+        new_request->buffer_size      = buffer_size;
+        new_request->buf[buffer_size] = '\0';
+        DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST] buffer: %s\n", new_request->buf);
     }
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->struct_key);
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
+
+    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
+    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
+    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->struct_key);
+    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 
     if (ledger_enqueue(fs_task_pid, new_request) == STATUS_ERROR) {
         ERROR("[LEDGER][ADD_FS_REQUEST]: Failed to add to req queue\n");
@@ -72,7 +73,6 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
         return STATUS_ERROR;
     }
 
-    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST] Request added\n");
     return STATUS_OK;
 
 case_error:

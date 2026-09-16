@@ -3,16 +3,19 @@
 #include "malloc.h"
 #include "render.h"
 #include "shared.h"
+#include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
+#include "ui.h"
 #include <stdint.h>
 
 int get_ac_tasks(char *buf, int len) {
-    if (buf != NULL) {
-        memcpy(buf, "SYS_INFO/TASKS", len);
-        return sys_getdirents(buf, len);
+    if (buf == NULL) {
+        return STATUS_ERROR;
     }
-    return -1;
+
+    memcpy(buf, "SYS_INFO/TASKS", len);
+    return sys_getdirents(buf, len);
 }
 
 int set_operator_task() {
@@ -28,6 +31,7 @@ int exec(const char *filename) {
 }
 
 void terminate_program() {
+    delete_all_containers();
     gfx_release_regions_and_viewport();
     sys_exit();
 }
@@ -37,6 +41,9 @@ int kill_task(uint32_t target_pid) {
 }
 
 int release_window() {
+    delete_all_containers();
+    gfx_release_regions_and_viewport();
+
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
     params.opcode = FREE;
@@ -50,15 +57,10 @@ int __init_task() {
 
     if (heap_start == -1 || current_heap_end == -1) {
         LOG("Failed to initialize heap\n");
-        return -1;
+        return STATUS_ERROR;
     }
 
     malloc_init((void *)heap_start, current_heap_end);
 
-    if (gfx_init() == -1) {
-        LOG("Failed to initialize graphics\n");
-        return -1;
-    }
-
-    return 0;
+    return gfx_init();
 }

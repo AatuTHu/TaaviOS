@@ -1,5 +1,8 @@
 #include "ata.h"
+#include "config.h"
 #include "fat32.h"
+#include "kmalloc.h"
+#include <stdbool.h>
 /*
  * Calculate the Logical Block Address (LBA) of the FAT sector
  * that contains the allocation entry for the given cluster.
@@ -525,13 +528,12 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
     if (buf == INVALID_BUFFER)
         return STATUS_ERROR;
 
-    uint8_t is_done          = 0;
     uint32_t current_cluster = start_cluster;
 
     /*
      *   Start looping and read the data of the current cluster in to a buffer
      */
-    while (is_done != 1) {
+    while (1) {
         if (__fat32_read_cluster(current_cluster, buf) == STATUS_ERROR) {
             ERROR("[FAT32][SEARCH_DIR]: Could not read cluster\n");
             kfree(buf);
@@ -553,8 +555,8 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
          */
         for (uint32_t i = 0; i < max_dir_entries; i++) {
             if (dir_entry[i].name[0] == FAT32_DIRENT_FREE) {
-                is_done = STATUS_OK;
-                break;
+                kfree(buf);
+                return STATUS_ERROR;
             }
 
             if (dir_entry[i].name[0] == FAT32_DIRENT_DELETED)
@@ -581,10 +583,6 @@ int __fat32_search_dir(uint32_t start_cluster, const uint8_t *name83,
                 kfree(buf);
                 return STATUS_OK;
             }
-        }
-
-        if (is_done == STATUS_OK) {
-            break;
         }
 
         /*

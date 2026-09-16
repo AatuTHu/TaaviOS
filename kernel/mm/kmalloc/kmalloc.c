@@ -18,8 +18,8 @@ static uint32_t remaining_heap_size;
 static uint32_t current_heap_ceiling = 0;
 
 static void update_remaining_heap_size() {
-    size_t total_free       = 0;
-    block_header_t *current = free_list;
+    size_t total_free             = 0;
+    const block_header_t *current = free_list;
     while (current != NULL) {
         total_free += sizeof(block_header_t) + current->size;
         current = current->next;

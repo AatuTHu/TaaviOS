@@ -45,7 +45,7 @@ int ledger_add_fs_req(uint32_t caller_pid,
                       const char *buf, uint32_t buffer_size, uint32_t flags);
 int ledger_add_fs_free_req(uint32_t caller_pid, uint32_t target_pid);
 // gui
-int ledger_add_gui_req(uint32_t caller_pid, gui_params_pack *params);
+int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params);
 int ledger_add_gui_free_req(uint32_t caller_pid, uint32_t target_pid);
 // reaper
 int ledger_add_reaper_req(uint32_t caller_pid, uint32_t target_pid);

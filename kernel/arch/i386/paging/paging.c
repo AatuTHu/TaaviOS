@@ -87,7 +87,7 @@ void paging_switch(page_directory_t *dir) {
 
 int paging_add_deferred_mapping(page_directory_t *dir, uint32_t virt, uint32_t phys, uint32_t flags, uint32_t page_count) {
 
-    if (page_count <= 0) {
+    if (page_count == 0) {
         return STATUS_ERROR;
     }
 

@@ -15,12 +15,42 @@
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
 
+static int signal_clerks_to_release_memory(struct registers *r, uint32_t caller_pid, uint32_t target_pid) {
+    DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting fs_task release allocated memory\n");
+    scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_fs_free_req(caller_pid, target_pid);
+    scheduler_yield(r);
+
+    if (ledger_collect(caller_pid, fs_task_pid, NULL) == STATUS_ERROR) {
+        ERROR("[SIG_RELEASE_MEMORY]: FS_TASK failed to release memory \n");
+    }
+
+    DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting gui_task to release allocated memory\n");
+    scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_gui_free_req(caller_pid, target_pid);
+    scheduler_yield(r);
+    if (ledger_collect(caller_pid, gui_task_pid, NULL) == STATUS_ERROR) {
+        ERROR("[SIG_RELEASE_MEMORY]: GUI_TASK failed to release memory \n");
+    }
+
+    DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting reaper to kill the task\n");
+    scheduler_set_task_state(TASK_BLOCKED);
+    ledger_add_reaper_req(caller_pid, target_pid);
+    scheduler_yield(r);
+    if (ledger_collect(caller_pid, reaper_task_pid, NULL) == STATUS_ERROR) {
+        ERROR("[SIG_RELEASE_MEMORY]: REAPER_TASK failed to release memory \n");
+    }
+
+    return STATUS_OK;
+}
+
 /**
  * sys_exit - marks a task dead.
  *
  * Description:
- * This function releases it's hold on keyboard and marks itself as dead. Then
- * yields
+ * This function releases keyboard focus if it has it. Signals clerks to release reserved memory
+ * related to the task. Then it marks the task as dead so scheduler cant pick it. After that it
+ * yields tasks processor time
  *
  * Return: STAUS_ERROR || STATUS_OK.
  */
@@ -31,7 +61,7 @@ static int32_t sys_exit(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    if (!(current->pid >= CLERK_COUNT)) {
+    if (current->pid < CLERK_COUNT) {
         return STATUS_ERROR;
     }
 
@@ -43,25 +73,9 @@ static int32_t sys_exit(struct registers *r) {
         keyboard_set_foreground_pid(-1);
     }
 
-    DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting fs_task release allocated memory\n");
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_fs_free_req(current->pid, current->pid);
-    scheduler_yield(r);
-    ledger_collect(current->pid, fs_task_pid, NULL);
-
-    DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting gui_task to release allocated memory\n");
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_gui_free_req(current->pid, current->pid);
-    scheduler_yield(r);
-    ledger_collect(current->pid, gui_task_pid, NULL);
-
-    DEBUG_SYSCALL("[SYSCALL][SYS_EXIT]: Requesting reaper to kill the task\n");
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_reaper_req(current->pid, current->pid);
-    scheduler_yield(r);
-    ledger_collect(current->pid, reaper_task_pid, NULL);
-
+    signal_clerks_to_release_memory(r, current->pid, current->pid);
     scheduler_set_task_state(TASK_DEAD);
+
     return STATUS_OK;
 }
 
@@ -122,15 +136,13 @@ static int32_t sys_write(struct registers *r) {
 
     switch (fd) {
     case 1:
-        vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
+        //  vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
         vga_write(buf);
-        r->eax = STATUS_OK;
         break;
 
     case 2:
-        vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
+        //  vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
         klog(buf);
-        r->eax = STATUS_OK;
         break;
 
     default:
@@ -250,6 +262,7 @@ static int32_t sys_sbrk(struct registers *r) {
     }
 
     if (size == 0) {
+        DEBUG_SYSCALL("[SYSCALL][SYS_SBRK]: Task asked for its current heap_end. It is: 0x%x\n", current->heap_end);
         return current->heap_end;
     }
 
@@ -262,7 +275,7 @@ static int32_t sys_sbrk(struct registers *r) {
     }
 
     current->heap_end = old_end + aligned_size;
-    r->eax            = STATUS_OK;
+    DEBUG_SYSCALL("[SYSCALL][SYS_SBRK]: New heap_end: 0x%x\n", current->heap_end);
     return old_end;
 }
 
@@ -323,8 +336,8 @@ static int32_t sys_exec(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    uint32_t heap_start = 0;
-    int entry           = elf_load(binary_buffer, pd, &heap_start);
+    uint32_t elf_calculated_heap_start = 0;
+    int entry                          = elf_load(binary_buffer, pd, &elf_calculated_heap_start);
 
     if (entry == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: elf load failed aborting.\n");
@@ -334,15 +347,18 @@ static int32_t sys_exec(struct registers *r) {
 
     kfree(binary_buffer);
 
-    task_t *task = task_create(-1, entry, heap_start, task_name, pd, USER_TASK);
+    task_t *task = task_create(-1, entry, elf_calculated_heap_start, task_name, pd, USER_TASK);
 
     if (task == NULL) {
-        goto failure;
+        ERROR("[SYSCALL][SYS_EXEC]: Task could not be created\n");
+        vmm_free_user_space(pd);
+        return STATUS_ERROR;
     }
 
     if (scheduler_add(task) == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_EXEC]: Failed to add task to scheduler\n");
-        goto failure;
+        vmm_free_user_space(pd);
+        return STATUS_ERROR;
     }
 
     DEBUG_SYSCALL("[SYSCALL][SYS_EXEC]: Task created %d\n", task->pid);
@@ -358,7 +374,7 @@ failure:
  * sys_mkdir - create directory.
  *
  * Description:
- * Creates a new folder. If path is longer than 8 chars uses mkdrip instead. internally.
+ * Creates a new folder.
  *
  * Return: STAUS_ERROR || STATUS_OK.
  */
@@ -420,31 +436,14 @@ static int32_t sys_kill(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Killing target: %s\n", target_task->name);
-
-    if (!(target_task->pid >= CLERK_COUNT)) {
+    if (target_task->pid < CLERK_COUNT) {
         return STATUS_ERROR;
     }
 
+    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Killing target: %s\n", target_task->name);
     target_task->state = TASK_DEAD;
 
-    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Requesting fs_task release allocated memory\n");
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_fs_free_req(current->pid, target_task->pid);
-    scheduler_yield(r);
-    ledger_collect(current->pid, fs_task_pid, NULL);
-
-    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Requesting gui_task to release allocated memory\n");
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_gui_free_req(current->pid, target_task->pid);
-    scheduler_yield(r);
-    ledger_collect(current->pid, gui_task_pid, NULL);
-
-    DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Requesting reaper to kill the task\n");
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_reaper_req(current->pid, target_task->pid);
-    scheduler_yield(r);
-    return ledger_collect(current->pid, reaper_task_pid, NULL);
+    return signal_clerks_to_release_memory(r, current->pid, target_task->pid);
 }
 
 /**
@@ -463,6 +462,11 @@ static int change_keyboard_focus(uint32_t target_pid) {
     task_t *current = scheduler_get_current_task();
 
     if (!(target_pid >= CLERK_COUNT || target_pid >= MAX_TASKS)) {
+        return STATUS_ERROR;
+    }
+
+    if (task_get(target_pid) == NULL) {
+        DEBUG_SYSCALL("[SYSCALL][CKF]: No task with the given pid found\n");
         return STATUS_ERROR;
     }
 
@@ -502,11 +506,8 @@ static int32_t sys_ioctl(struct registers *r) {
  * sys_configure_window - When userspace task wants to make changes to their window.
  *
  * Description:
- * There are 4 configure operations that can be made to window
- * first one is to create the window so that it is shown on the screen
- * second one is to paint it tho atm it does not do anything
- * third one is to move the window to another location on the screen.
- * fourth one sets the current window as the operator.
+ * This function takes in pack of params. They contain opcode and values (for example width/height
+ * x/y) the caller is giving to gui. Gui then complites request and caller collects the results
  *
  * Return: STATUS_OK || STATUS_ERROR.
  */
