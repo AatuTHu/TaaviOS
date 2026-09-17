@@ -18,7 +18,7 @@ static syscall_fn_t syscall_table[MAX_SYSCALLS];
 static int signal_clerks_to_release_memory(struct registers *r, uint32_t caller_pid, uint32_t target_pid) {
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting fs_task release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_fs_free_req(caller_pid, target_pid);
+    ledger_queue_free_req(caller_pid, fs_task_pid, target_pid);
     scheduler_yield(r);
 
     if (ledger_collect(caller_pid, fs_task_pid, NULL) == STATUS_ERROR) {
@@ -27,7 +27,7 @@ static int signal_clerks_to_release_memory(struct registers *r, uint32_t caller_
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting gui_task to release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_gui_free_req(caller_pid, target_pid);
+    ledger_queue_free_req(caller_pid, gui_task_pid, target_pid);
     scheduler_yield(r);
     if (ledger_collect(caller_pid, gui_task_pid, NULL) == STATUS_ERROR) {
         ERROR("[SIG_RELEASE_MEMORY]: GUI_TASK failed to release memory \n");
@@ -35,7 +35,7 @@ static int signal_clerks_to_release_memory(struct registers *r, uint32_t caller_
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting reaper to kill the task\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_reaper_req(caller_pid, target_pid);
+    ledger_queue_free_req(caller_pid, reaper_task_pid, target_pid);
     scheduler_yield(r);
     if (ledger_collect(caller_pid, reaper_task_pid, NULL) == STATUS_ERROR) {
         ERROR("[SIG_RELEASE_MEMORY]: REAPER_TASK failed to release memory \n");
