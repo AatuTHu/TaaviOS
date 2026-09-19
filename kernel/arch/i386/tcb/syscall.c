@@ -521,7 +521,9 @@ static int32_t sys_window(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_gui_req(current->pid, params);
+    if (ledger_add_gui_req(current->pid, params) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
     scheduler_yield(r);
     return ledger_collect(current->pid, gui_task_pid, params->buf);
 }

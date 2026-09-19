@@ -40,9 +40,8 @@ void reaper_task_loop() {
                 req->status = (reaper_kill_task(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
                 scheduler_wake_task(req->caller_pid);
             }
-        } else {
-            ledger_remove_request();
         }
+
         blankie_activate(reaper_task_pid);
     }
 }

@@ -675,7 +675,7 @@ void fs_handle_request(request_table *req) {
 
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
-        req->status = TERMINATED;
+        req->status = FAILED;
         scheduler_wake_task(req->caller_pid);
         return;
     }

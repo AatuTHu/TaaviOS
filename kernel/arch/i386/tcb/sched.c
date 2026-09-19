@@ -62,13 +62,13 @@ static void scheduler_check_clerks() {
         }
     }
 
-    if (ledger_has_killable_reqs() > 0) {
+    if (ledger_count_clerk_reqs(reaper_task_pid) > 0) {
         clerk = task_table[reaper_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //    DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
                 clerk->state    = TASK_READY;
-                clerk->priority = PRIORITY_LOW;
+                clerk->priority = PRIORITY_NORMAL;
             }
         }
     }

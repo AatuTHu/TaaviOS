@@ -59,6 +59,24 @@ static clerk_queue *ledger_get_queue(uint32_t clerk_pid) {
     return q;
 }
 
+static inline void ledger_remove_request(request_table *req) {
+
+    if (req != NULL) {
+
+        if (req->pixels != NULL) {
+            kfree(req->pixels);
+            req->pixels = NULL;
+        }
+
+        if (req->buf != NULL) {
+            kfree(req->buf);
+            req->buf = NULL;
+        }
+
+        kfree(req);
+    }
+}
+
 /**
  * ledger_check_request - Marks the last request as terminated.
  * @clerk_pid: pid of the clerk
@@ -77,59 +95,32 @@ void ledger_check_request(uint32_t clerk_pid) {
     request_table *entry = q->table[*q->last_idx];
     if (entry != NULL) {
         ERROR("[LEDGER][CHECK_REQUEST]: force terminating last request and waking caller\n");
-        entry->status = TERMINATED;
-        scheduler_wake_task(entry->caller_pid);
+        uint32_t caller = entry->caller_pid;
+        ledger_remove_request(entry);
+        q->table[*q->last_idx] = NULL;
+        scheduler_wake_task(caller);
     }
 }
 
-void ledger_remove_request() {
+static inline int queue_req(request_table *new_request) {
 
-    for (int c = 0; c < CLERK_COUNT; c++) {
-        clerk_queue *q = ledger_get_queue(c);
-        if (q == NULL || q->table == NULL) {
-            continue;
-        }
-
-        for (int i = 0; i < q->max_entries; i++) {
-            if (q->table[i] != NULL && q->table[i]->status == TERMINATED) {
-
-                if (q->table[i]->pixels != NULL) {
-                    kfree(q->table[i]->pixels);
-                    q->table[i]->pixels = NULL;
-                }
-
-                if (q->table[i]->buf != NULL) {
-                    kfree(q->table[i]->buf);
-                    q->table[i]->buf = NULL;
-                }
-
-                kfree(q->table[i]);
-                q->table[i] = NULL;
-                //  DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper removed one request\n");
-            }
-        }
-    }
-}
-
-static inline int queue_req(request_table *new_request, uint32_t clerk_pid, uint32_t caller_pid) {
-
-    clerk_queue *q = ledger_get_queue(clerk_pid);
+    clerk_queue *q = ledger_get_queue(new_request->clerk_pid);
     if (!q) {
         kfree(new_request);
-        scheduler_wake_task(caller_pid);
+        scheduler_wake_task(new_request->caller_pid);
         return STATUS_ERROR;
     }
 
     for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] == NULL) {
             q->table[i] = new_request;
-            wake_clerk(clerk_pid);
+            wake_clerk(new_request->clerk_pid);
             return STATUS_OK;
         }
     }
 
     kfree(new_request);
-    scheduler_wake_task(caller_pid);
+    scheduler_wake_task(new_request->caller_pid);
     return STATUS_ERROR;
 }
 
@@ -163,9 +154,9 @@ static char *pack_dimensions(uint32_t value, char *buf) {
  * Description:
  * Scans the clerk's queue for a COMPLETE request owned by caller_pid.
  * OPEN requests return the allocated FD directly. READ requests copy
- * their buffer into out. All other types fall through to the shared
- * completion path. Any matching TERMINATED entries also trigger the
- * reaper so stale requests don't linger.
+ * their buffer into out. Resize makes a confirmation width.height string for the caller.
+ * incase gui could not make the request happen. All other types fall through to the shared
+ * completion path. After all is collected the request is removed from the table
  *
  * Return: STATUS_OK / FD on success / buffer containing width and height
  * STATUS_ERROR if nothing found.
@@ -187,10 +178,13 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
         if (req->status == COMPLETE) {
             switch (req->request_type) {
             case CREATE:
-            case OPEN:
-                req->status = TERMINATED;
+            case OPEN: {
                 DEBUG_LEDGER("[LEDGER][COLLECT]: collecting struct_key: %d\n", req->struct_key);
-                return req->struct_key;
+                uint32_t key = req->struct_key;
+                ledger_remove_request(req);
+                q->table[i] = NULL;
+                return key;
+            }
             case LIST:
             case READ:
                 if (out != NULL) {
@@ -198,8 +192,10 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                     out[req->buffer_size] = '\0';
                     // DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d containing: %s\n", caller_pid, req->buffer_size, req->buf);
                 }
-                req->status = TERMINATED;
-                return req->buffer_size;
+                uint32_t buffer_size = req->buffer_size;
+                ledger_remove_request(req);
+                q->table[i] = NULL;
+                return buffer_size;
             case RESIZE:
                 if (out != NULL) {
                     DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting width and height\n", caller_pid);
@@ -211,14 +207,15 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                     *params      = '\0';
                 }
                 // DEBUG_LEDGER("[LEDGER][COLLECT]: params packed to go %s\n", out);
-                req->status = TERMINATED;
+                ledger_remove_request(req);
+                q->table[i] = NULL;
                 return STATUS_OK;
 
             default:
                 break;
             }
-
-            req->status = TERMINATED;
+            ledger_remove_request(req);
+            q->table[i] = NULL;
             return STATUS_OK;
         }
     }
@@ -294,6 +291,30 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
     return req_count;
 }
 
+int ledger_count_all_clerk_reqs(uint32_t clerk_pid) {
+    //    DEBUG_LEDGER("[LEDGER][COUNT_CLERK_REQS]: Counting for %d\n", clerk_pid);
+
+    if (clerk_pid >= CLERK_COUNT) {
+        return STATUS_ERROR;
+    }
+
+    const clerk_queue *q = ledger_get_queue(clerk_pid);
+    if (q == NULL) {
+        ERROR("[LEDGER][CONUT CLERKS]: clerk pid is invalid\n");
+        return 0;
+    }
+
+    int req_count = 0;
+
+    for (int i = 0; i < q->max_entries; i++) {
+        if (q->table[i] != NULL) {
+            req_count++;
+        }
+    }
+
+    return req_count;
+}
+
 int ledger_count_active_reqs() {
     int req_count = 0;
     for (uint32_t clerk_pid = 0; clerk_pid < CLERK_COUNT; clerk_pid++) {
@@ -346,7 +367,7 @@ int ledger_queue_free_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t targ
     new_request->request_type = FREE;
     new_request->clerk_pid    = clerk_pid;
 
-    return queue_req(new_request, clerk_pid, caller_pid);
+    return queue_req(new_request);
 }
 
 /**
@@ -366,6 +387,10 @@ int ledger_queue_free_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t targ
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
 int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const char *buf, uint32_t buffer_size, uint32_t flags) {
+
+    if (ledger_count_all_clerk_reqs(fs_task_pid) >= MAX_FS_REQ_ENTRIES) {
+        goto case_error;
+    }
 
     if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type == READ || type == WRITE)) {
         ERROR("[LEDGER][ADD_FS_REQUEST]: Invalid fd number. Aborting\n");
@@ -387,11 +412,12 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     new_request->struct_key   = fd;
     new_request->buffer_size  = buffer_size;
 
-    if (buffer_size > 0 && buf != NULL) {
+    if (buf != NULL) {
         new_request->buf = (char *)kmalloc(buffer_size + 1);
         if (new_request->buf == NULL) {
-            ERROR("Could not allocate buffer for the message\n");
+            ERROR("[LEDGER][ADD_FS_REQ]Could not allocate buffer for the message\n");
             kfree(new_request);
+            scheduler_wake_task(caller_pid);
             return STATUS_ERROR;
         }
         memcpy(new_request->buf, buf, buffer_size);
@@ -407,7 +433,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
     // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
 
-    return queue_req(new_request, fs_task_pid, caller_pid);
+    return queue_req(new_request);
 
 case_error:
     scheduler_wake_task(caller_pid);
@@ -425,6 +451,10 @@ case_error:
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
 int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
+
+    if (ledger_count_all_clerk_reqs(gui_task_pid) >= MAX_GUI_REQ_ENTRIES) {
+        goto case_error;
+    }
 
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {
@@ -461,11 +491,15 @@ int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
 
     if (params->buf != NULL) {
         new_request->buf = (char *)kmalloc(params->buffer_size + 1);
-        if (new_request->buf != NULL) {
-            new_request->buffer_size = params->buffer_size;
-            memcpy(new_request->buf, params->buf, params->buffer_size);
-            new_request->buf[params->buffer_size] = '\0';
+        if (new_request->buf == NULL) {
+            ERROR("[LEDGER][ADD_GUI_REQ]Could not allocate buffer for the message\n");
+            kfree(new_request);
+            scheduler_wake_task(caller_pid);
+            return STATUS_ERROR;
         }
+        new_request->buffer_size = params->buffer_size;
+        memcpy(new_request->buf, params->buf, params->buffer_size);
+        new_request->buf[params->buffer_size] = '\0';
     }
 
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: caller pid: %d\n", new_request->caller_pid);
@@ -477,7 +511,7 @@ int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
     // DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: y: %d\n", new_request->y);
     //  DEBUG_GUI_TASK("[LEDGER][ADD_GUI_REQUEST]: buffer length : %d\n", new_request->buffer_size);
 
-    return queue_req(new_request, gui_task_pid, caller_pid);
+    return queue_req(new_request);
 
 case_error:
     scheduler_wake_task(caller_pid);

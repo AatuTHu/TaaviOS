@@ -60,7 +60,9 @@ int __init_task() {
         return STATUS_ERROR;
     }
 
+    LOG("Initializing malloc\n");
     malloc_init((void *)heap_start, current_heap_end);
 
+    LOG("Initializing GFX\n");
     return gfx_init();
 }

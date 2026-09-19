@@ -535,6 +535,14 @@ int gfx_delete_region(uint32_t region_id) {
  */
 int gfx_init(void) {
     memset(gfx_regions, 0, sizeof(gfx_regions));
+    gfx_region_t *entry = (gfx_region_t *)malloc(sizeof(gfx_region_t));
+
+    if (entry == NULL) {
+        LOG("Cant allocate entry for the primary viewport\n");
+        return STATUS_ERROR;
+    }
+
+    LOG("Sending viewport information to kernel\n");
     int id = gfx_create_viewport(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y,
                                  DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, COLOR_WHITE, COLOR_BLACK);
 
@@ -543,13 +551,7 @@ int gfx_init(void) {
         return STATUS_ERROR;
     }
 
-    gfx_region_t *entry = (gfx_region_t *)malloc(sizeof(gfx_region_t));
-
-    if (entry == NULL) {
-        LOG("Cant allocate entry for the primary viewport\n");
-        return STATUS_ERROR;
-    }
-
+    LOG("Setting viewport metadata\n");
     entry->id           = id;
     entry->border_color = COLOR_ORAGNE_MUD;
     entry->border_width = default_border_width;
@@ -560,10 +562,12 @@ int gfx_init(void) {
     entry->fg_color     = COLOR_WHITE;
     entry->bg_color     = COLOR_BLACK;
     entry->str          = NULL;
-    gfx_home_cursor(entry);
 
+    LOG("Homing viewport cursor\n");
+    gfx_home_cursor(entry);
     gfx_regions[PRIMARY_VIEWPORT_ID] = entry;
 
+    LOG("Drawing borders for viewport\n");
     gfx_draw_borders(PRIMARY_VIEWPORT_ID);
 
     return STATUS_OK;

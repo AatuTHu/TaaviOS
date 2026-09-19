@@ -46,7 +46,7 @@ static inline void gfx_clamp_vertical(gfx_region_t *child) {
         child->cursor_y = max_y;
 }
 
-int gfx_init(void);
+int gfx_init();
 int gfx_create_viewport(int x, int y, int w, int h, uint32_t fg_color, uint32_t bg_color);
 int gfx_register_region(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t fg, uint32_t bg, const char *str);
 int gfx_resize_viewport(uint32_t region_id, int w, int h);
