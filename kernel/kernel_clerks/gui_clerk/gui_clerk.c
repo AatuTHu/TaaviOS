@@ -82,6 +82,11 @@ static int copy_pixels_to_screen(blueprint_t *entry) {
 static int gui_draw_string(const request_table *req) {
     // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
     //  DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s\n", req->buf);
+
+    if (req == NULL) {
+        return STATUS_ERROR;
+    }
+
     blueprint_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
@@ -94,8 +99,10 @@ static int gui_draw_string(const request_table *req) {
         return STATUS_ERROR;
     }
 
-    // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New x position %d\n", req->x);
-    // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: New y position %d\n", req->y);
+    if (req->buf == NULL || req->x >= entry->width || req->y >= entry->height) {
+        ERROR("[GUI_TASK][DRAW_STRING]: request was invalid\n");
+        return STATUS_ERROR;
+    }
 
     fb_draw_string(entry->pixels, req->x, req->y, entry->width, req->buf,
                    req->fg_color, req->bg_color);
@@ -161,7 +168,11 @@ static int gui_delete_window(uint32_t target_pid) {
  * Return: If successful return STATUS_OK || if unsuccessful return STATUS_ERROR.
  */
 static int gui_create_window_entry(request_table *req) {
+
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Trying to initialize a window\n");
+    if (req == NULL) {
+        return STATUS_ERROR;
+    }
 
     int slot = -1;
 
@@ -231,7 +242,8 @@ static int gui_scroll_window(request_table *req) {
 
     clamp_dimensions(&req->width, &req->height, fb.width, fb.height);
 
-    return fb_scroll_down(entry->pixels, req->x, req->y, req->width, req->height, entry->width, req->bg_color);
+    return fb_scroll_down(entry->pixels, req->x, req->y, req->width, req->height,
+                          entry->width, req->bg_color);
 }
 
 static int gui_paint_rectangle(request_table *req) {
@@ -252,12 +264,8 @@ static int gui_paint_rectangle(request_table *req) {
     fb_fill_rect(entry->pixels, req->x, req->y, req->width,
                  req->height, entry->width, entry->height, req->bg_color);
 
-    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
     //  DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Window painted successfully to screen!\n");
-    return STATUS_OK;
+    return copy_pixels_to_screen(entry);
 }
 
 static int gui_draw_sprite(request_table *req) {
@@ -286,11 +294,7 @@ static int gui_draw_sprite(request_table *req) {
         }
     }
 
-    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    return STATUS_OK;
+    return copy_pixels_to_screen(entry);
 }
 
 static int gui_resize_window(request_table *req) {
@@ -309,6 +313,7 @@ static int gui_resize_window(request_table *req) {
     clamp_dimensions(&req->width, &req->height, fb.width, fb.height);
 
     uint32_t pixels_size       = req->width * req->height * 4;
+
     uint32_t *new_pixel_buffer = (uint32_t *)kmalloc(pixels_size);
     if (new_pixel_buffer == NULL) {
         ERROR("[GUI_TASK][RESIZE]: Could not allocate new pixel buffer\n");
@@ -340,12 +345,8 @@ static int gui_resize_window(request_table *req) {
     clamp_bounds(&entry->screen_x, &entry->screen_y, &req->width,
                  &req->height, fb.width, fb.height);
 
-    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
     //    DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
-    return STATUS_OK;
+    return copy_pixels_to_screen(entry);
 }
 
 static int gui_move_task_window(const request_table *req) {
@@ -370,12 +371,8 @@ static int gui_move_task_window(const request_table *req) {
 
     clamp_bounds(&entry->screen_x, &entry->screen_y, &entry->width, &entry->height, fb.width, fb.height);
 
-    if (copy_pixels_to_screen(entry) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
     //  DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
-    return STATUS_OK;
+    return copy_pixels_to_screen(entry);
 }
 
 static void gui_handle_request(request_table *req) {

@@ -201,6 +201,7 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h) {
     params.buffer_size = DIMENSIONS_BUFFER_LEN;
 
     if (sys_conwi(&params) == STATUS_ERROR) {
+        LOG("Resize failed\n");
         return STATUS_ERROR;
     }
 

@@ -5,6 +5,7 @@
 #include "ledger.h"
 #include "sched.h"
 #include "shared.h"
+#include "task.h"
 #include <stdint.h>
 /*
  * Ledger Protocol
@@ -95,6 +96,7 @@ void ledger_check_request(uint32_t clerk_pid) {
     request_table *entry = q->table[*q->last_idx];
     if (entry != NULL) {
         ERROR("[LEDGER][CHECK_REQUEST]: force terminating last request and waking caller\n");
+        ERROR("[LEDGER][CHECK_REQUEST]: Last req op_code: %d\n", entry->request_type);
         uint32_t caller = entry->caller_pid;
         ledger_remove_request(entry);
         q->table[*q->last_idx] = NULL;
@@ -193,6 +195,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                     // DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d containing: %s\n", caller_pid, req->buffer_size, req->buf);
                 }
                 uint32_t buffer_size = req->buffer_size;
+
                 ledger_remove_request(req);
                 q->table[i] = NULL;
                 return buffer_size;
@@ -312,6 +315,7 @@ int ledger_count_all_clerk_reqs(uint32_t clerk_pid) {
         }
     }
 
+    // DEBUG_LEDGER("[LEDGER][COUNT_ALL_CLERK_REQS]: Counted %d reqs for %s\n", req_count, task_get(clerk_pid)->name);
     return req_count;
 }
 

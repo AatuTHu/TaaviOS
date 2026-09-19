@@ -127,7 +127,7 @@ static void scheduler_switch(struct registers *r) {
         }
     }
 
-    if (scheduler_has_runnable_task() == 0 || ledger_count_active_reqs() > 0 || ledger_has_killable_reqs() > 0) {
+    if (scheduler_has_runnable_task() == 0 || ledger_count_active_reqs() > 0) {
         // DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
         scheduler_check_clerks();
     }
@@ -153,10 +153,9 @@ static void scheduler_switch(struct registers *r) {
         if (next->task_mode == USER_TASK) {
             vmm_switch(next->page_dir);
         }
-
         tss_set_kernel_stack(next->kernel_stack);
-        memcpy(r, &next->context, sizeof(struct registers));
     }
+    memcpy(r, &next->context, sizeof(struct registers));
 }
 
 void scheduler_yield(struct registers *r) {
