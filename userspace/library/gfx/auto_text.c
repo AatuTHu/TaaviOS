@@ -13,6 +13,8 @@
  * @author: A.H, 2026
  */
 
+#define CURSOR_POS_WIDTH 1
+
 /**
  * pack_params_and_send - build a gui_params_pack and send it to the kernel.
  * @opcode: operation to perform.
@@ -63,7 +65,7 @@ void gfx_paint_cursor_position(uint32_t color) {
     params.struct_key = entry->id;
     params.x          = entry->cursor_x;
     params.y          = entry->cursor_y;
-    params.width      = 1;
+    params.width      = CURSOR_POS_WIDTH;
     params.height     = FONT_HEIGHT;
     params.bg_color   = color;
     params.fg_color   = entry->fg_color;
@@ -151,6 +153,8 @@ static void case_new_line(uint32_t *nwlind, uint32_t current_i, const char *text
         pack_params_and_send(WRITE_AT, entry->id, entry->cursor_x, entry->cursor_y,
                              temp_str, entry->fg_color, entry->bg_color);
     }
+
+    gfx_paint_cursor_position(entry->bg_color);
 
     entry->cursor_y += FONT_HEIGHT;
     entry->cursor_x = entry->padding_x + entry->border_width + entry->offset_x;
@@ -246,13 +250,13 @@ int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len) {
             new_line_ind = i + 1;
             break;
         case KEY_LEFT:
-            if (entry->cursor_x > 0) {
+            if (entry->cursor_x > entry->border_width + entry->padding_x) {
                 gfx_paint_cursor_position(entry->bg_color);
                 entry->cursor_x -= FONT_WIDTH;
             }
             return STATUS_OK;
         case KEY_RIGHT:
-            if (entry->cursor_x <= entry->width - FONT_WIDTH) {
+            if (entry->cursor_x <= entry->width - FONT_WIDTH - entry->border_width - entry->padding_x) {
                 gfx_paint_cursor_position(entry->bg_color);
                 entry->cursor_x += FONT_WIDTH;
             }

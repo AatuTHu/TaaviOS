@@ -38,11 +38,11 @@ uint32_t total_mods = 0;
 static void init_serial_and_vga() {
     vga_init();
     serial_init();
-    DEBUG("[KERNEL]: --INIT SERIAL & VGA--\n");
+    DEBUG_KERNEL("[KERNEL]: --INIT SERIAL & VGA--\n");
 }
 
 static void init_arch() {
-    DEBUG("[KERNEL]: --INIT ARCH--\n");
+    DEBUG_KERNEL("[KERNEL]: --INIT ARCH--\n");
     gdt_init();
     tss_init();
     idt_init();
@@ -50,14 +50,14 @@ static void init_arch() {
 }
 
 static void init_mm(const uint32_t *mboot_info) {
-    DEBUG("[KERNEL]: --INIT MEMORY MANAGEMENT--\n");
+    DEBUG_KERNEL("[KERNEL]: --INIT MEMORY MANAGEMENT--\n");
     const struct multiboot_info *mboot =
         (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
     pmm_init(mboot);
 }
 
 static void check_for_modules(const uint32_t *mboot_info) {
-    DEBUG("[KERNEL]: --CHECKING FOR MODULES--\n");
+    DEBUG_KERNEL("[KERNEL]: --CHECKING FOR MODULES--\n");
     const struct multiboot_info *mbi =
         (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
 
@@ -96,7 +96,7 @@ static void init_filesystems() {
             continue;
         }
         if (mbr_find_fat32(drive, &fat32_lba, &fat32_sectors) == STATUS_OK) {
-            DEBUG("[MBR]: Partition found, initializing filesystem\n");
+            DEBUG_KERNEL("[MBR]: Partition found, initializing filesystem\n");
             fat32_init(drive, fat32_lba);
             break;
         }
@@ -104,8 +104,8 @@ static void init_filesystems() {
 }
 
 static void init_microlithic() {
-    DEBUG("[KERNEL]: --INIT KERNEL TASKS--\n");
-    DEBUG("[KERNEL]: Creating an idle kernel task\n");
+    DEBUG_KERNEL("[KERNEL]: --INIT KERNEL TASKS--\n");
+    DEBUG_KERNEL("[KERNEL]: Creating an idle kernel task\n");
     task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, 0, "idle",
                                       &kernel_page_dir, KERNEL_TASK);
 
@@ -113,7 +113,7 @@ static void init_microlithic() {
         scheduler_add(kernel_task);
     }
 
-    DEBUG("[KERNEL]: Creating an filesystem kernel task\n");
+    DEBUG_KERNEL("[KERNEL]: Creating an filesystem kernel task\n");
     kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, 0, "fs_task",
                               &kernel_page_dir, KERNEL_TASK);
 
@@ -122,7 +122,7 @@ static void init_microlithic() {
         scheduler_add(kernel_task);
     }
 
-    DEBUG("[KERNEL]: Creating an reaper kernel task\n");
+    DEBUG_KERNEL("[KERNEL]: Creating an reaper kernel task\n");
     kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop, 0,
                               "reaper", &kernel_page_dir, KERNEL_TASK);
 
@@ -131,7 +131,7 @@ static void init_microlithic() {
         scheduler_add(kernel_task);
     }
 
-    DEBUG("[KERNEL]: Creating an graphical user interface kernel task\n");
+    DEBUG_KERNEL("[KERNEL]: Creating an graphical user interface kernel task\n");
     kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop, 0,
                               "gui_task", &kernel_page_dir, KERNEL_TASK);
 
@@ -172,10 +172,10 @@ void kernel_main(const uint32_t *mboot_info) {
         uint32_t heap_start       = 0;
         uint32_t entry            = elf_load((void *)phys_to_virt(init_phys), init_pd, &heap_start);
         if (entry == ET_NONE) {
-            DEBUG("[KERNEL]: ELF load failed!\n");
+            DEBUG_KERNEL("[KERNEL]: ELF load failed!\n");
         }
-        DEBUG("[KERNEL]: ELF loaded.\n");
-        DEBUG("[KERNEL]: Creating init task\n");
+        DEBUG_KERNEL("[KERNEL]: ELF loaded.\n");
+        DEBUG_KERNEL("[KERNEL]: Creating init task\n");
         first_task = task_create(-1, entry, heap_start, "init", init_pd, USER_TASK);
         // first_task->priority = PRIORITY_HIGH;
 
@@ -193,7 +193,7 @@ void kernel_main(const uint32_t *mboot_info) {
 
     // pit_sleep_ms(500);
     if (first_task != NULL) {
-        DEBUG("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
+        DEBUG_KERNEL("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
         scheduler_set_current_task(first_task->pid);
         first_task->started = 1;
         _set_scheduler_on();

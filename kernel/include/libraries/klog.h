@@ -16,6 +16,7 @@
 #define LOG_GUI_TASK (1 << 9)   // 512
 #define LOG_FB (1 << 10)        // 1024
 #define LOG_SYSCALL (1 << 11)   // 2048
+#define LOG_KERNEL (1 << 12)    // 4096
 
 #define LOG_CORE (LOG_SCHED | LOG_TASK | LOG_CORE_MM | LOG_SYSCALL) // 2436
 #define LOG_FS_ALL (LOG_FAT32 | LOG_FS_TASK | LOG_LEDGER)           // 112
@@ -103,6 +104,12 @@ void klog_error(const char *fmt, ...);
 #define DEBUG_SYSCALL(fmt, ...) klog_debug(fmt, ##__VA_ARGS__)
 #else
 #define DEBUG_SYSCALL(fmt, ...) ((void)0)
+#endif
+
+#if (LOG_LEVEL & LOG_KERNEL) || (LOG_LEVEL & LOG_ALL_DEBUGS)
+#define DEBUG_KERNEL(fmt, ...) klog_debug(fmt, ##__VA_ARGS__)
+#else
+#define DEBUG_KERNEL(fmt, ...) ((void)0)
 #endif
 
 #endif

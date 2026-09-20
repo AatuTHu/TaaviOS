@@ -111,8 +111,9 @@ void pmm_init(const struct multiboot_info *mboot) {
     DEBUG_CORE_MM("[PMM] Bitmap pages: %d-%d (phys=0x%x size=%d bytes)\n", bitmap_start,
                   bitmap_end, bitmap_phys, bitmap_size_bytes);
 
-    // Left out for now as bitmap fits inside kernel slots.
-    //  for (uint32_t i = bitmap_start; i <= bitmap_end; i++) { __pmm_set_bit(i); }
+    for (uint32_t i = bitmap_start; i <= bitmap_end; i++) {
+        __pmm_set_bit(i);
+    }
 
     free_pages = 0;
     used_pages = 0;

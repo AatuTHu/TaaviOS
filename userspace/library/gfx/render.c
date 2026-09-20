@@ -105,6 +105,7 @@ static int parse_dimensions(const char *ptr, int *w, int *h) {
  */
 int gfx_draw_borders(uint32_t region_id) {
     gui_params_pack params;
+    memset(&params, 0, sizeof(params));
 
     gfx_region_t *entry = gfx_regions[region_id];
 

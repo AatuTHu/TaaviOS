@@ -142,7 +142,7 @@ static int32_t sys_write(struct registers *r) {
 
     case 2:
         //  vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-        klog(buf);
+        DEBUG(buf);
         break;
 
     default:
@@ -440,6 +440,10 @@ static int32_t sys_kill(struct registers *r) {
         return STATUS_ERROR;
     }
 
+    if (current->pid == target_task->pid) {
+        sys_exit(r);
+    }
+
     DEBUG_SYSCALL("[SYSCALL][SYS_KILL]: Killing target: %s\n", target_task->name);
     target_task->state = TASK_DEAD;
 
@@ -524,6 +528,7 @@ static int32_t sys_window(struct registers *r) {
     if (ledger_add_gui_req(current->pid, params) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
+    scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
     return ledger_collect(current->pid, gui_task_pid, params->buf);
 }

@@ -10,11 +10,12 @@ void main(void) {
 
     sys_yield();
 
-    //    if (exec("/sysbin/teditor") != 0)
-    //      return;
+    if (exec("/sysbin/teditor") != 0)
+        return;
 
-    // sys_yield();
+    sys_yield();
 
     //  if (exec("/sysbin/fs_int") != 0)
     //      return;
+    // sys_yield();
 }

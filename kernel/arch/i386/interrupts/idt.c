@@ -21,7 +21,7 @@ static void pic_remap() {
 
     outb(PIC1_DATA, 0x0);
     outb(PIC2_DATA, 0x0);
-    klog("[IDT]: Remapping complete\n");
+    DEBUG_KERNEL("[IDT]: Remapping complete\n");
 }
 
 static void idt_set_gate(int n, uint32_t handler, uint8_t dpl) {
@@ -36,26 +36,26 @@ void idt_init() {
     idt_pointer.limit = sizeof(idt) - 1;
     idt_pointer.base  = (uint32_t)&idt;
 
-    klog("[IDT]: Remapping PIC\n");
+    DEBUG_KERNEL("[IDT]: Remapping PIC\n");
     pic_remap();
 
-    klog("[IDT]: Mapping 32 cpu exception stubs\n");
+    DEBUG_KERNEL("[IDT]: Mapping 32 cpu exception stubs\n");
     for (int i = 0; i <= 31; i++) {
         idt_set_gate(i, (uint32_t)isr_stub_table[i], 0);
     }
 
-    klog("[IDT]: Mapping 16 hardware intterrupt stubs\n");
+    DEBUG_KERNEL("[IDT]: Mapping 16 hardware intterrupt stubs\n");
     for (int i = 32; i <= 47; i++) {
         idt_set_gate(i, (uint32_t)irq_stub_table[i - 32], 0);
     }
 
-    klog("[IDT]: Setting system call gate to 0x80\n");
+    DEBUG_KERNEL("[IDT]: Setting system call gate to 0x80\n");
     idt_set_gate(0x80, (uint32_t)syscall_handler, 3);
 
-    klog("[IDT]: Setting task yield gate to 0x81\n");
+    DEBUG_KERNEL("[IDT]: Setting task yield gate to 0x81\n");
     idt_set_gate(0x81, (uint32_t)isr129, 0);
 
-    klog("[IDT]: IDT FLUSH BEGINS\n");
+    DEBUG_KERNEL("[IDT]: IDT FLUSH BEGINS\n");
     idt_flush((uint32_t)&idt_pointer);
-    klog("[IDT]: IDT INITIALIZED SUCCESFULLY\n");
+    DEBUG_KERNEL("[IDT]: IDT INITIALIZED SUCCESFULLY\n");
 }

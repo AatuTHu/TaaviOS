@@ -50,13 +50,14 @@ static const char *skip_spaces(const char *str) {
 }
 
 static void show_commands(const char *args) {
+    reset_region(main_id);
     (void)args;
     print_to_region(main_id, "Available commands:\n");
     print_to_region(main_id, "- help          'Prints this list'\n");
     print_to_region(main_id, "- open   [path] 'Open a file'\n");
     print_to_region(main_id, "- write  [text] 'Writes to opened file'\n");
     print_to_region(main_id, "- mkdir  [path] 'Creates a directory'\n");
-    print_to_region(main_id, "- delete [path] 'Deletes a file\n'");
+    print_to_region(main_id, "- delete [path] 'Deletes a file'\n");
     print_to_region(main_id, "- cd     [path] 'Changes working directory'\n");
     print_to_region(main_id, "- ls            'Lists directory contents'\n");
     print_to_region(main_id, "- read          'Reads the opened file'\n");
@@ -119,6 +120,7 @@ static void quit_program(const char *args) {
 
 static void read_file(const char *args) {
     (void)args;
+    reset_region(main_id);
     if (fd == STATUS_ERROR) {
         print_at(info_id, PADDING, INFO_LINE_Y, "No file currently open");
         return;
@@ -210,6 +212,7 @@ static const Command commands[] = {
 void exec_cmd(char *buf) {
     reset_region(cmd_id);
     reset_region(main_id);
+    reset_region(info_id);
 
     const char *trimmed = skip_spaces(buf);
     if (*trimmed == '\0') {

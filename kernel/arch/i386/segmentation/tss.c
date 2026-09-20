@@ -20,7 +20,7 @@ void tss_init(void) {
 
     gdt_set_gate(5, (uint32_t)&tss, sizeof(struct tss_entry) - 1, 0x89, 0x00);
 
-    klog("[TSS] TSS FLUSH BEGINS\n");
+    DEBUG_KERNEL("[TSS] TSS FLUSH BEGINS\n");
     tss_flush();
-    klog("[TSS] TSS INITIALIZED SUCCESFULLY\n");
+    DEBUG_KERNEL("[TSS] TSS INITIALIZED SUCCESFULLY\n");
 }
