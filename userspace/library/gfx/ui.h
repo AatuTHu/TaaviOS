@@ -27,7 +27,7 @@ void set_viewport_background_color(uint32_t color);
 void set_region_text_color(uint32_t region_id, uint32_t color);
 void set_region_background_color(uint32_t region_id, uint32_t color);
 void set_region_border_color(uint32_t region_id, uint32_t color);
-void mark_cursor_position(uint32_t background_color);
+void mark_cursor_position(uint32_t region_id, uint32_t background_color);
 
 void set_viewport_padding_x(uint32_t padding);
 void set_viewport_padding_y(uint32_t padding);

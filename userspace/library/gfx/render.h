@@ -55,7 +55,6 @@ void gfx_release_regions_and_viewport();
 int gfx_delete_region(uint32_t region_id);
 int gfx_draw_borders(uint32_t region_id);
 
-void gfx_paint_cursor_position(uint32_t color);
 int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len);
 void gfx_draw_text_at(uint32_t region_id, uint32_t x, uint32_t y, const char *msg);
 void gfx_draw_text_to_region(uint32_t region_id, const char *msg);

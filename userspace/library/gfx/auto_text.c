@@ -48,31 +48,6 @@ static int pack_params_and_send(uint8_t opcode, uint32_t region_id, uint32_t x, 
 }
 
 /**
- * paint_cursor_position - repaint the cell at the primary viewport's cursor.
- * @color: color to paint the cursor cell.
- *
- * Description:
- * Used to draw cursor position vertical line next to chars
- * at the current cursor position with the given color.
- *
- * Return: void.
- */
-void gfx_paint_cursor_position(uint32_t color) {
-    gfx_region_t *entry = gfx_regions[PRIMARY_VIEWPORT_ID];
-    gui_params_pack params;
-    memset(&params, 0, sizeof(params));
-    params.opcode     = PAINT_WINDOW;
-    params.struct_key = entry->id;
-    params.x          = entry->cursor_x;
-    params.y          = entry->cursor_y;
-    params.width      = CURSOR_POS_WIDTH;
-    params.height     = FONT_HEIGHT;
-    params.bg_color   = color;
-    params.fg_color   = entry->fg_color;
-    sys_conwi(&params);
-}
-
-/**
  * gfx_draw_text_at - use when in need of a custom x and y positioning without x and y calculation
  * afterwards
  * @region_id: region component index.
@@ -154,8 +129,6 @@ static void case_new_line(uint32_t *nwlind, uint32_t current_i, const char *text
                              temp_str, entry->fg_color, entry->bg_color);
     }
 
-    gfx_paint_cursor_position(entry->bg_color);
-
     entry->cursor_y += FONT_HEIGHT;
     entry->cursor_x = entry->padding_x + entry->border_width + entry->offset_x;
     *nwlind         = current_i + 1;
@@ -200,7 +173,6 @@ static int backspace_pressed(uint32_t current_i, gfx_region_t *entry, const char
     if (entry->cursor_y == entry->padding_y && entry->cursor_x == entry->padding_x) {
         return STATUS_OK;
     }
-    gfx_paint_cursor_position(entry->bg_color);
 
     if (entry->cursor_y >= (entry->padding_y + FONT_HEIGHT) && entry->cursor_x <= entry->padding_x) {
         entry->cursor_y -= FONT_HEIGHT;
@@ -249,34 +221,6 @@ int gfx_draw_text(uint32_t region_id, const char *text, uint32_t len) {
             backspace_pressed(i, entry, text, new_line_ind);
             new_line_ind = i + 1;
             break;
-        case KEY_LEFT:
-            if (entry->cursor_x > entry->border_width + entry->padding_x) {
-                gfx_paint_cursor_position(entry->bg_color);
-                entry->cursor_x -= FONT_WIDTH;
-            }
-            return STATUS_OK;
-        case KEY_RIGHT:
-            if (entry->cursor_x <= entry->width - FONT_WIDTH - entry->border_width - entry->padding_x) {
-                gfx_paint_cursor_position(entry->bg_color);
-                entry->cursor_x += FONT_WIDTH;
-            }
-            return STATUS_OK;
-        case KEY_UP:
-            if (entry->cursor_y > 0) {
-                gfx_paint_cursor_position(entry->bg_color);
-                entry->cursor_y -= FONT_HEIGHT;
-            }
-            return STATUS_OK;
-        case KEY_DOWN:
-            if ((entry->cursor_y + FONT_HEIGHT) >= (entry->height - entry->padding_y)) {
-                gfx_paint_cursor_position(entry->bg_color);
-                scroll_down(entry);
-                entry->cursor_y = entry->height - FONT_HEIGHT - entry->padding_y;
-            } else {
-                gfx_paint_cursor_position(entry->bg_color);
-                entry->cursor_y += FONT_HEIGHT;
-            }
-            return STATUS_OK;
         }
         gfx_clamp_horizontal(entry);
         gfx_clamp_vertical(entry);

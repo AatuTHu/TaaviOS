@@ -7,6 +7,7 @@
 #include "stand.h"
 #include "string.h"
 #include <stdint.h>
+#include <sys/types.h>
 
 container_info_t *container_list[MAX_REGIONS];
 
@@ -170,8 +171,15 @@ int draw_sprite(uint32_t region_id, int x, int y, int width, int height, uint32_
     return gfx_draw_sprite(region_id, x, y, width, height, scale, sprite);
 }
 
-void mark_cursor_position(uint32_t background_color) {
-    gfx_paint_cursor_position(background_color);
+void mark_cursor_position(uint32_t region_id, uint32_t background_color) {
+
+    gfx_region_t *region = gfx_regions[region_id];
+
+    if (region == NULL) {
+        return;
+    }
+
+    gfx_fill_rect(region->cursor_x, region->cursor_y, 1, FONT_HEIGHT, background_color);
 }
 
 int delete_container(uint32_t region_id) {
