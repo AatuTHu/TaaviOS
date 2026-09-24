@@ -62,14 +62,4 @@ int gfx_clear_region(uint32_t region_id);
 int gfx_fill_rect(uint32_t x, uint32_t y, uint32_t width, uint32_t height, uint32_t color);
 int gfx_draw_sprite(uint32_t region_id, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite);
 int gfx_reset_cursor(uint32_t region_id);
-
-void gfx_set_width(uint32_t region_id, uint32_t w);
-void gfx_set_height(uint32_t region_id, uint32_t h);
-void gfx_set_padding_x(uint32_t region_id, uint32_t px);
-void gfx_set_padding_y(uint32_t region_id, uint32_t py);
-void gfx_set_bg_color(uint32_t region_id, uint32_t color);
-void gfx_set_fg_color(uint32_t region_id, uint32_t color);
-void gfx_set_border_width(uint32_t region_id, uint32_t width);
-void gfx_set_border_color(uint32_t region_id, uint32_t color);
-
 #endif

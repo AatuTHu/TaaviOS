@@ -1,5 +1,6 @@
 #ifndef UI_H
 #define UI_H
+
 #include <stdint.h>
 
 typedef struct {
@@ -24,14 +25,22 @@ void delete_all_containers();
 
 void set_viewport_text_color(uint32_t color);
 void set_viewport_background_color(uint32_t color);
+void set_viewport_border_color(uint32_t color);
+void set_viewport_border_width(uint32_t width);
+void set_viewport_width(uint32_t width);
+void set_viewport_height(uint32_t height);
+void set_viewport_padding_x(uint32_t padding);
+void set_viewport_padding_y(uint32_t padding);
+
 void set_region_text_color(uint32_t region_id, uint32_t color);
 void set_region_background_color(uint32_t region_id, uint32_t color);
 void set_region_border_color(uint32_t region_id, uint32_t color);
-void mark_cursor_position(uint32_t region_id, uint32_t background_color);
-
-void set_viewport_padding_x(uint32_t padding);
-void set_viewport_padding_y(uint32_t padding);
+void set_region_border_width(uint32_t region_id, uint32_t width);
+void set_region_width(uint32_t region_id, uint32_t width);
+void set_region_height(uint32_t region_id, uint32_t height);
 void set_region_padding_x(uint32_t region_id, uint32_t padding);
 void set_region_padding_y(uint32_t region_id, uint32_t padding);
+
+void mark_cursor_position(uint32_t region_id, uint32_t background_color);
 
 #endif

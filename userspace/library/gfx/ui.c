@@ -7,7 +7,6 @@
 #include "stand.h"
 #include "string.h"
 #include <stdint.h>
-#include <sys/types.h>
 
 container_info_t *container_list[MAX_REGIONS];
 
@@ -138,33 +137,124 @@ int reset_region(uint32_t region_id) {
     return gfx_reset_cursor(region_id);
 }
 
+/**
+ * set_viewport_text_color - change the primary viewport's foreground/text color.
+ * @color: new foreground color.
+ *
+ * Description:
+ * Directly sets the fg_color field on the primary viewport region.
+ *
+ * Return: void.
+ */
 void set_viewport_text_color(uint32_t color) {
-    gfx_set_fg_color(PRIMARY_VIEWPORT_ID, color);
+    gfx_regions[PRIMARY_VIEWPORT_ID]->fg_color = color;
 }
 
+/**
+ * set_region_text_color - change a region's foreground/text color.
+ * @region_id: region component to modify.
+ * @color: new foreground color.
+ *
+ * Description:
+ * Directly sets the fg_color field on the given region component.
+ *
+ * Return: void.
+ */
 void set_region_text_color(uint32_t region_id, uint32_t color) {
-    gfx_set_fg_color(region_id, color);
+    gfx_regions[region_id]->fg_color = color;
 }
 
+/**
+ * set_viewport_background_color - change the primary viewport's background color.
+ * @color: new background color.
+ *
+ * Description:
+ * Directly sets the bg_color field on the primary viewport region.
+ *
+ * Return: void.
+ */
 void set_viewport_background_color(uint32_t color) {
-    gfx_set_bg_color(PRIMARY_VIEWPORT_ID, color);
+    gfx_regions[PRIMARY_VIEWPORT_ID]->bg_color = color;
 }
 
+/**
+ * set_region_background_color - change a region's background color.
+ * @region_id: region component to modify.
+ * @color: new background color.
+ *
+ * Description:
+ * Directly sets the bg_color field on the given region component.
+ *
+ * Return: void.
+ */
 void set_region_background_color(uint32_t region_id, uint32_t color) {
-    gfx_set_bg_color(region_id, color);
+    gfx_regions[region_id]->bg_color = color;
 }
 
+/**
+ * set_viewport_padding_x - set left/right padding for the primary viewport.
+ * @padding: new horizontal padding, excluding border.
+ *
+ * Description:
+ * Adds the viewport's existing border width to the requested padding.
+ *
+ * Return: void.
+ */
 void set_viewport_padding_x(uint32_t padding) {
-    gfx_set_padding_x(PRIMARY_VIEWPORT_ID, padding);
+    gfx_regions[PRIMARY_VIEWPORT_ID]->padding_x = padding + gfx_regions[PRIMARY_VIEWPORT_ID]->border_width;
 }
+
+/**
+ * set_viewport_padding_y - set top/bottom padding for the primary viewport.
+ * @padding: new vertical padding, excluding border.
+ *
+ * Description:
+ * Adds the viewport's existing border width to the requested padding.
+ *
+ * Return: void.
+ */
 void set_viewport_padding_y(uint32_t padding) {
-    gfx_set_padding_y(PRIMARY_VIEWPORT_ID, padding);
+    gfx_regions[PRIMARY_VIEWPORT_ID]->padding_y = padding + gfx_regions[PRIMARY_VIEWPORT_ID]->border_width;
 }
+
+/**
+ * set_region_padding_x - set left/right padding for a region.
+ * @region_id: region component to modify.
+ * @padding: new horizontal padding, excluding border.
+ *
+ * Description:
+ * Adds the component's existing border width to the requested padding,
+ * so callers only need to think in terms of padding beyond the border.
+ *
+ * Return: void.
+ */
 void set_region_padding_x(uint32_t region_id, uint32_t padding) {
-    gfx_set_padding_x(region_id, padding);
+    if (region_id == PRIMARY_VIEWPORT_ID) {
+        gfx_regions[region_id]->padding_x = padding + gfx_regions[region_id]->border_width;
+        return;
+    }
+    gfx_region_t *parent              = gfx_regions[PRIMARY_VIEWPORT_ID];
+    gfx_regions[region_id]->padding_x = padding + gfx_regions[region_id]->border_width + parent->border_width + parent->padding_x;
 }
+
+/**
+ * set_region_padding_y - set top/bottom padding for a region.
+ * @region_id: region component to modify.
+ * @padding: new vertical padding, excluding border.
+ *
+ * Description:
+ * Adds the component's existing border width to the requested padding,
+ * so callers only need to think in terms of padding beyond the border.
+ *
+ * Return: void.
+ */
 void set_region_padding_y(uint32_t region_id, uint32_t padding) {
-    gfx_set_padding_y(region_id, padding);
+    if (region_id == PRIMARY_VIEWPORT_ID) {
+        gfx_regions[region_id]->padding_y = padding + gfx_regions[region_id]->border_width;
+        return;
+    }
+    gfx_region_t *parent              = gfx_regions[PRIMARY_VIEWPORT_ID];
+    gfx_regions[region_id]->padding_y = padding + gfx_regions[region_id]->border_width + parent->border_width + parent->padding_y;
 }
 
 int draw_sprite(uint32_t region_id, int x, int y, int width, int height, uint32_t scale, uint32_t *sprite) {
@@ -204,6 +294,17 @@ void delete_all_containers() {
     }
 }
 
+/**
+ * set_region_border_color - change a region's border color.
+ * @region_id: region component to modify.
+ * @color: new border color.
+ *
+ * Description:
+ * Directly sets the border_color field on the given region component.
+ * Repaints the border to make the change visible immediately via show().
+ *
+ * Return: void.
+ */
 void set_region_border_color(uint32_t region_id, uint32_t color) {
 
     if (gfx_regions[region_id] == NULL) {
@@ -211,6 +312,6 @@ void set_region_border_color(uint32_t region_id, uint32_t color) {
         return;
     }
 
-    gfx_set_border_color(region_id, color);
+    gfx_regions[region_id]->border_color = color;
     show(region_id);
 }

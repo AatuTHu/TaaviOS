@@ -2,7 +2,6 @@
 #include "malloc.h"
 #include "op_sy.h"
 #include "readline.h"
-#include "shared.h"
 #include "stand.h"
 #include "string.h"
 #include "ui.h"
