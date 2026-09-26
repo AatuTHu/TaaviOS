@@ -23,6 +23,8 @@ void button_press(uint32_t region_id);
 int delete_container(uint32_t region_id);
 void delete_all_containers();
 
+int get_region_cursor_x(uint32_t region_id);
+
 void set_viewport_text_color(uint32_t color);
 void set_viewport_background_color(uint32_t color);
 void set_viewport_border_color(uint32_t color);
@@ -41,6 +43,6 @@ void set_region_height(uint32_t region_id, uint32_t height);
 void set_region_padding_x(uint32_t region_id, uint32_t padding);
 void set_region_padding_y(uint32_t region_id, uint32_t padding);
 
-void mark_cursor_position(uint32_t region_id, uint32_t background_color);
+void mark_cursor_position(uint32_t x, uint32_t y, uint32_t background_color);
 
 #endif

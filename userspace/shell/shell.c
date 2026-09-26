@@ -1,4 +1,3 @@
-#include "history.h"
 #include "malloc.h"
 #include "op_sy.h"
 #include "readline.h"
@@ -241,8 +240,6 @@ int main(void) {
         return 1;
     }
 
-    history_init();
-
     print("TaaviOS - Operating shell\n");
     print("Type 'help' to see all commands\n");
 
@@ -253,7 +250,6 @@ int main(void) {
         readline(buf, BUF_SIZE);
 
         if (buf[0] != '\0') {
-            history_add(buf);
             exec_cmd(buf);
         }
     }

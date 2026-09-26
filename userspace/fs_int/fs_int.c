@@ -1,7 +1,6 @@
 #include "document.h"
 #include "folder.h"
 #include "font.h"
-#include "history.h"
 #include "op_sy.h"
 #include "readline.h"
 #include "shared.h"
@@ -286,8 +285,6 @@ int main(void) {
     const char *art_start = "[ --> ";
     const char *art_end   = " ] ";
 
-    history_init();
-
     print_at(info_id, PADDING, INFO_LINE_Y, "Maccas configurated and ready for use");
 
     while (1) {
@@ -304,7 +301,6 @@ int main(void) {
         readline_at(cmd_id, buf, BUF_SIZE, buffer_x_pos, CMD_LINE_Y);
 
         if (buf[0] != '\0') {
-            history_add(buf);
             exec_cmd(buf);
         }
     }

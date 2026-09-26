@@ -31,8 +31,6 @@ int exec(const char *filename) {
 }
 
 void terminate_program() {
-    delete_all_containers();
-    gfx_release_regions_and_viewport();
     sys_exit();
 }
 

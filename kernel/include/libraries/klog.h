@@ -21,7 +21,7 @@
 #define LOG_CORE (LOG_SCHED | LOG_TASK | LOG_CORE_MM | LOG_SYSCALL) // 2436
 #define LOG_FS_ALL (LOG_FAT32 | LOG_FS_TASK | LOG_LEDGER)           // 112
 #define LOG_LEDGER_CLERKS (LOG_FS_TASK | LOG_GUI_TASK | LOG_LEDGER) // 592
-#define LOG_GUI_ALL (LOG_GUI_TASK, LOG_FB | LOG_LEDGER)             // 1600
+#define LOG_GUI_ALL (LOG_GUI_TASK | LOG_FB | LOG_LEDGER)            // 1600
 #define LOG_MM_ALL (LOG_KMALLOC | LOG_CORE_MM)                      // 136
 #define LOG_ALL (0xFFFFFFFF)
 
