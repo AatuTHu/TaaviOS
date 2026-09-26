@@ -6,17 +6,12 @@
 - Make a diagnostics user app for this
 
 **Kernel / System calls / sched**
-- O_CREAT for files -> not started.
 - get ticks/get uptime system call
 
 **File system**
 - delete start deletion from the base cluster of the target progressing till end. Should start at end and approach start?
 
 **VGA / FB**
-- VGA driver poorly written -> scroll maybe broken
-- Scroll up/down on arrow key press
 - Black is not really a black. It is 0x010101 and 0x000000 is transparent. A hacky way but works for now.
 - VGA mapped directly in paging -> should go through VMM like all other memory <- deferred mapping function added to vmm.
 
-**shell**
-- key_down does nothing

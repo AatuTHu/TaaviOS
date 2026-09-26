@@ -16,7 +16,8 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 
 **FS** FS is responsible for the filesystem operations. It reads, writes, opens, and closes files for the user programs. It also holds the directory traversal data for every task that changes its working directory. Other tasks include creating a virtual directory with system information (memory usage, tasks, CPU time).
 
-**Reaper** Reaper handles cleanup of dead tasks and finished ledger requests. When a task is killed or a request fails, the reaper frees the associated memory and resources so nothing leaks.
+**Reaper** Reaper handles cleanup of dead tasks. When a task is killed, all clerks are sent a request to free all the allocated memories they reserved
+for the task. Then reaper tears down tasks page directory and deletes all related to it.
 
 **Idle** Idle runs when there is literally nothing else to do. It simply halts the CPU until the next interrupt.
 

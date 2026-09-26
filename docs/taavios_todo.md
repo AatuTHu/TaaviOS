@@ -24,7 +24,7 @@
 - [ ] small self made compiler
 - [ ] system doctor clerk
 - [ ] calculate section based on x and y so that keys are not needed
-- [ ] get_dents should expose more than just the name? Attributes, size for example
+- [x] get_dents should expose more than just the name? Attributes, size for example
 - [ ] apps launcher?
 - [ ] init should launch clerks?
 - [ ] scheduler super priority protocol?
