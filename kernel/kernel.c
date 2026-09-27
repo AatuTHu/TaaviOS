@@ -1,5 +1,6 @@
 #include "ata.h"
 #include "config.h"
+#include "doc_clerk.h"
 #include "elf.h"
 #include "fat32.h"
 #include "fb.h"
@@ -106,16 +107,16 @@ static void init_filesystems() {
 static void init_microlithic() {
     DEBUG_KERNEL("[KERNEL]: --INIT KERNEL TASKS--\n");
     DEBUG_KERNEL("[KERNEL]: Creating an idle kernel task\n");
-    task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, 0, "idle",
-                                      &kernel_page_dir, KERNEL_TASK);
+    task_t *kernel_task = task_create(idle_task_pid, (uint32_t)idle, 0,
+                                      "idle", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         scheduler_add(kernel_task);
     }
 
     DEBUG_KERNEL("[KERNEL]: Creating an filesystem kernel task\n");
-    kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, 0, "fs_task",
-                              &kernel_page_dir, KERNEL_TASK);
+    kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, 0,
+                              "fs_task", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
         fs_init(kernel_task);
@@ -137,6 +138,15 @@ static void init_microlithic() {
 
     if (kernel_task != NULL) {
         gui_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
+
+    DEBUG_KERNEL("[KERNEL]: Creating a system doctor clerk\n");
+    kernel_task = task_create(doc_clerk_pid, (uint32_t)doc_clerk_loop, 0,
+                              "doc_clerk", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        doc_init(kernel_task);
         scheduler_add(kernel_task);
     }
 

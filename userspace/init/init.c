@@ -5,6 +5,8 @@
 
 void main(void) {
 
+    sys_ioctl(RUN_ALL_TESTS, 0, 0);
+
     if (exec("/sysbin/shell") != 0)
         return;
 

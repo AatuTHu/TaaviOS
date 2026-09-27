@@ -19,12 +19,16 @@ request_table *gui_table[MAX_GUI_REQ_ENTRIES];
 int last_gui_req_idx = -1;
 
 request_table *reaper_table[MAX_REAPER_REQ_ENTRIES];
-int last_reaper_req_idx               = -1;
+int last_reaper_req_idx = -1;
+
+request_table *doc_table[MAX_DOC_REQ_ENTRIES];
+int last_doc_req_idx                  = -1;
 
 clerk_queue clerk_queues[CLERK_COUNT] = {
     [fs_task_pid]     = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
     [gui_task_pid]    = {gui_table, MAX_GUI_REQ_ENTRIES, &last_gui_req_idx},
     [reaper_task_pid] = {reaper_table, MAX_REAPER_REQ_ENTRIES, &last_reaper_req_idx},
+    [doc_clerk_pid]   = {doc_table, MAX_DOC_REQ_ENTRIES, &last_doc_req_idx},
 };
 
 static void wake_clerk(uint32_t clerk_pid) {
@@ -353,7 +357,7 @@ int ledger_has_killable_reqs() {
 }
 
 int ledger_queue_free_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t target_pid) {
-    if (caller_pid >= MAX_TASKS || target_pid >= MAX_TASKS || target_pid < CLERK_COUNT) {
+    if (caller_pid >= MAX_TASKS || target_pid >= MAX_TASKS) {
         ERROR("[LEDGER][ADD_REAPER_REQUEST]: Callers pid or target pid was invalid. Aborting\n");
         return STATUS_ERROR;
     }
@@ -522,6 +526,25 @@ case_error:
     return STATUS_ERROR;
 }
 
+int ledger_add_doc_req(uint32_t caller_pid, uint32_t opcode) {
+
+    request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
+    if (new_request == NULL) {
+        ERROR("[LEDGER][ADD_DOC_REQUEST]: could not allocate new request. Aborting\n");
+        goto case_error;
+    }
+    memset(new_request, 0, sizeof(request_table));
+
+    new_request->caller_pid   = caller_pid;
+    new_request->clerk_pid    = doc_clerk_pid;
+    new_request->request_type = opcode;
+    return queue_req(new_request);
+
+case_error:
+    scheduler_wake_task(caller_pid);
+    return STATUS_ERROR;
+}
+
 void ledger_init() {
     for (int i = 0; i < MAX_FS_REQ_ENTRIES; i++) {
         fs_table[i] = NULL;
@@ -534,7 +557,12 @@ void ledger_init() {
         reaper_table[i] = NULL;
     }
 
+    for (int i = 0; i < MAX_DOC_REQ_ENTRIES; i++) {
+        doc_table[i] = NULL;
+    }
+
     last_gui_req_idx    = -1;
     last_fs_req_idx     = -1;
     last_reaper_req_idx = -1;
+    last_doc_req_idx    = -1;
 }

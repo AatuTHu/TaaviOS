@@ -49,12 +49,14 @@
 #define MAX_FS_REQ_ENTRIES 50
 #define MAX_GUI_REQ_ENTRIES 500
 #define MAX_REAPER_REQ_ENTRIES 20
+#define MAX_DOC_REQ_ENTRIES 5
 
-#define CLERK_COUNT 4 // amount of clerks. Very important. hardcoded for now
+#define CLERK_COUNT 5 // amount of clerks. Very important. hardcoded for now
 #define idle_task_pid 0
 #define fs_task_pid 1
 #define reaper_task_pid 2
 #define gui_task_pid 3
+#define doc_clerk_pid 4
 
 #define EFLAGS_IF (1 << 9) // interrupts flag
 #define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
