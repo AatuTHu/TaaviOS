@@ -316,3 +316,11 @@ int get_region_cursor_x(uint32_t region_id) {
 
     return 0;
 }
+
+int get_region_cursor_y(uint32_t region_id) {
+    if (gfx_regions[region_id] != NULL) {
+        return gfx_regions[region_id]->cursor_y;
+    }
+
+    return 0;
+}

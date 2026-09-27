@@ -24,6 +24,7 @@ int delete_container(uint32_t region_id);
 void delete_all_containers();
 
 int get_region_cursor_x(uint32_t region_id);
+int get_region_cursor_y(uint32_t region_id);
 
 void set_viewport_text_color(uint32_t color);
 void set_viewport_background_color(uint32_t color);
