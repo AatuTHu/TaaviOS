@@ -499,7 +499,7 @@ static int32_t sys_ioctl(struct registers *r) {
         return keyboard_set_operator_pid(current->pid);
     case CH_ACT_W:
         return change_keyboard_focus(r->ecx);
-    case RUN_ALL_TESTS: {
+    case TEST_CREATE_WINDOW: {
         task_t *current = scheduler_get_current_task();
 
         if (current == NULL) {

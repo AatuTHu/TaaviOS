@@ -59,7 +59,7 @@ typedef enum {
     CH_ACT_W,
     SCROLL_DOWN,
     RESIZE,
-    RUN_ALL_TESTS
+    TEST_CREATE_WINDOW,
 } operations_t;
 
 #define O_RDONLY 0x01

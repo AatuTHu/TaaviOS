@@ -1,11 +1,12 @@
 #include "op_sy.h"
+#include "shared.h"
 #include "sys_calls.h"
 #include <stddef.h>
 #include <stdint.h>
 
 void main(void) {
 
-    sys_ioctl(RUN_ALL_TESTS, 0, 0);
+    sys_ioctl(TEST_CREATE_WINDOW, 0, 0);
 
     if (exec("/sysbin/shell") != 0)
         return;
