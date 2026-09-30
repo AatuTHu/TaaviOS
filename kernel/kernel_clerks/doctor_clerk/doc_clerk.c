@@ -5,7 +5,6 @@
 #include "klog.h"
 #include "ledger.h"
 #include "sched.h"
-#include "shared.h"
 
 static int doc_handle_req(request_table *req) {
     task_t *doc_clerk = task_get(doc_clerk_pid);
@@ -18,6 +17,12 @@ static int doc_handle_req(request_table *req) {
     switch (req->request_type) {
     case TEST_CREATE_WINDOW:
         doc_test_create_window(doc_clerk, req);
+        break;
+    case TEST_RESIZE_WINDOW:
+        doc_test_resize_window(doc_clerk, req);
+        break;
+    case TEST_MOVE_WINDOW:
+        doc_test_move_window(doc_clerk, req);
         break;
     default:
         ERROR("[DOC][HANDLE_REQUEST]: invalid request type\n");

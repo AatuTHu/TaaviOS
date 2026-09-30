@@ -33,3 +33,5 @@
 - [ ] GUI_CLERK change the blueprint_t to window_t
 - [ ] Change all places where clerks are called 'task' to 'clerk'
 - [ ] Add comment blocks
+- [ ] Gui delete has unnecessary buffer wiping clean.
+- [ ] Ledger collect doesn't handle failed req cases.

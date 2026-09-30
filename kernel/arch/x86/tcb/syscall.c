@@ -499,14 +499,14 @@ static int32_t sys_ioctl(struct registers *r) {
         return keyboard_set_operator_pid(current->pid);
     case CH_ACT_W:
         return change_keyboard_focus(r->ecx);
-    case TEST_CREATE_WINDOW: {
+    case TEST: {
         task_t *current = scheduler_get_current_task();
 
         if (current == NULL) {
             ERROR("[SYS_IOCTL]: Failed to find current task\n");
             break;
         }
-        if (ledger_add_doc_req(current->pid, opcode) == STATUS_ERROR) {
+        if (ledger_add_doc_req(current->pid, r->ecx) == STATUS_ERROR) {
             ERROR("[SYS_IOCTL]: Failed to add request for doc\n");
             break;
         }
