@@ -113,13 +113,13 @@ void *kmalloc(uint32_t size) {
     return NULL;
 }
 
-static void merge() {
+static int merge() {
     block_header_t *current = free_list;
     while (current != NULL && current->next != NULL) {
         // Sanity check to avoid reading garbage/unmapped memory
         if (current->next->magic != HEAP_MAGIC) {
             ERROR("[KMALLOC][MERGE]: Corrupted block magic in free list at 0x%x\n", current->next);
-            break;
+            return STATUS_ERROR;
         }
 
         if ((block_header_t *)((uint8_t *)current + sizeof(block_header_t) + current->size) == current->next) {
@@ -133,11 +133,12 @@ static void merge() {
         }
     }
     update_remaining_heap_size();
+    return STATUS_OK;
 }
 
-void kfree(void *ptr) {
+int kfree(void *ptr) {
     if (!ptr)
-        return;
+        return STATUS_ERROR;
 
     // DEBUG_KMALLOC("[KMALLOC][FREE]: Freeing at 0x%x\n", ptr);
     block_header_t *addr =
@@ -145,7 +146,7 @@ void kfree(void *ptr) {
     if (addr->magic != HEAP_MAGIC) {
         ERROR("[KMALLOC][FREE]: Invalid magic at 0x%x — expected 0x%x\n", addr,
               HEAP_MAGIC);
-        return;
+        return STATUS_ERROR;
     } else {
         block_header_t *prev    = NULL;
         block_header_t *current = free_list;
@@ -153,7 +154,7 @@ void kfree(void *ptr) {
         while (current != NULL && current < addr) {
             if (current == addr) {
                 ERROR("[KMALLOC][FREE]: Double free detected at 0x%x\n", ptr);
-                return;
+                return STATUS_ERROR;
             }
             prev    = current;
             current = current->next;
@@ -166,6 +167,9 @@ void kfree(void *ptr) {
             prev->next = addr;
         }
         // DEBUG_KMALLOC("[KMALLOC][FREE]: Block returned to free list, merging\n");
-        merge();
+        if (merge() == STATUS_ERROR) {
+            return STATUS_ERROR;
+        }
     }
+    return STATUS_OK;
 }

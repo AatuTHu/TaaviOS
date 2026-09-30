@@ -167,6 +167,11 @@ void kernel_main(const uint32_t *mboot_info) {
 
     kmalloc_init((void *)HEAP_START, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE);
 
+    if (doc_test_core_sys() == STATUS_ERROR) {
+        ERROR("[CORE FUNCTIONALITY FAILED SHUTTING DOWN]");
+        return;
+    }
+
     init_drivers();
     init_filesystems();
 

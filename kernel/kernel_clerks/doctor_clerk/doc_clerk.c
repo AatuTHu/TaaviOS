@@ -3,8 +3,61 @@
 #include "config.h"
 #include "hail_mary.h"
 #include "klog.h"
+#include "kmalloc.h"
 #include "ledger.h"
+#include "paging.h"
+#include "pmm.h"
 #include "sched.h"
+#include "vmm.h"
+
+#define TEST_BUFFER_SIZE 10
+
+int doc_test_core_sys() {
+
+    uint32_t physical_mm = pmm_alloc();
+
+    if (physical_mm == 0) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed to allocate a physical memory page\n");
+        return STATUS_ERROR;
+    }
+    DEBUG_DOC("[DOC][TEST_CORE]: ALLOCATING PHYSICAL MEMORY PASSED\n");
+    if (pmm_free(physical_mm) == STATUS_ERROR) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed to free physical memory page\n");
+        return STATUS_ERROR;
+    }
+    DEBUG_DOC("[DOC][TEST_CORE]: FREEING PHYSICAL MEMORY PASSED\n");
+    page_directory_t *test_page_directory = paging_create_directory();
+
+    if (test_page_directory == NULL) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed to create page directory\n");
+        return STATUS_ERROR;
+    }
+
+    DEBUG_DOC("[DOC][TEST_CORE]: CREATING PAGE DIRECTORY PASSED\n");
+    if (vmm_alloc(test_page_directory, TEST_ADDR, PAGE_SIZE, PAGE_USER_RW) == STATUS_ERROR) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed to allocate memory inside the test_page_directory\n");
+        return STATUS_ERROR;
+    }
+    DEBUG_DOC("[DOC][TEST_CORE]: ALLOCATING MEMORY TO PAGE DIRECTORY PASSED\n");
+    if (vmm_free_user_space(test_page_directory) == STATUS_ERROR) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed the virtual memory inside the test_page_directory\n");
+        return STATUS_ERROR;
+    }
+    DEBUG_DOC("[DOC][TEST_CORE]: DESTROYING PAGE DIRECTORY PASSED\n");
+    char *buf = (char *)kmalloc(TEST_BUFFER_SIZE);
+
+    if (buf == NULL) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed to allocate heap memory the size of %d\n", TEST_BUFFER_SIZE);
+        return STATUS_ERROR;
+    }
+    DEBUG_DOC("[DOC][TEST_CORE]: HEAP ALLOCATION PASSED\n");
+    if (kfree(buf) == STATUS_ERROR) {
+        DEBUG_DOC("[DOC][TEST_CORE]: Failed to free the heap memory buffer\n");
+        return STATUS_ERROR;
+    }
+    DEBUG_DOC("[DOC][TEST_CORE]: HEAP FREE PASSED\n");
+    return STATUS_OK;
+}
 
 static int doc_handle_req(request_table *req) {
     task_t *doc_clerk = task_get(doc_clerk_pid);
@@ -15,13 +68,13 @@ static int doc_handle_req(request_table *req) {
     }
 
     switch (req->request_type) {
-    case TEST_CREATE_WINDOW:
+    case CREATE:
         doc_test_create_window(doc_clerk, req);
         break;
-    case TEST_RESIZE_WINDOW:
+    case RESIZE:
         doc_test_resize_window(doc_clerk, req);
         break;
-    case TEST_MOVE_WINDOW:
+    case MOVE:
         doc_test_move_window(doc_clerk, req);
         break;
     default:

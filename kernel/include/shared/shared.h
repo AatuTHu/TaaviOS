@@ -58,9 +58,6 @@ typedef enum {
     SCROLL_DOWN,
     RESIZE,
     TEST,
-    TEST_CREATE_WINDOW,
-    TEST_RESIZE_WINDOW,
-    TEST_MOVE_WINDOW,
 } operations_t;
 
 #define O_RDONLY 0x01

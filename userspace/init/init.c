@@ -6,9 +6,9 @@
 
 void main(void) {
 
-    sys_ioctl(TEST, TEST_CREATE_WINDOW, 0);
-    sys_ioctl(TEST, TEST_RESIZE_WINDOW, 0);
-    sys_ioctl(TEST, TEST_MOVE_WINDOW, 0);
+    sys_ioctl(TEST, CREATE, 0);
+    sys_ioctl(TEST, RESIZE, 0);
+    sys_ioctl(TEST, MOVE, 0);
 
     if (exec("/sysbin/shell") != 0)
         return;
