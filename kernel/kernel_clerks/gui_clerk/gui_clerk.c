@@ -22,36 +22,6 @@ static blueprint_t *program_windows[MAX_TASKS];
 static uint32_t bg_color       = 0;
 static int hail_mary_act_count = 0;
 
-static inline void clamp_dimensions(uint16_t *width, uint16_t *height, uint32_t max_w, uint32_t max_h) {
-    if (*width > max_w)
-        *width = max_w;
-    if (*height > max_h)
-        *height = max_h;
-}
-
-static void clamp_bounds(uint16_t *x, uint16_t *y, uint16_t *w, uint16_t *h, uint32_t max_w, uint32_t max_h) {
-    clamp_dimensions(w, h, max_w, max_h);
-
-    if (*x + *w > max_w) {
-        *x = max_w - *w;
-    }
-    if (*y + *h > max_h) {
-        *y = max_h - *h;
-    }
-}
-
-static void clip_rect(uint16_t *x, uint16_t *y, uint16_t *w, uint16_t *h, uint32_t max_w, uint32_t max_h) {
-    if (*x >= max_w || *y >= max_h) {
-        *w = 0;
-        *h = 0;
-        return;
-    }
-    if (*x + *w > max_w)
-        *w = max_w - *x;
-    if (*y + *h > max_h)
-        *h = max_h - *y;
-}
-
 static int copy_pixels_to_screen(blueprint_t *entry) {
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -174,6 +144,13 @@ static int gui_create_window_entry(request_table *req) {
         return STATUS_ERROR;
     }
 
+    if (req->width > fb.width || req->height > fb.height ||
+        req->x >= fb.width || req->y >= fb.height || req->x + req->width > fb.width ||
+        req->y + req->height > fb.height || req->width == 0 || req->height == 0) {
+        DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Invalid window dimensions\n");
+        return STATUS_ERROR;
+    }
+
     int slot = -1;
 
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -198,9 +175,7 @@ static int gui_create_window_entry(request_table *req) {
     }
 
     DEBUG_GUI_TASK("[GUI_TASK][CREATE_WINDOW]: Slot and memory allocated, setting values\n");
-    entry->owner_pid = req->caller_pid;
-
-    clamp_bounds(&req->x, &req->y, &req->width, &req->height, fb.width, fb.height);
+    entry->owner_pid     = req->caller_pid;
     entry->width         = req->width;
     entry->height        = req->height;
     entry->screen_x      = req->x;
@@ -240,7 +215,12 @@ static int gui_scroll_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    clamp_dimensions(&req->width, &req->height, fb.width, fb.height);
+    if (req->width > entry->width || req->height > entry->height ||
+        req->x >= entry->width || req->y >= entry->height || req->x + req->width > entry->width ||
+        req->y + req->height > entry->height || req->width == 0 || req->height == 0) {
+        DEBUG_GUI_TASK("[GUI_TASK][SCROLL_WINDOW]: Invalid window dimensions\n");
+        return STATUS_ERROR;
+    }
 
     return fb_scroll_down(entry->pixels, req->x, req->y, req->width, req->height,
                           entry->width, req->bg_color);
@@ -259,7 +239,12 @@ static int gui_paint_rectangle(request_table *req) {
         return STATUS_ERROR;
     }
 
-    clip_rect(&req->x, &req->y, &req->width, &req->height, fb.width, fb.height);
+    if (req->width > entry->width || req->height > entry->height ||
+        req->x >= entry->width || req->y >= entry->height || req->x + req->width > entry->width ||
+        req->y + req->height > entry->height || req->width == 0 || req->height == 0) {
+        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Invalid window dimensions\n");
+        return STATUS_ERROR;
+    }
 
     fb_fill_rect(entry->pixels, req->x, req->y, req->width,
                  req->height, entry->width, entry->height, req->bg_color);
@@ -310,7 +295,11 @@ static int gui_resize_window(request_table *req) {
         return STATUS_ERROR;
     }
 
-    clamp_dimensions(&req->width, &req->height, fb.width, fb.height);
+    if (req->width > fb.width || req->height > fb.height || (entry->screen_x + req->width) > fb.width ||
+        (entry->screen_y + req->height) > fb.height) {
+        DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: Invalid window dimensions\n");
+        return STATUS_ERROR;
+    }
 
     uint32_t pixels_size       = req->width * req->height * 4;
 
@@ -342,9 +331,6 @@ static int gui_resize_window(request_table *req) {
     entry->width  = req->width;
     entry->height = req->height;
 
-    clamp_bounds(&entry->screen_x, &entry->screen_y, &req->width,
-                 &req->height, fb.width, fb.height);
-
     //    DEBUG_GUI_TASK("[GUI_TASK][RESIZE]: successfully resized window\n");
     return copy_pixels_to_screen(entry);
 }
@@ -361,15 +347,18 @@ static int gui_move_task_window(const request_table *req) {
         return STATUS_ERROR;
     }
 
+    if (req->x >= fb.width || req->y >= fb.height || (entry->width + req->x) > fb.width ||
+        (entry->height + req->y) > fb.height) {
+        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: Invalid window dimensions\n");
+        return STATUS_ERROR;
+    }
+
     if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
                      entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
-
     entry->screen_x = req->x;
     entry->screen_y = req->y;
-
-    clamp_bounds(&entry->screen_x, &entry->screen_y, &entry->width, &entry->height, fb.width, fb.height);
 
     //  DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
     return copy_pixels_to_screen(entry);
@@ -384,34 +373,32 @@ static void gui_handle_request(request_table *req) {
     switch (req->request_type) {
     case WRITE_AT:
         req->status = (gui_draw_string(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case CREATE:
         req->status = (gui_create_window_entry(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case FREE:
         req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case PAINT_WINDOW:
         req->status = (gui_paint_rectangle(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case DRAW:
         req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case SCROLL_DOWN:
         req->status = (gui_scroll_window(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case MOVE:
         req->status = (gui_move_task_window(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
+        break;
     case RESIZE:
         req->status = (gui_resize_window(req) == STATUS_OK) ? COMPLETE : FAILED;
-        goto after_req_steps;
-
+        break;
     default:
         req->status = FAILED;
-        goto after_req_steps;
+        break;
     }
-after_req_steps:
     gui_task->priority = PRIORITY_NORMAL;
     scheduler_wake_task(req->caller_pid);
     return;

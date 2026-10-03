@@ -219,6 +219,9 @@ static int read(request_table *req) {
  * If there is the starting cluster will be the one found from there. Otherwise it will use the root cluster.
  * If the file is found the function creates an fd entry of it and places the fd number to req->struct_key field.
  *
+ * If req->flags is o_creat this function creates a directory entry with file attributes. Then
+ * returns 0 if the dirent creation succeedes.
+ *
  * Context: Why was it made, when to call it.
  * Return: STATUS_OK || STATUS_ERROR
  */
@@ -242,6 +245,8 @@ static int open(request_table *req) {
             ERROR("[FS_TASK][OPEN]: Could not create file.\n");
             return STATUS_ERROR;
         }
+        req->struct_key = 0;
+        return STATUS_OK;
     }
 
     if (fat32_find_cluster(starting_cluster, path, &file_cluster,

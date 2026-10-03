@@ -34,7 +34,7 @@ int doc_test_filesystem(task_t *doc_clerk) {
 
     DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in moving to the directory\n");
 
-    if (make_request_fetch_results(doc_clerk, OPEN, 0, "DOC.TXT", strlen("DOC.TXT"), O_CREAT) STATUS_ERROR) {
+    if (make_request_fetch_results(doc_clerk, OPEN, 0, "DOC.TXT", strlen("DOC.TXT"), O_CREAT) == STATUS_ERROR) {
         ERROR("[DOC][TEST_FILE_SYSTEM]: Failed to create the file\n");
         return STATUS_ERROR;
     }

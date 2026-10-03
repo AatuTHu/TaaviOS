@@ -130,27 +130,6 @@ static inline int queue_req(request_table *new_request) {
     return STATUS_ERROR;
 }
 
-static char *pack_dimensions(uint32_t value, char *buf) {
-    char tmp[10];
-    int i = 0;
-
-    if (value == 0) {
-        *buf++ = '0';
-        return buf;
-    }
-
-    while (value > 0) {
-        tmp[i++] = '0' + (value % 10);
-        value /= 10;
-    }
-
-    while (i > 0) {
-        *buf++ = tmp[--i];
-    }
-
-    return buf;
-}
-
 /**
  * ledger_collect - retrieves a COMPLETE request belonging to caller_pid.
  * @caller_pid: pid of the task collecting its result
@@ -203,27 +182,18 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                 ledger_remove_request(req);
                 q->table[i] = NULL;
                 return buffer_size;
-            case RESIZE:
-                if (out != NULL) {
-                    DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting width and height\n", caller_pid);
-                    char *params = out;
-
-                    params       = pack_dimensions(req->width, params);
-                    *params++    = '.';
-                    params       = pack_dimensions(req->height, params);
-                    *params      = '\0';
-                }
-                // DEBUG_LEDGER("[LEDGER][COLLECT]: params packed to go %s\n", out);
-                ledger_remove_request(req);
-                q->table[i] = NULL;
-                return STATUS_OK;
-
             default:
                 break;
             }
             ledger_remove_request(req);
             q->table[i] = NULL;
             return STATUS_OK;
+
+        } else if (req->status == FAILED) {
+            DEBUG_LEDGER("[LEDGER][COLLECT]: %d collecting failed requiest\n", caller_pid);
+            ledger_remove_request(req);
+            q->table[i] = NULL;
+            return STATUS_ERROR;
         }
     }
 

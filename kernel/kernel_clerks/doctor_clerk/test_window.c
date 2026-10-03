@@ -14,7 +14,7 @@ static int __move_window(task_t *doc_clerk, int x, int y) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
 
-    params.opcode     = RESIZE;
+    params.opcode     = MOVE;
     params.struct_key = window_key;
     params.x          = x;
     params.y          = y;
@@ -136,6 +136,7 @@ int doc_test_resize_window(task_t *doc_clerk) {
 
     if (__create_window(doc_clerk, 400, 400, 10, 10) == STATUS_ERROR) {
         ERROR("[DOC][RESIZE_WINDOW]: Setting up window failed\n");
+        return STATUS_ERROR;
     }
 
     for (int i = 0; i < num_tests; i++) {
@@ -149,6 +150,7 @@ int doc_test_resize_window(task_t *doc_clerk) {
 
     if (__delete_window(doc_clerk) == STATUS_ERROR) {
         ERROR("[DOC][DELETE_WINDOW]: Failed to DELETE window\n");
+        return STATUS_ERROR;
     }
     window_key = -1;
 
@@ -157,22 +159,23 @@ int doc_test_resize_window(task_t *doc_clerk) {
 
 int doc_test_move_window(task_t *doc_clerk) {
     window_test_case_t tests[] = {
-        {10, 10, 100, 200, STATUS_OK},
-        {900, 10, 200, 200, STATUS_OK},
-        {10, 640, 200, 200, STATUS_OK},
-        {10, -10, 200, 200, STATUS_ERROR},
-        {1100, 10, 200, 200, STATUS_ERROR},
+        {10, 10, 400, 400, STATUS_OK},
+        {900, 10, 400, 400, STATUS_ERROR},
+        {10, 624, 400, 400, STATUS_OK},
+        {10, -10, 400, 400, STATUS_ERROR},
+        {881, 10, 400, 400, STATUS_ERROR},
     };
 
     int num_tests = sizeof(tests) / sizeof(tests[0]);
 
     if (__create_window(doc_clerk, 400, 400, 10, 10) == STATUS_ERROR) {
         ERROR("[DOC][]: Setting up window failed\n");
+        return STATUS_ERROR;
     }
 
     for (int i = 0; i < num_tests; i++) {
         window_test_case_t *t = &tests[i];
-        if (__move_window(doc_clerk, t->width, t->height) != t->expected_status) {
+        if (__move_window(doc_clerk, t->x, t->y) != t->expected_status) {
             ERROR("[DOC][MOVE_WINDOW]: TEST %d FAILED\n", i);
             continue;
         }
@@ -181,6 +184,7 @@ int doc_test_move_window(task_t *doc_clerk) {
 
     if (__delete_window(doc_clerk) == STATUS_ERROR) {
         ERROR("[DOC][MOVE_WINDOW]: Failed to DELETE window\n");
+        return STATUS_ERROR;
     }
     window_key = -1;
 

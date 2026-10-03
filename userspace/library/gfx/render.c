@@ -46,53 +46,6 @@ static void gfx_home_cursor(gfx_region_t *entry) {
 }
 
 /**
- * parse_dimensions - parse a "W.H" formatted string into width/height.
- * @ptr: buffer containing the dimension string.
- * @w: output width.
- * @h: output height.
- *
- * Description:
- * Reads leading digits as width, skips a '.' separator, then reads
- * trailing digits as height, tolerating surrounding spaces.
- *
- * Return: STATUS_OK || STATUS_ERROR.
- */
-static int parse_dimensions(const char *ptr, int *w, int *h) {
-
-    while (*ptr == ' ') ptr++;
-
-    if (*ptr < '0' || *ptr > '9') {
-        return STATUS_ERROR;
-    }
-
-    *w = 0;
-    while (*ptr >= '0' && *ptr <= '9') {
-        *w = *w * 10 + (*ptr - '0');
-        ptr++;
-    }
-
-    while (*ptr == ' ') ptr++;
-
-    if (*ptr != '.') {
-        return STATUS_ERROR;
-    }
-    ptr++;
-    while (*ptr == ' ') ptr++;
-
-    if (*ptr < '0' || *ptr > '9') {
-        return STATUS_ERROR;
-    }
-
-    *h = 0;
-    while (*ptr >= '0' && *ptr <= '9') {
-        *h = *h * 10 + (*ptr - '0');
-        ptr++;
-    }
-
-    return STATUS_OK;
-}
-
-/**
  * gfx_draw_borders - repaint a region's border and interior.
  * @region_id: region whose border should be repainted.
  *
@@ -205,10 +158,6 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h) {
         LOG("Resize failed\n");
         return STATUS_ERROR;
     }
-
-    const char *ptr = params.buf;
-
-    parse_dimensions(ptr, &w, &h);
 
     entry->width  = w;
     entry->height = h;
