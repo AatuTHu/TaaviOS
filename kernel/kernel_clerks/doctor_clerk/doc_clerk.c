@@ -8,6 +8,7 @@
 #include "paging.h"
 #include "pmm.h"
 #include "sched.h"
+#include "shared.h"
 #include "vmm.h"
 
 #define TEST_BUFFER_SIZE 10
@@ -68,14 +69,19 @@ static int doc_handle_req(request_table *req) {
     }
 
     switch (req->request_type) {
-    case CREATE:
-        doc_test_create_window(doc_clerk, req);
+    case GUI_CLERK:
+        doc_test_create_window(doc_clerk);
+        doc_test_resize_window(doc_clerk);
+        doc_test_move_window(doc_clerk);
+        req->status         = COMPLETE;
+        doc_clerk->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         break;
-    case RESIZE:
-        doc_test_resize_window(doc_clerk, req);
-        break;
-    case MOVE:
-        doc_test_move_window(doc_clerk, req);
+    case FS_CLERK:
+        doc_test_filesystem(doc_clerk);
+        req->status         = COMPLETE;
+        doc_clerk->priority = PRIORITY_NORMAL;
+        scheduler_wake_task(req->caller_pid);
         break;
     default:
         ERROR("[DOC][HANDLE_REQUEST]: invalid request type\n");

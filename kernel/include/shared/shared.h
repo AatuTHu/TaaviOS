@@ -58,6 +58,8 @@ typedef enum {
     SCROLL_DOWN,
     RESIZE,
     TEST,
+    GUI_CLERK,
+    FS_CLERK,
 } operations_t;
 
 #define O_RDONLY 0x01

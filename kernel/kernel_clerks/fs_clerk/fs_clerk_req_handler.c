@@ -588,11 +588,7 @@ static int delete(request_table *req) {
         return STATUS_ERROR;
     }
 
-    DEBUG_FS_TASK("[FS_TASK][DELETE]: Target found, now deleting it.\n");
-
-    uint32_t target_cluster = out_dir_cluster == 0 ? out_file_cluster : out_dir_cluster;
-
-    if (fat32_delete_dirent(target_cluster) == STATUS_ERROR) {
+    if (fat32_delete_dirent(out_file_cluster, out_dir_cluster) == STATUS_ERROR) {
         ERROR("[FS_TASK][DELETE]: Failed to delete entry.\n");
         return STATUS_ERROR;
     }

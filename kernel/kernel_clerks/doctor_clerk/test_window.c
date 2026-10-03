@@ -90,7 +90,7 @@ static int __delete_window(task_t *doc_clerk) {
     return delete_result == STATUS_ERROR ? STATUS_ERROR : STATUS_OK;
 }
 
-int doc_test_create_window(task_t *doc_clerk, request_table *req) {
+int doc_test_create_window(task_t *doc_clerk) {
 
     window_test_case_t tests[] = {
         {200, 200, 200, 200, STATUS_OK},
@@ -120,13 +120,10 @@ int doc_test_create_window(task_t *doc_clerk, request_table *req) {
         }
     }
 
-    req->status         = COMPLETE;
-    doc_clerk->priority = PRIORITY_NORMAL;
-    scheduler_wake_task(req->caller_pid);
     return STATUS_OK;
 }
 
-int doc_test_resize_window(task_t *doc_clerk, request_table *req) {
+int doc_test_resize_window(task_t *doc_clerk) {
     window_test_case_t tests[] = {
         {10, 10, 100, 100, STATUS_OK},
         {10, 10, 600, 1000, STATUS_OK},
@@ -153,15 +150,12 @@ int doc_test_resize_window(task_t *doc_clerk, request_table *req) {
     if (__delete_window(doc_clerk) == STATUS_ERROR) {
         ERROR("[DOC][DELETE_WINDOW]: Failed to DELETE window\n");
     }
-    window_key          = -1;
+    window_key = -1;
 
-    req->status         = COMPLETE;
-    doc_clerk->priority = PRIORITY_NORMAL;
-    scheduler_wake_task(req->caller_pid);
     return STATUS_OK;
 }
 
-int doc_test_move_window(task_t *doc_clerk, request_table *req) {
+int doc_test_move_window(task_t *doc_clerk) {
     window_test_case_t tests[] = {
         {10, 10, 100, 200, STATUS_OK},
         {900, 10, 200, 200, STATUS_OK},
@@ -188,10 +182,7 @@ int doc_test_move_window(task_t *doc_clerk, request_table *req) {
     if (__delete_window(doc_clerk) == STATUS_ERROR) {
         ERROR("[DOC][MOVE_WINDOW]: Failed to DELETE window\n");
     }
-    window_key          = -1;
+    window_key = -1;
 
-    req->status         = COMPLETE;
-    doc_clerk->priority = PRIORITY_NORMAL;
-    scheduler_wake_task(req->caller_pid);
     return STATUS_OK;
 }

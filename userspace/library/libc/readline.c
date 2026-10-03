@@ -1,6 +1,7 @@
 #include "readline.h"
 #include "font.h"
 #include "history.h"
+#include "log.h"
 #include "render.h"
 #include "shared.h"
 #include "stand.h"
@@ -292,6 +293,12 @@ static void rdl_handle(rdl_obj_t *rdl_obj, char *buf) {
 }
 
 void readline_at_region(uint32_t region_id, char *buf, uint32_t original_buf_len) {
+    if (buf == NULL || original_buf_len == 0) {
+        return;
+    }
+
+    memset(buf, 0, original_buf_len);
+
     rdl_obj_t rdl_obj;
     memset(&rdl_obj, 0, sizeof(rdl_obj));
 
@@ -307,20 +314,16 @@ void readline_at_region(uint32_t region_id, char *buf, uint32_t original_buf_len
 }
 
 void readline(char *buf, uint32_t original_buf_len) {
-    rdl_obj_t rdl_obj;
-    memset(&rdl_obj, 0, sizeof(rdl_obj));
-
-    rdl_obj.region_id        = PRIMARY_VIEWPORT_ID;
-    rdl_obj.original_buf_len = original_buf_len;
-    rdl_obj.pos              = 0;
-    rdl_obj.x                = get_region_cursor_x(PRIMARY_VIEWPORT_ID);
-    rdl_obj.start_x          = rdl_obj.x;
-    rdl_obj.y                = get_region_cursor_y(PRIMARY_VIEWPORT_ID);
-    rdl_obj.is_absolute      = false;
-    rdl_handle(&rdl_obj, buf);
+    readline_at_region(PRIMARY_VIEWPORT_ID, buf, original_buf_len);
 }
 
 void readline_at(uint32_t region_id, char *buf, uint32_t original_buf_len, uint32_t x, uint32_t y) {
+    if (buf == NULL || original_buf_len == 0) {
+        return;
+    }
+
+    memset(buf, 0, original_buf_len);
+
     rdl_obj_t rdl_obj;
     memset(&rdl_obj, 0, sizeof(rdl_obj));
 
