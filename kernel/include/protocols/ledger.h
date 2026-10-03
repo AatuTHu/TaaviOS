@@ -43,6 +43,7 @@ int ledger_add_fs_req(uint32_t caller_pid,
                       operations_t type, uint32_t fd,
                       const char *buf, uint32_t buffer_size, uint32_t flags);
 int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params);
+int ledger_add_doc_req(uint32_t called_pid, uint32_t opcode);
 
 request_table *ledger_fetch_next_req(uint32_t clerk_pid);
 void ledger_init();

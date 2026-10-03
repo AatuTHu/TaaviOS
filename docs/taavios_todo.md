@@ -26,7 +26,13 @@
 - [ ] calculate section based on x and y so that keys are not needed
 - [x] get_dents should expose more than just the name? Attributes, size for example
 - [ ] apps launcher?
-- [ ] init should launch clerks?
 - [ ] scheduler super priority protocol?
 - [ ] Nothing stops from writing to directory. Directories should not be able to be opened/closed/written to?
 - [x] FAT32 delete dir/file.
+- [ ] GUI_CLERK opcode to receive screen info like resolution, other windows width/height/x/y
+- [ ] GUI_CLERK change the blueprint_t to window_t
+- [ ] Change all places where clerks are called 'task' to 'clerk'
+- [ ] Add comment blocks
+- [ ] Gui delete has unnecessary buffer wiping clean
+- [ ] Ledger collect doesn't handle failed req cases
+- [ ] DOCs gui tests should not do actual drawing to screen

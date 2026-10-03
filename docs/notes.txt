@@ -7,6 +7,7 @@
 
 **Kernel / System calls / sched**
 - get ticks/get uptime system call
+- Super privilege protocol. A task/clerk can ask for super privilege so that scheduler picks it next.
 
 **File system**
 - delete start deletion from the base cluster of the target progressing till end. Should start at end and approach start?

@@ -410,7 +410,7 @@ error_case:
     return STATUS_ERROR;
 }
 
-int fat32_delete_dirent(uint32_t target_cluster) {
+int fat32_delete_dirent(uint32_t target_cluster, uint32_t target_parent_cluster) {
 
     uint32_t current_cluster = target_cluster;
     uint8_t *buf             = __fat32_allocate_buffer();
@@ -438,13 +438,38 @@ int fat32_delete_dirent(uint32_t target_cluster) {
         uint32_t next_cluster = __fat32_next_cluster(current_cluster);
 
         if (next_cluster >= FAT32_CLUSTER_EOC_MIN) {
-            DEBUG_FS_TASK("[FAT32][DELETE_DIRENT]: Next cluster was end of the chain.\n");
-            kfree(buf);
-            return STATUS_OK;
+            DEBUG_FAT32("[FAT32][DELETE_DIRENT]: Next cluster was end of the chain.\n");
+            break;
         }
 
         current_cluster = next_cluster;
     }
+
+    if (__fat32_read_cluster(target_parent_cluster, buf) == STATUS_ERROR) {
+        ERROR("[FAT32][DELETE_DIRENT]: There was error with reading the clusters data\n");
+        goto error_case;
+    }
+
+    fat32_dirent_t *dir_entry = (fat32_dirent_t *)buf;
+    uint32_t dir_entries      = __fat32_calculate_max_dir_entries();
+
+    for (uint32_t i = 0; i < dir_entries; i++) {
+        uint32_t whole_cluster = (dir_entry[i].cluster_high << 16) | dir_entry[i].cluster_low;
+        if (whole_cluster == target_cluster) {
+            DEBUG_FAT32("[FAT32][DELETE_DIRENT]: Freed cluster %d from parent cluster\n", whole_cluster);
+            dir_entry[i].name[0] = FAT32_DIRENT_FREE;
+
+            if (__fat32_write_cluster(target_parent_cluster, buf) == STATUS_ERROR) {
+                ERROR("Failed to write changes to disk\n");
+                goto error_case;
+            }
+
+            break;
+        }
+    }
+
+    kfree(buf);
+    return STATUS_OK;
 
 error_case:
     kfree(buf);
