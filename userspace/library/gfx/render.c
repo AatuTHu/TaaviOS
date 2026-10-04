@@ -493,7 +493,6 @@ int gfx_init(void) {
         return STATUS_ERROR;
     }
 
-    LOG("Sending viewport information to kernel\n");
     int id = gfx_create_viewport(DEFAULT_WINDOW_X, DEFAULT_WINDOW_Y,
                                  DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT, COLOR_WHITE, COLOR_BLACK);
 
@@ -502,7 +501,7 @@ int gfx_init(void) {
         return STATUS_ERROR;
     }
 
-    LOG("Setting viewport metadata\n");
+    memset(entry, 0, sizeof(*entry));
     entry->id           = id;
     entry->border_color = COLOR_ORAGNE_MUD;
     entry->border_width = default_border_width;
@@ -514,11 +513,9 @@ int gfx_init(void) {
     entry->bg_color     = COLOR_BLACK;
     entry->str          = NULL;
 
-    LOG("Homing viewport cursor\n");
     gfx_home_cursor(entry);
     gfx_regions[PRIMARY_VIEWPORT_ID] = entry;
 
-    LOG("Drawing borders for viewport\n");
     gfx_draw_borders(PRIMARY_VIEWPORT_ID);
 
     return STATUS_OK;
@@ -544,7 +541,6 @@ int gfx_reset_cursor(uint32_t region_id) {
 void gfx_release_regions_and_viewport() {
     for (int i = 0; i < MAX_REGIONS; i++) {
         if (gfx_regions[i] != NULL) {
-            LOG("Deletable region found at %d\n", i);
             gfx_delete_region(i);
         }
     }

@@ -5,6 +5,8 @@
 #include <stdint.h>
 
 #define HEAP_MAGIC 0xDEADBEEF
+#define PAGE_SIZE 4096
+#define ADDITIONAL_HEAP_PAGE_SIZE 128
 
 typedef struct block_header {
     uint32_t magic;

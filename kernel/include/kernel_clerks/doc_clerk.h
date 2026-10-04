@@ -16,6 +16,5 @@ void doc_init(const task_t *doc_clerk);
 int doc_test_core_sys();
 int doc_test_create_window(task_t *doc_clerk);
 int doc_test_resize_window(task_t *doc_clerk);
-int doc_test_move_window(task_t *doc_clerk);
 int doc_test_filesystem(task_t *doc_clerk);
 #endif
