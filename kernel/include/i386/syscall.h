@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 typedef int32_t (*syscall_fn_t)(struct registers *r);
+int32_t sys_window(struct registers *r);
 void syscall_init();
 void syscall_dispatch(struct registers *r);
 

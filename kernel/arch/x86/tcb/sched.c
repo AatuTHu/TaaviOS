@@ -41,13 +41,13 @@ static void scheduler_check_clerks() {
     // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
 
-    if (ledger_count_clerk_reqs(gui_task_pid) > 0) {
+    if (ledger_count_clerk_reqs(gui_task_pid) > 0 || task_has_dirty_buffer() > 0) {
         clerk = task_table[gui_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
                 clerk->state    = TASK_READY;
-                clerk->priority = PRIORITY_NORMAL;
+                clerk->priority = PRIORITY_HIGH;
             }
         }
     }
@@ -127,7 +127,7 @@ static void scheduler_switch(struct registers *r) {
         }
     }
 
-    if (scheduler_has_runnable_task() == 0 || ledger_count_active_reqs() > 0) {
+    if (scheduler_has_runnable_task() == 0 || ledger_count_active_reqs() > 0 || task_has_dirty_buffer() > 0) {
         // DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
         scheduler_check_clerks();
     }

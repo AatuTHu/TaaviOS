@@ -10,6 +10,7 @@
 #include "sched.h"
 #include "shared.h"
 #include "taavi.h"
+#include "task.h"
 #include <stdint.h>
 
 /**
@@ -18,7 +19,6 @@
  * @author: A.H, 2026
  */
 
-static blueprint_t *program_windows[MAX_TASKS];
 static uint32_t bg_color       = 0;
 static int hail_mary_act_count = 0;
 
@@ -37,47 +37,17 @@ static int copy_pixels_to_screen(blueprint_t *entry) {
     return STATUS_OK;
 }
 
-/**
- * gui_draw_string - used to put chars to screen.
- * @param *req: holds request information
- *
- * Description:
- * Function searches from the program windows the entry that owner corresponds to caller pid.
- * After that it checks if the callers pixel buffer is made. If not the function returns early without drawing
- * If it is allocated the function calls on fb_draw_string to but the string at the correct x and y position in pixels buffer.
- * Then it copies the pixels buffer to frame buffer virtual address.
- *
- * Return: If successful return STATUS_OK || if unsuccessful return STATUS_ERROR.
- */
-static int gui_draw_string(const request_table *req) {
-    // DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Drawing for caller %d\n", caller_pid);
-    //  DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: trying to draw %s\n", req->buf);
+static int gui_flush_pixels() {
 
-    if (req == NULL) {
-        return STATUS_ERROR;
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->dirty_flag == 1) {
+            // DEBUG_GUI_TASK("[GUI][FLUSH]: Dirty buffer found\n");
+            copy_pixels_to_screen(program_windows[i]);
+            program_windows[i]->dirty_flag = 0;
+        }
     }
 
-    blueprint_t *entry = program_windows[req->struct_key];
-
-    if (entry == NULL || entry->pixels == NULL) {
-        DEBUG_GUI_TASK("[GUI_TASK][DRAW_STRING]: Pixel buffer was null, cant draw\n");
-        return STATUS_ERROR;
-    }
-
-    if (entry->owner_pid != req->caller_pid) {
-        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
-        return STATUS_ERROR;
-    }
-
-    if (req->buf == NULL || req->x >= entry->width || req->y >= entry->height) {
-        ERROR("[GUI_TASK][DRAW_STRING]: request was invalid\n");
-        return STATUS_ERROR;
-    }
-
-    fb_draw_string(entry->pixels, req->x, req->y, entry->width, req->buf,
-                   req->fg_color, req->bg_color);
-
-    return copy_pixels_to_screen(entry);
+    return STATUS_OK;
 }
 
 /**
@@ -198,90 +168,6 @@ static int gui_create_window_entry(request_table *req) {
     return STATUS_OK;
 }
 
-static int gui_scroll_window(request_table *req) {
-
-    if (req == NULL) {
-        return STATUS_ERROR;
-    }
-
-    blueprint_t *entry = program_windows[req->struct_key];
-
-    if (entry == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (entry->owner_pid != req->caller_pid) {
-        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
-        return STATUS_ERROR;
-    }
-
-    if (req->width > entry->width || req->height > entry->height ||
-        req->x >= entry->width || req->y >= entry->height || req->x + req->width > entry->width ||
-        req->y + req->height > entry->height || req->width == 0 || req->height == 0) {
-        DEBUG_GUI_TASK("[GUI_TASK][SCROLL_WINDOW]: Invalid window dimensions\n");
-        return STATUS_ERROR;
-    }
-
-    return fb_scroll_down(entry->pixels, req->x, req->y, req->width, req->height,
-                          entry->width, req->bg_color);
-}
-
-static int gui_paint_rectangle(request_table *req) {
-
-    blueprint_t *entry = program_windows[req->struct_key];
-
-    if (entry == NULL || entry->pixels == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (entry->owner_pid != req->caller_pid) {
-        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
-        return STATUS_ERROR;
-    }
-
-    if (req->width > entry->width || req->height > entry->height ||
-        req->x >= entry->width || req->y >= entry->height || req->x + req->width > entry->width ||
-        req->y + req->height > entry->height || req->width == 0 || req->height == 0) {
-        DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Invalid window dimensions\n");
-        return STATUS_ERROR;
-    }
-
-    fb_fill_rect(entry->pixels, req->x, req->y, req->width,
-                 req->height, entry->width, entry->height, req->bg_color);
-
-    //  DEBUG_GUI_TASK("[GUI_TASK][PAINT_RECT]: Window painted successfully to screen!\n");
-    return copy_pixels_to_screen(entry);
-}
-
-static int gui_draw_sprite(request_table *req) {
-
-    blueprint_t *entry = program_windows[req->struct_key];
-
-    if (entry == NULL || entry->pixels == NULL || req->pixels == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (entry->owner_pid != req->caller_pid) {
-        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
-        return STATUS_ERROR;
-    }
-
-    for (uint32_t row = 0; row < req->height; row++) {
-        for (uint32_t col = 0; col < req->width; col++) {
-            uint32_t color = req->pixels[row * req->width + col];
-            if (color != TRANSPARENT) {
-                fb_fill_rect((uint32_t *)entry->pixels,
-                             req->x + col * req->scale, req->y + row * req->scale,
-                             req->scale, req->scale,
-                             entry->width, entry->height,
-                             color);
-            }
-        }
-    }
-
-    return copy_pixels_to_screen(entry);
-}
-
 static int gui_resize_window(request_table *req) {
 
     blueprint_t *entry = program_windows[req->struct_key];
@@ -335,35 +221,6 @@ static int gui_resize_window(request_table *req) {
     return copy_pixels_to_screen(entry);
 }
 
-static int gui_move_task_window(const request_table *req) {
-    blueprint_t *entry = program_windows[req->struct_key];
-
-    if (entry == NULL || entry->pixels == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (entry->owner_pid != req->caller_pid) {
-        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
-        return STATUS_ERROR;
-    }
-
-    if (req->x >= fb.width || req->y >= fb.height || (entry->width + req->x) > fb.width ||
-        (entry->height + req->y) > fb.height) {
-        DEBUG_GUI_TASK("[GUI_TASK][MOVE]: Invalid window dimensions\n");
-        return STATUS_ERROR;
-    }
-
-    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-    entry->screen_x = req->x;
-    entry->screen_y = req->y;
-
-    //  DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
-    return copy_pixels_to_screen(entry);
-}
-
 static void gui_handle_request(request_table *req) {
     task_t *gui_task = task_get(gui_task_pid);
 
@@ -371,26 +228,11 @@ static void gui_handle_request(request_table *req) {
         return;
 
     switch (req->request_type) {
-    case WRITE_AT:
-        req->status = (gui_draw_string(req) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
     case CREATE:
         req->status = (gui_create_window_entry(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
     case FREE:
         req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
-    case PAINT_WINDOW:
-        req->status = (gui_paint_rectangle(req) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
-    case DRAW:
-        req->status = (gui_draw_sprite(req) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
-    case SCROLL_DOWN:
-        req->status = (gui_scroll_window(req) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
-    case MOVE:
-        req->status = (gui_move_task_window(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
     case RESIZE:
         req->status = (gui_resize_window(req) == STATUS_OK) ? COMPLETE : FAILED;
@@ -406,12 +248,17 @@ static void gui_handle_request(request_table *req) {
 
 void gui_task_loop() {
     while (1) {
+        if (task_has_dirty_buffer() > 0) {
+            gui_flush_pixels();
+        }
+
         request_table *req = ledger_fetch_next_req(gui_task_pid);
         if (req != NULL) {
             if (req->status == PENDING || req->status == IN_PROGRESS) {
                 gui_handle_request(req);
             }
         }
+
         blankie_activate(gui_task_pid);
     }
 }
