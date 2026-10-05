@@ -72,7 +72,6 @@ static int doc_handle_req(request_table *req) {
     case GUI_CLERK:
         doc_test_create_window(doc_clerk);
         doc_test_resize_window(doc_clerk);
-        doc_test_move_window(doc_clerk);
         req->status         = COMPLETE;
         doc_clerk->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);

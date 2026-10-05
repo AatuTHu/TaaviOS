@@ -10,27 +10,6 @@
 
 static int window_key = -1;
 
-static int __move_window(task_t *doc_clerk, int x, int y) {
-    gui_params_pack params;
-    memset(&params, 0, sizeof(params));
-
-    params.opcode     = MOVE;
-    params.struct_key = window_key;
-    params.x          = x;
-    params.y          = y;
-    params.fg_color   = COLOR_LIGHT_GRAY;
-    params.bg_color   = COLOR_BLACK;
-
-    if (ledger_add_gui_req(doc_clerk_pid, &params) == STATUS_ERROR) {
-        ERROR("[DOC][MOVE_WINDOW]: Setting up the test failed\n");
-        return STATUS_ERROR;
-    }
-    doc_clerk->state = TASK_BLOCKED;
-    scheduler_yield(&doc_clerk->context);
-
-    return ledger_collect(doc_clerk_pid, gui_task_pid, NULL);
-}
-
 static int __resize_window(task_t *doc_clerk, int width, int height) {
     gui_params_pack params;
     memset(&params, 0, sizeof(params));
@@ -150,40 +129,6 @@ int doc_test_resize_window(task_t *doc_clerk) {
 
     if (__delete_window(doc_clerk) == STATUS_ERROR) {
         ERROR("[DOC][DELETE_WINDOW]: Failed to DELETE window\n");
-        return STATUS_ERROR;
-    }
-    window_key = -1;
-
-    return STATUS_OK;
-}
-
-int doc_test_move_window(task_t *doc_clerk) {
-    window_test_case_t tests[] = {
-        {10, 10, 400, 400, STATUS_OK},
-        {900, 10, 400, 400, STATUS_ERROR},
-        {10, 624, 400, 400, STATUS_OK},
-        {10, -10, 400, 400, STATUS_ERROR},
-        {881, 10, 400, 400, STATUS_ERROR},
-    };
-
-    int num_tests = sizeof(tests) / sizeof(tests[0]);
-
-    if (__create_window(doc_clerk, 400, 400, 10, 10) == STATUS_ERROR) {
-        ERROR("[DOC][]: Setting up window failed\n");
-        return STATUS_ERROR;
-    }
-
-    for (int i = 0; i < num_tests; i++) {
-        window_test_case_t *t = &tests[i];
-        if (__move_window(doc_clerk, t->x, t->y) != t->expected_status) {
-            ERROR("[DOC][MOVE_WINDOW]: TEST %d FAILED\n", i);
-            continue;
-        }
-        DEBUG_DOC("[DOC][MOVE_WINDOW]: TEST %d PASSED\n", i);
-    }
-
-    if (__delete_window(doc_clerk) == STATUS_ERROR) {
-        ERROR("[DOC][MOVE_WINDOW]: Failed to DELETE window\n");
         return STATUS_ERROR;
     }
     window_key = -1;

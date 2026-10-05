@@ -9,6 +9,8 @@
 #include "ui.h"
 #include <stdint.h>
 
+#define INIT_HEAP_SIZE (256 * PAGE_SIZE)
+
 int get_ac_tasks(char *buf, int len) {
     if (buf == NULL) {
         return STATUS_ERROR;
@@ -49,17 +51,15 @@ int release_window() {
 }
 
 int __init_task() {
+    int heap_start = sys_sbrk(INIT_HEAP_SIZE);
 
-    int heap_start       = sys_sbrk(0);
-    int current_heap_end = sys_sbrk(256);
-
-    if (heap_start == -1 || current_heap_end == -1) {
+    if (heap_start == -1) {
         LOG("Failed to initialize heap\n");
         return STATUS_ERROR;
     }
 
     LOG("Initializing malloc\n");
-    malloc_init((void *)heap_start, current_heap_end);
+    malloc_init((void *)heap_start, INIT_HEAP_SIZE);
 
     LOG("Initializing GFX\n");
     return gfx_init();

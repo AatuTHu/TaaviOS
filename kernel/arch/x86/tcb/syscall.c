@@ -142,7 +142,7 @@ static int32_t sys_write(struct registers *r) {
 
     case 2:
         //  vga_set_color(VGA_COLOR_LIGHT_RED, VGA_COLOR_BLACK);
-        DEBUG(buf);
+        //        DEBUG_USPC(buf);
         break;
 
     default:
@@ -520,33 +520,6 @@ static int32_t sys_ioctl(struct registers *r) {
     }
 
     return STATUS_ERROR;
-}
-
-/**
- * sys_configure_window - When userspace task wants to make changes to their window.
- *
- * Description:
- * This function takes in pack of params. They contain opcode and values (for example width/height
- * x/y) the caller is giving to gui. Gui then complites request and caller collects the results
- *
- * Return: STATUS_OK || STATUS_ERROR.
- */
-static int32_t sys_window(struct registers *r) {
-    // DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
-    gui_params_pack *params = (gui_params_pack *)r->ebx;
-    task_t *current         = scheduler_get_current_task();
-
-    if (current == NULL || params == NULL) {
-        ERROR("[SYSCALL][SYS_CONWI]: invalid input params. Aborting\n");
-        return STATUS_ERROR;
-    }
-
-    if (ledger_add_gui_req(current->pid, params) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
-    return ledger_collect(current->pid, gui_task_pid, params->buf);
 }
 
 void syscall_dispatch(struct registers *r) {

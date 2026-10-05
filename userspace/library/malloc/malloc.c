@@ -2,9 +2,6 @@
 #include "log.h"
 #include "sys_calls.h"
 
-#define PAGE_SIZE 4096
-#define ADDITIONAL_HEAP_PAGE_SIZE 128
-
 /**
  * Heap allocator
  * Design & Implementation:
@@ -61,6 +58,7 @@ void *malloc(uint32_t size) {
             current = current->next;
         }
 
+        LOG("[MALLOC]: Requesting for more memory\n");
         int addition_size = (ADDITIONAL_HEAP_PAGE_SIZE * PAGE_SIZE);
         if (sys_sbrk(addition_size) == -1) {
             return NULL;

@@ -12,6 +12,7 @@
  */
 
 task_t *task_table[MAX_TASKS];
+blueprint_t *program_windows[MAX_TASKS];
 
 task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const char *name,
                     page_directory_t *page_dir, uint8_t task_mode) {
@@ -145,4 +146,13 @@ task_t *task_get(uint32_t index) {
         return NULL;
     }
     return task_table[index];
+}
+
+int task_has_dirty_buffer() {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        if (program_windows[i] != NULL && program_windows[i]->dirty_flag == 1) {
+            return 1;
+        }
+    }
+    return 0;
 }
