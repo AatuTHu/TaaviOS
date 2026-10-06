@@ -33,7 +33,7 @@ clerk_queue clerk_queues[CLERK_COUNT] = {
 
 static void wake_clerk(uint32_t clerk_pid) {
     task_t *clerk = task_get(clerk_pid);
-    if (clerk != NULL && clerk_pid != reaper_task_pid) {
+    if (clerk != NULL && clerk_pid != reaper_task_pid && clerk_pid != doc_clerk_pid) {
         clerk->priority = PRIORITY_HIGH;
     }
     scheduler_wake_task(clerk_pid);

@@ -78,7 +78,6 @@ task_t *task_create(int reserved_pid, uint32_t entry, uint32_t heap_start, const
     task->context.esp                = task->context.useresp;
     task->context.eflags             = EFLAGS_DEFAULT;
     task->task_mode                  = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
-
     task_table[slot]                 = task;
 
     return task;

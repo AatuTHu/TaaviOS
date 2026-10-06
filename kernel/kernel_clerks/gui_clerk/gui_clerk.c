@@ -221,6 +221,36 @@ static int gui_resize_window(request_table *req) {
     return copy_pixels_to_screen(entry);
 }
 
+static int gui_move_window(const request_table *req) {
+    blueprint_t *entry = program_windows[req->struct_key];
+
+    if (entry == NULL || entry->pixels == NULL) {
+        return STATUS_ERROR;
+    }
+
+    if (entry->owner_pid != req->caller_pid) {
+        ERROR("[GUI_TASK] Caller tried to access somebody elses window.\n");
+        return STATUS_ERROR;
+    }
+
+    if (req->x >= fb.width || req->y >= fb.height || (entry->width + req->x) > fb.width ||
+        (entry->height + req->y) > fb.height) {
+        DEBUG_SYSCALL("[SYS_WI][MOVE]: Invalid window dimensions\n");
+        return STATUS_ERROR;
+    }
+
+    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    entry->screen_x = req->x;
+    entry->screen_y = req->y;
+
+    //  DEBUG_GUI_TASK("[GUI_TASK][MOVE]: successfully moved window\n");
+    return copy_pixels_to_screen(entry);
+}
+
 static void gui_handle_request(request_table *req) {
     task_t *gui_task = task_get(gui_task_pid);
 
@@ -237,6 +267,10 @@ static void gui_handle_request(request_table *req) {
     case RESIZE:
         req->status = (gui_resize_window(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
+    case MOVE:
+        req->status = (gui_move_window(req) == STATUS_OK) ? COMPLETE : FAILED;
+        break;
+
     default:
         req->status = FAILED;
         break;

@@ -6,6 +6,7 @@
 #include "print_register.h"
 #include "sched.h"
 #include "task.h"
+#include <stdint.h>
 
 irq_callback_t irq_callbacks[16] = {0};
 
@@ -14,11 +15,10 @@ void irq_register_handler(int index, irq_callback_t cb) {
     irq_callbacks[index] = cb;
 }
 
-void isr_handler(struct registers *r) {
+uint32_t isr_handler(struct registers *r) {
 
     if (r->int_no == 129) {
-        scheduler_tick(r);
-        return;
+        return scheduler_tick(r);
     }
 
     uint32_t cr2;
@@ -27,13 +27,13 @@ void isr_handler(struct registers *r) {
     int is_user     = (r->cs & 0x3) == 3;
     task_t *current = scheduler_get_current_task();
 
-    if (current != NULL && current->task_mode == KERNEL_TASK && current->pid != reaper_task_pid) {
+    /*if (current != NULL && current->task_mode == KERNEL_TASK && current->pid != reaper_task_pid) {
         ERROR("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
         print_registers_to_console(r);
         current->state = TASK_SLEEPING;
         activate_hail_mary(current->pid);
-        return;
-    }
+        return (uint32_t)r;
+    }*/
 
     ERROR("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     ERROR("                     KERNEL PANIC                           \n");
@@ -74,19 +74,20 @@ void isr_handler(struct registers *r) {
     while (1) {
         __asm__ __volatile__("hlt");
     }
+    return (uint32_t)r;
 }
 
-void irq_handler(struct registers *r) {
-
-    int irq_index = r->int_no - 32;
+uint32_t irq_handler(struct registers *r) {
+    uint32_t next_esp = (uint32_t)r;
+    int irq_index     = r->int_no - 32;
 
     if (irq_index < 0 || irq_index > 15) {
         outb(0x20, 0x20);
-        return;
+        return next_esp;
     }
 
     if (irq_index == 0) {
-        scheduler_tick(r);
+        next_esp = scheduler_tick(r);
     }
 
     if (irq_callbacks[irq_index] != 0) {
@@ -96,4 +97,5 @@ void irq_handler(struct registers *r) {
     if (r->int_no >= 40)
         outb(0xA0, 0x20);
     outb(0x20, 0x20);
+    return next_esp;
 }

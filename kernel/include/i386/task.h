@@ -28,6 +28,7 @@ typedef struct task_t {
     uint32_t kernel_stack;
     uint32_t heap_start;
     uint32_t heap_end;
+    uint32_t interrupt_frame;
     uint8_t started;
     uint8_t priority;
     uint8_t task_mode;

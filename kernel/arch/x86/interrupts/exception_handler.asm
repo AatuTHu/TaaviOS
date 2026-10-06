@@ -83,21 +83,22 @@ IRQ 15, 47  ; IDE  — Secondary ATA channel (secondary disk)
 isr_common:
     pusha
     mov eax, esp ; Save user stack pointer to eax
-    push eax ; this pushes eax?
-    call isr_handler
+    push eax ; this pushes eax? No shit 6.10.2026
     add esp, 4
-    popa
-    add esp, 8
+    mov esp, eax ; interrupt frame to esp
+    popa ; unpack the frame to registers
+    add esp, 8 ; return address the 8bits from start of the frame
     iret
 
 irq_common:
     pusha
-    mov eax, esp ; Save user stack pointer to eax
-    push eax ; Push eax into the irq handler function
-    call irq_handler 
+    mov eax, esp
+    push eax
+    call irq_handler
     add esp, 4
-    popa
-    add esp, 8
+    mov esp, eax ; interrupt frame to esp
+    popa ; unpack the frame to registers
+    add esp, 8 ; return address the 8bits from start of the frame
     iret
 
 global isr_stub_table

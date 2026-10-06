@@ -142,36 +142,6 @@ static int draw_sprite(const gui_params_pack *params, uint32_t caller_pid) {
     return STATUS_OK;
 }
 
-static int move_task_window(const gui_params_pack *params, uint32_t caller_pid) {
-    blueprint_t *entry = program_windows[params->struct_key];
-
-    if (entry == NULL || entry->pixels == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (entry->owner_pid != caller_pid) {
-        ERROR("[SYS_WI] Caller tried to access somebody elses window.\n");
-        return STATUS_ERROR;
-    }
-
-    if (params->x >= fb.width || params->y >= fb.height || (entry->width + params->x) > fb.width ||
-        (entry->height + params->y) > fb.height) {
-        DEBUG_SYSCALL("[SYS_WI][MOVE]: Invalid window dimensions\n");
-        return STATUS_ERROR;
-    }
-
-    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                     entry->height, fb.width, fb.height, COLOR_DARKER_GREEN) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-    entry->screen_x   = params->x;
-    entry->screen_y   = params->y;
-
-    //  DEBUG_SYSCALL("[SYS_WI][MOVE]: successfully moved window\n");
-    entry->dirty_flag = 1;
-    return STATUS_OK;
-}
-
 /**
  * sys_configure_window - When userspace task wants to make changes to their window.
  *
@@ -200,8 +170,6 @@ int32_t sys_window(struct registers *r) {
         return draw_sprite(params, current->pid);
     case SCROLL_DOWN:
         return scroll_window(params, current->pid);
-    case MOVE:
-        return move_task_window(params, current->pid);
     }
 
     if (ledger_add_gui_req(current->pid, params) == STATUS_ERROR) {

@@ -1,5 +1,6 @@
 #include "sched.h"
 #include "config.h"
+#include "idt.h"
 #include "klog.h"
 #include "kstring.h"
 #include "ledger.h"
@@ -7,6 +8,7 @@
 #include "tss.h"
 #include "vmm.h"
 #include <stddef.h>
+#include <stdint.h>
 /*
  * Scheduler
  * This code is a pile of sticks. 28.5.2026
@@ -24,8 +26,10 @@
  * fs_task or if there is literally nothing else to do then activate idle_task.
  */
 
+#define HIGH_PRIORITY_PICK_LIMIT 3
 static int current_pid               = -1;
 static volatile uint8_t scheduler_on = 0;
+static int high_prio_pick_count      = 0;
 
 static int scheduler_has_runnable_task() {
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -82,55 +86,91 @@ static void scheduler_check_clerks() {
     }
 }
 
+static int __scheduler_search_by_priority(uint8_t priority, int *out_pid, uint32_t starting_pos) {
+    for (int i = starting_pos; i <= MAX_TASKS; i++) {
+        int next_idx = (current_pid + i) % MAX_TASKS;
+        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == priority &&
+            (task_table[next_idx]->state == TASK_READY ||
+             task_table[next_idx]->state == TASK_RUNNING)) {
+            *out_pid = next_idx;
+            return STATUS_OK;
+        }
+    }
+    return STATUS_ERROR;
+}
+
 static int scheduler_find_next_task() {
-    for (int i = 1; i <= MAX_TASKS; i++) {
-        int next_idx = (current_pid + i) % MAX_TASKS;
-        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == PRIORITY_HIGH &&
-            (task_table[next_idx]->state == TASK_READY ||
-             task_table[next_idx]->state == TASK_RUNNING)) {
-            return next_idx;
-        }
+
+    int next_idx = -1;
+    if (high_prio_pick_count < HIGH_PRIORITY_PICK_LIMIT &&
+        __scheduler_search_by_priority(PRIORITY_HIGH, &next_idx, 1) == STATUS_OK) {
+        high_prio_pick_count++;
+        return next_idx;
     }
 
-    for (int i = 1; i <= MAX_TASKS; i++) {
-        int next_idx = (current_pid + i) % MAX_TASKS;
-        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == PRIORITY_NORMAL &&
-            (task_table[next_idx]->state == TASK_READY ||
-             task_table[next_idx]->state == TASK_RUNNING)) {
-            return next_idx;
-        }
+    if (__scheduler_search_by_priority(PRIORITY_NORMAL, &next_idx, 1) == STATUS_OK) {
+        high_prio_pick_count = 0;
+        return next_idx;
     }
 
-    for (int i = 1; i <= MAX_TASKS; i++) {
-        int next_idx = (current_pid + i) % MAX_TASKS;
-        if (task_table[next_idx] != NULL && task_table[next_idx]->priority == PRIORITY_LOW &&
-            (task_table[next_idx]->state == TASK_READY ||
-             task_table[next_idx]->state == TASK_RUNNING)) {
-            return next_idx;
-        }
+    if (__scheduler_search_by_priority(PRIORITY_HIGH, &next_idx, 0) == STATUS_OK) {
+        high_prio_pick_count = 1;
+        return next_idx;
+    }
+
+    if (__scheduler_search_by_priority(PRIORITY_NORMAL, &next_idx, 0) == STATUS_OK) {
+        high_prio_pick_count = 0;
+        return next_idx;
+    }
+
+    if (__scheduler_search_by_priority(PRIORITY_LOW, &next_idx, 1) == STATUS_OK) {
+        high_prio_pick_count = 0;
+        return next_idx;
     }
 
     return STATUS_ERROR;
 }
 
+/**
+ * scheduler_init_frame - create fake interrupt frame.
+ *
+ * Description:
+ * This function creaters a interrupt frame for every task that has never been ran before
+ * First it checks if the task at hand is userspace task or a clerk, becuase the clerk is a
+ * ring 0 task its interrupt frame has fewer registers compared to ring 3. Then
+ * it takes the address of the kernel stack and converts it to a pointer.
+ * Then it creates the frame the registers_count amount off from the top
+ * so that the frame always ends at the top of the stack.
+ * saves the task context on to it and then saves the pointer to that frame
+ * to task->interrupt_frame.
+ *
+ */
+static void scheduler_init_frame(task_t *t) {
+    uint32_t register_count = t->task_mode == USER_TASK ? 15 : 13;
+    uint32_t *top           = (uint32_t *)(uintptr_t)t->kernel_stack;
+    struct registers *frame = (struct registers *)(top - register_count);
+
+    memcpy(frame, &t->context, register_count * 4);
+    frame->int_no      = 0;
+    frame->err_code    = 0;
+
+    t->interrupt_frame = (uint32_t)(uintptr_t)frame;
+}
+
 // The core switching logic, shared by both
-static void scheduler_switch(struct registers *r) {
+static uint32_t scheduler_switch(struct registers *r) {
     task_t *current = scheduler_get_current_task();
 
-    if (current != NULL && current->started && current->state != TASK_DEAD && current->state != TASK_SLEEPING) {
-        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Saving: %s with state: %d\n", current->name, current->state);
-        memcpy(&current->context, r, sizeof(struct registers));
+    if (current != NULL && current->started && current->state != TASK_DEAD &&
+        current->state != TASK_SLEEPING) {
+        current->interrupt_frame = (uint32_t)r;
 
         if (current->state == TASK_RUNNING) {
-            // DEBUG_SCHED("[SCHEDULER][SWITCH]: setting: %s ready\n", current->name);
             current->state = TASK_READY;
         }
     }
 
-    if (scheduler_has_runnable_task() == 0 || ledger_count_active_reqs() > 0 || task_has_dirty_buffer() > 0) {
-        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Checking if clerks have servicing.\n");
-        scheduler_check_clerks();
-    }
+    scheduler_check_clerks();
 
     int next_pid = scheduler_find_next_task();
 
@@ -144,18 +184,23 @@ static void scheduler_switch(struct registers *r) {
     if (next->state == TASK_READY) {
         next->state = TASK_RUNNING;
     }
+
+    if (next->started == 0) {
+        scheduler_init_frame(next);
+    }
+
     next->started = 1;
 
     if (next_pid != current_pid) {
-        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Running: %s\n", next->name);
         current_pid = next_pid;
 
         if (next->task_mode == USER_TASK) {
             vmm_switch(next->page_dir);
         }
-        tss_set_kernel_stack(next->kernel_stack);
     }
-    memcpy(r, &next->context, sizeof(struct registers));
+    tss_set_kernel_stack(next->kernel_stack);
+
+    return next->interrupt_frame;
 }
 
 void scheduler_yield(struct registers *r) {
@@ -164,11 +209,11 @@ void scheduler_yield(struct registers *r) {
     __asm__ __volatile__("int $0x81");
 }
 
-void scheduler_tick(struct registers *r) {
+uint32_t scheduler_tick(struct registers *r) {
     if (current_pid == -1 || scheduler_on == 0) {
-        return;
+        return (uint32_t)r;
     }
-    scheduler_switch(r);
+    return scheduler_switch(r);
 }
 
 /*

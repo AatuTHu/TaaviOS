@@ -5,7 +5,7 @@
 #include "task.h"
 #include <stdint.h>
 
-void scheduler_tick(struct registers *r);
+uint32_t scheduler_tick(struct registers *r);
 void scheduler_init(void);
 int scheduler_add(task_t *task);
 int scheduler_remove_task(uint32_t target_pid);
