@@ -84,6 +84,7 @@ isr_common:
     pusha
     mov eax, esp ; Save user stack pointer to eax
     push eax ; this pushes eax? No shit 6.10.2026
+    call isr_handler
     add esp, 4
     mov esp, eax ; interrupt frame to esp
     popa ; unpack the frame to registers

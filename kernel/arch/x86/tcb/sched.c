@@ -197,8 +197,8 @@ static uint32_t scheduler_switch(struct registers *r) {
         if (next->task_mode == USER_TASK) {
             vmm_switch(next->page_dir);
         }
+        tss_set_kernel_stack(next->kernel_stack);
     }
-    tss_set_kernel_stack(next->kernel_stack);
 
     return next->interrupt_frame;
 }
