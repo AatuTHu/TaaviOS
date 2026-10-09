@@ -1,9 +1,11 @@
 #include "keyboard.h"
 #include "config.h"
 #include "io.h"
-#include "isr.h"
 #include "klog.h"
+#if defined(__i386__) || defined(__i686__)
+#include "isr.h"
 #include "sched.h"
+#endif
 #include "shared.h"
 #include <stdbool.h>
 /**
@@ -171,7 +173,9 @@ void keyboard_handler(uint8_t scancode) {
             break;
         }
         if (did_press_arrow_key) {
+#if defined(__i386__) || defined(__i686__)
             scheduler_wake_task(keyboard_buffer->foreground_pid);
+#endif
         }
         return;
     }
@@ -197,7 +201,9 @@ void keyboard_handler(uint8_t scancode) {
         if (c != 0) {
             // DEBUG("[KEYBOARD][HANDLER]: fired!\n");
             keyboard_write_to_buffer(c);
+#if defined(__i386__) || defined(__i686__)
             scheduler_wake_task(keyboard_buffer->foreground_pid);
+#endif
         }
     }
 }
@@ -206,5 +212,7 @@ void keyboard_init() {
     keyboard_buffer->read           = 0;
     keyboard_buffer->write          = 0;
     keyboard_buffer->foreground_pid = -1;
+#if defined(__i386__) || defined(__i686__)
     irq_register_handler(1, keyboard_irq_handler);
+#endif
 }

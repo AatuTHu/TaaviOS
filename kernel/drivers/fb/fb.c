@@ -3,7 +3,9 @@
 #include "font.h"
 #include "klog.h"
 #include "kstring.h"
+#if defined(__i386__) || defined(__i686__)
 #include "paging.h"
+#endif
 #include <stdint.h>
 
 fb_t fb;
@@ -107,7 +109,11 @@ int fb_init(const struct multiboot_info *mbi) {
 
     uint32_t fb_size    = mbi->framebuffer_pitch * mbi->framebuffer_height;
     uint32_t page_count = (fb_size + PAGE_SIZE - 1) / PAGE_SIZE;
+
+#if defined(__i386__) || defined(__i686__)
     paging_add_deferred_mapping(&kernel_page_dir, FB_VIRTUAL_BASE, fb.phys_addr, PAGE_PRESENT | PAGE_RW, page_count);
+#endif
+
     DEBUG_FB("[FB]: framebuffer type: %d\n", mbi->framebuffer_type);
     DEBUG_FB("[FB]: framebuffer width: %d\n", fb.width);
     DEBUG_FB("[FB]: framebuffer height: %d\n", fb.height);

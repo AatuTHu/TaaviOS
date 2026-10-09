@@ -1,5 +1,7 @@
 /isodir
+/iso_root
 /build
+limine/
 *.o
 *.bin
 *.iso

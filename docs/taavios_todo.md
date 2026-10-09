@@ -1,5 +1,6 @@
 ### TODO
 
+32BIT
 - [30-70%] NO MAGIC NUMBERS
 - [x] a way of switching active tasks. For example from one shell to another
 - [x] Shell -> ring 0 -> sys_read -> fs_task -> fat32 -> save result -> wake shell -> shell collects -> prints to screen in ring 3
@@ -36,3 +37,22 @@
 - [ ] Gui delete has unnecessary buffer wiping clean
 - [ ] Ledger collect doesn't handle failed req cases
 - [ ] DOCs gui tests should not do actual drawing to screen
+
+64BIT
+
+- [x] BOOT VIA LIMINE & COLLECT INFORMATION
+- [ ] GDT
+- [ ] IDT
+- [ ] TSS
+- [ ] ISR
+- [ ] APIC
+- [ ] PAGING
+- [ ] HEAP
+- [ ] TASKS
+- [ ] SYSCALLS
+- [ ] SCHED
+- [ ] MICROLITHIC ARCH
+
+BOTH
+
+- [ ] Port as much as possible from 32bit so that both can use the same code
