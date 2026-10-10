@@ -1,5 +1,7 @@
 #include "boot_info.h"
 #include "config.h"
+#include "gdt.h"
+#include "klog.h"
 #include <stdint.h>
 #define LIMINE_API_REVISION 2
 #include "limine.h"
@@ -109,12 +111,79 @@ static int boot_info_collect(struct boot_info *out) {
         out->fb.green_mask_shift                    = fb_info->framebuffers[0]->green_mask_shift;
         out->fb.blue_mask_size                      = fb_info->framebuffers[0]->blue_mask_size;
         out->fb.blue_mask_shift                     = fb_info->framebuffers[0]->blue_mask_shift;
+    } else {
+        out->fb.addr = 0;
     }
 
     if (rsdp_req.response != NULL) {
         out->rsdp = rsdp_req.response->address;
     }
     return STATUS_OK;
+}
+
+void print_collected_info(struct boot_info *bf) {
+
+    DEBUG_KERNEL("[KERNEL]: HHDM offset: 0x%x \n", bf->hhdm_offset);
+    DEBUG_KERNEL("[KERNEL]: Kernel physical base: 0x%x\n", bf->kernel_phys_base);
+    DEBUG_KERNEL("[KERNEL]: Kernel virtual base: 0x%x\n", bf->kernel_virt_base);
+    DEBUG_KERNEL("[KERNEL]: Memmap region count: %d\n", bf->region_count);
+
+    DEBUG_KERNEL("[KERNEL]: memmaping: \n");
+    uint64_t usable_memory      = 0;
+    uint64_t reclaimable_memory = 0;
+    uint64_t reserved_memory    = 0;
+    if (bf->region_count > 0) {
+        for (uint64_t i = 0; i < bf->region_count; i++) {
+            DEBUG_KERNEL("Region index %d\n", i);
+            DEBUG_KERNEL("\tRegion base: 0x%x\n", bf->regions[i].base);
+            DEBUG_KERNEL("\tRegion length: %d\n", bf->regions[i].length);
+            DEBUG_KERNEL("\tRegion type: ");
+
+            switch (bf->regions[i].type) {
+            case BOOT_REGION_KERNEL:
+                DEBUG_KERNEL("kernel region\n");
+                reserved_memory += bf->regions[i].length;
+                break;
+            case BOOT_REGION_USABLE:
+                DEBUG_KERNEL("usable region\n");
+                usable_memory += bf->regions[i].length;
+                break;
+            case BOOT_REGION_RESERVED:
+                DEBUG_KERNEL("reserved region\n");
+                reserved_memory += bf->regions[i].length;
+                break;
+            case BOOT_REGION_FRAMEBUFFER:
+                DEBUG_KERNEL("framebuffer region\n");
+                reserved_memory += bf->regions[i].length;
+                break;
+            case BOOT_REGION_RECLAIMABLE:
+                DEBUG_KERNEL("Boot reclaimable region\n");
+                reclaimable_memory += bf->regions[i].length;
+                break;
+            }
+            DEBUG_KERNEL("\tRegion end 0x%x\n", bf->regions[i].base + (uint64_t)bf->regions[i].length);
+        }
+    }
+
+    DEBUG_KERNEL("Total usable memory: %d bytes\n", (unsigned long long)usable_memory);
+    DEBUG_KERNEL("Total reclaimable memory: %d bytes\n", (unsigned long long)reclaimable_memory);
+    DEBUG_KERNEL("Total reserved memory: %d bytes\n", (unsigned long long)reserved_memory);
+
+    DEBUG_KERNEL("Total usable memory: %d MiB\n", (unsigned long long)(usable_memory / 1048576));
+    DEBUG_KERNEL("Total reclaimable memory: %d MiB\n", (unsigned long long)(reclaimable_memory / 1048576));
+
+    if (bf->fb.addr != 0) {
+        DEBUG_KERNEL("[KERNEL]: Framebuffer information\n");
+        DEBUG_KERNEL("Framebuffer addr: 0x%x\n", bf->fb.addr);
+        DEBUG_KERNEL("Framebuffer width: %d\n", bf->fb.width);
+        DEBUG_KERNEL("Framebuffer height: %d\n", bf->fb.height);
+        DEBUG_KERNEL("Framebuffer pitch: %d\n", bf->fb.pitch);
+        DEBUG_KERNEL("Framebuffer bpp: %d\n", bf->fb.bpp);
+    } else {
+        DEBUG_KERNEL("No framebuffer detected\n");
+    }
+
+    DEBUG_KERNEL("[KERNEL]: rsdp address: 0x%x\n", bf->rsdp);
 }
 
 void _start(void) {
@@ -131,5 +200,8 @@ void _start(void) {
 
     serial_write("Sucessfully collected boot information!\n");
 
+    gdt_init();
+
+    print_collected_info(&b_info);
     hcf();
 }
