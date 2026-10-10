@@ -27,9 +27,11 @@
  */
 
 #define HIGH_PRIORITY_PICK_LIMIT 3
+#define DOC_ANALYTICS_RUN_INTERVAL 7000
 static int current_pid               = -1;
 static volatile uint8_t scheduler_on = 0;
 static int high_prio_pick_count      = 0;
+static int doc_maintenaince_counter  = 0;
 
 static int scheduler_has_runnable_task() {
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -66,7 +68,7 @@ static void scheduler_check_clerks() {
         }
     }
 
-    if (ledger_count_clerk_reqs(reaper_task_pid) > 0) {
+    if (ledger_count_clerk_reqs(reaper_task_pid) > 0 || ledger_has_killable_reqs() > 0) {
         clerk = task_table[reaper_task_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
@@ -83,6 +85,17 @@ static void scheduler_check_clerks() {
             clerk->state    = TASK_READY;
             clerk->priority = PRIORITY_LOW;
         }
+    }
+
+    if (++doc_maintenaince_counter > DOC_ANALYTICS_RUN_INTERVAL) {
+        clerk = task_table[doc_clerk_pid];
+        if (clerk != NULL && clerk->task_mode != USER_TASK) {
+            if (clerk->state == TASK_SLEEPING) {
+                clerk->state    = TASK_READY;
+                clerk->priority = PRIORITY_LOW;
+            }
+        }
+        doc_maintenaince_counter = 0;
     }
 }
 
@@ -192,6 +205,7 @@ static uint32_t scheduler_switch(struct registers *r) {
     next->started = 1;
 
     if (next_pid != current_pid) {
+        DEBUG_SCHED("[SCHEDULER][SWITCH]: Running with %s\n", next->name);
         current_pid = next_pid;
 
         if (next->task_mode == USER_TASK) {
@@ -311,7 +325,6 @@ void scheduler_wake_task(uint32_t pid) {
     if (waking_task != NULL) {
         waking_task->state = TASK_READY;
     }
-    //    DEBUG_SCHED("[SCHEDULER]: Waking task %s with pid: %d, at idx: %d\n", task_table[i]->name, task_table[i]->pid, i);
     return;
 }
 
