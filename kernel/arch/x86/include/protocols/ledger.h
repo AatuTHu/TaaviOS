@@ -47,6 +47,7 @@ int ledger_add_doc_req(uint32_t called_pid, uint32_t opcode);
 
 request_table *ledger_fetch_next_req(uint32_t clerk_pid);
 void ledger_init();
+int ledger_remove_request();
 int ledger_count_clerk_reqs(uint32_t clerk_pid);
 int ledger_count_active_reqs();
 int ledger_has_killable_reqs();

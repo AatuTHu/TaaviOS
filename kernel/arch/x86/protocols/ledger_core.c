@@ -64,22 +64,37 @@ static clerk_queue *ledger_get_queue(uint32_t clerk_pid) {
     return q;
 }
 
-static inline void ledger_remove_request(request_table *req) {
+int ledger_remove_request() {
+    // DEBUG_LEDGER("[LEDGER][REMOVE]: Don't fear the reaper\n");
+    int kill_count = 0;
 
-    if (req != NULL) {
-
-        if (req->pixels != NULL) {
-            kfree(req->pixels);
-            req->pixels = NULL;
+    for (int c = 0; c < CLERK_COUNT; c++) {
+        clerk_queue *q = ledger_get_queue(c);
+        if (q == NULL) {
+            continue;
         }
 
-        if (req->buf != NULL) {
-            kfree(req->buf);
-            req->buf = NULL;
-        }
+        for (int i = 0; i < q->max_entries; i++) {
+            if (q->table[i] != NULL && (q->table[i]->status == TERMINATED)) {
+                DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper came to reap clerk %s, slot %d\n", task_table[c]->name, i);
 
-        kfree(req);
+                if (q->table[i]->buf != NULL) {
+                    kfree(q->table[i]->buf);
+                }
+
+                if (q->table[i]->pixels != NULL) {
+                    kfree(q->table[i]->pixels);
+                }
+
+                kfree(q->table[i]);
+                q->table[i] = NULL;
+                kill_count++;
+            }
+        }
     }
+
+    DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper exiting with kill count of %d\n", kill_count);
+    return kill_count;
 }
 
 /**
@@ -101,9 +116,8 @@ void ledger_check_request(uint32_t clerk_pid) {
     if (entry != NULL) {
         ERROR("[LEDGER][CHECK_REQUEST]: force terminating last request and waking caller\n");
         ERROR("[LEDGER][CHECK_REQUEST]: Last req op_code: %d\n", entry->request_type);
-        uint32_t caller = entry->caller_pid;
-        ledger_remove_request(entry);
-        q->table[*q->last_idx] = NULL;
+        uint32_t caller                = entry->caller_pid;
+        q->table[*q->last_idx]->status = TERMINATED;
         scheduler_wake_task(caller);
     }
 }
@@ -166,8 +180,7 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
             case OPEN: {
                 DEBUG_LEDGER("[LEDGER][COLLECT]: collecting struct_key: %d\n", req->struct_key);
                 uint32_t key = req->struct_key;
-                ledger_remove_request(req);
-                q->table[i] = NULL;
+                req->status  = TERMINATED;
                 return key;
             }
             case LIST:
@@ -178,21 +191,17 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
                     // DEBUG_LEDGER("[LEDGER][COLLECT]: %d is collecting to a buffer the size of %d containing: %s\n", caller_pid, req->buffer_size, req->buf);
                 }
                 uint32_t buffer_size = req->buffer_size;
-
-                ledger_remove_request(req);
-                q->table[i] = NULL;
+                req->status          = TERMINATED;
                 return buffer_size;
             default:
                 break;
             }
-            ledger_remove_request(req);
-            q->table[i] = NULL;
+            req->status = TERMINATED;
             return STATUS_OK;
 
         } else if (req->status == FAILED) {
             DEBUG_LEDGER("[LEDGER][COLLECT]: %d collecting failed requiest\n", caller_pid);
-            ledger_remove_request(req);
-            q->table[i] = NULL;
+            req->status = TERMINATED;
             return STATUS_ERROR;
         }
     }

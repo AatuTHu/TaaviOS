@@ -123,7 +123,7 @@ void klog_error(const char *fmt, ...);
 #if (LOG_LEVEL & LOG_USPC) || (LOG_LEVEL & LOG_ALL_DEBUGS)
 #define DEBUG_USPC(fmt, ...) klog_debug(fmt, ##__VA_ARGS__)
 #else
-#define DEBUG_DOC(fmt, ...) ((void)0)
+#define DEBUG_USPC(fmt, ...) ((void)0)
 #endif
 
 #endif

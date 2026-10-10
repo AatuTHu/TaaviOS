@@ -25,21 +25,23 @@ static int reaper_kill_task(uint32_t target_pid) {
     return STATUS_OK;
 }
 
-/*
- * This file contains the implementation of the reaper. Its job is to delete
- * dead things. For now it's only doing it to schedulers dead tasks but it can
- * be expanded on.
- *
- * As does other clerks it follows the blankie_protocol
- */
 void reaper_task_loop() {
     while (1) {
         request_table *req = ledger_fetch_next_req(reaper_task_pid);
         if (req != NULL) {
             if (req->status == PENDING || req->status == IN_PROGRESS) {
                 req->status = (reaper_kill_task(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
+
+                if (req->caller_pid == req->target_pid) {
+                    req->status = TERMINATED;
+                    continue;
+                }
                 scheduler_wake_task(req->caller_pid);
             }
+        }
+
+        if (ledger_has_killable_reqs() > 0) {
+            ledger_remove_request();
         }
 
         blankie_activate(reaper_task_pid);
