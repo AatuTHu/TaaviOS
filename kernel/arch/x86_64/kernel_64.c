@@ -1,6 +1,7 @@
 #include "boot_info.h"
 #include "config.h"
 #include "gdt.h"
+#include "idt.h"
 #include "klog.h"
 #include <stdint.h>
 #define LIMINE_API_REVISION 2
@@ -201,6 +202,7 @@ void _start(void) {
     serial_write("Sucessfully collected boot information!\n");
 
     gdt_init();
+    idt_init();
 
     print_collected_info(&b_info);
     hcf();

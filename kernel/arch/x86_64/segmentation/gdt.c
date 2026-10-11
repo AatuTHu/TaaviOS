@@ -1,4 +1,4 @@
-#include "gdt.h"
+#include "../include/x86_64/gdt.h"
 #include "config.h"
 #include "klog.h"
 #include "kstring.h"

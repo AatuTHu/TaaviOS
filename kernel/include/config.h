@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define IDT_ENTRIES 256
+
 #define SEG_KERNEL_CODE 0x08
 #define SEG_KERNEL_DATA 0x10
 #define SEG_USER_CODE 0x1B
