@@ -1,6 +1,6 @@
-#include "../include/x86_64/idt.h"
-#include "../include/x86_64/gdt.h"
+#include "idt.h"
 #include "config.h"
+#include "gdt.h"
 #include "io.h"
 #include "klog.h"
 #include "kstring.h"
