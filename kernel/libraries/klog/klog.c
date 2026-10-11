@@ -41,18 +41,18 @@ static void print_int(int n) {
     kputs(&buf[pos + 1]);
 }
 
-static void print_hex(uint32_t n) {
+static void print_hex(uintptr_t n) {
     if (n == 0) {
         kputchar('0');
         return;
     }
 
     const char digits[] = "0123456789abcdef";
-    char buf[9];
-    buf[8]  = '\0';
-    int pos = 7;
+    char buf[17];
+    buf[16] = '\0';
+    int pos = 15;
 
-    while (n > 0) {
+    while (n > 0 && pos >= 0) {
         buf[pos--] = digits[n % 16];
         n /= 16;
     }
@@ -97,7 +97,7 @@ static void kwrite(const char *fmt, va_list args) {
                 kputchar((char)va_arg(args, int));
                 break;
             case 'x':
-                print_hex(va_arg(args, uint32_t));
+                print_hex(va_arg(args, uintptr_t));
                 break;
             default:
                 kputchar('%');

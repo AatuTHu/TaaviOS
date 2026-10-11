@@ -1,11 +1,17 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#define IDT_ENTRIES 256
+
 #define SEG_KERNEL_CODE 0x08
 #define SEG_KERNEL_DATA 0x10
 #define SEG_USER_CODE 0x1B
 #define SEG_USER_DATA 0x23
 #define GDT_TSS_SEL 0x2B
+
+#define SEG_64_USER_DATA 0x18
+#define SEG_64_USER_CODE 0x20
+#define GDT_TSS 0x28
 
 #define TASK_NAME_LENGTH 9
 #define PIT_FREQUENCY 1000
