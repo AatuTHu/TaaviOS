@@ -78,8 +78,16 @@ static int boot_info_collect(struct boot_info *out) {
             mem_type = BOOT_REGION_RESERVED;
             break;
         case LIMINE_MEMMAP_ACPI_RECLAIMABLE:
+            mem_type = BOOT_REGION_ACPI_RECLAIMABLE;
+            break;
         case LIMINE_MEMMAP_BOOTLOADER_RECLAIMABLE:
             mem_type = BOOT_REGION_RECLAIMABLE;
+            break;
+        case LIMINE_MEMMAP_ACPI_NVS:
+            mem_type = BOOT_REGION_ACPI_NVS;
+            break;
+        case LIMINE_MEMMAP_BAD_MEMORY:
+            mem_type = BOOT_REGION_BAD_MEMORY;
             break;
         case LIMINE_MEMMAP_EXECUTABLE_AND_MODULES:
             mem_type = BOOT_REGION_KERNEL;

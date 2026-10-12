@@ -1,13 +1,19 @@
 #include "boot_info.h"
+#include "config.h"
 #include "gdt.h"
 #include "idt.h"
 #include "klog.h"
+#include "pmm.h"
 #include "serial.h"
 #include <stdint.h>
 
 struct boot_info b_info;
 
-void print_collected_info() {
+static void panic() {
+    while (1) __asm__ __volatile__("hlt");
+}
+
+static void print_collected_info() {
 
     DEBUG_KERNEL("[KERNEL]: HHDM offset: 0x%x \n", b_info.hhdm_offset);
     DEBUG_KERNEL("[KERNEL]: Kernel physical base: 0x%x\n", b_info.kernel_phys_base);
@@ -18,6 +24,7 @@ void print_collected_info() {
     uint64_t usable_memory      = 0;
     uint64_t reclaimable_memory = 0;
     uint64_t reserved_memory    = 0;
+    uint64_t bad_memory         = 0;
     if (b_info.region_count > 0) {
         for (uint64_t i = 0; i < b_info.region_count; i++) {
             DEBUG_KERNEL("Region index %d\n", i);
@@ -43,9 +50,20 @@ void print_collected_info() {
                 reserved_memory += b_info.regions[i].length;
                 break;
             case BOOT_REGION_RECLAIMABLE:
-                DEBUG_KERNEL("Boot reclaimable region\n");
+                DEBUG_KERNEL("boot reclaimable region\n");
                 reclaimable_memory += b_info.regions[i].length;
                 break;
+            case BOOT_REGION_ACPI_NVS:
+                DEBUG_KERNEL("acpi NVS region\n");
+                reserved_memory += b_info.regions[i].length;
+                break;
+            case BOOT_REGION_BAD_MEMORY:
+                DEBUG_KERNEL("Bad memory region\n");
+                bad_memory += b_info.regions[i].length;
+                break;
+            case BOOT_REGION_ACPI_RECLAIMABLE:
+                DEBUG_KERNEL("acpi reclaimamble region\n");
+                reclaimable_memory += b_info.regions[i].length;
             }
             DEBUG_KERNEL("\tRegion end 0x%x\n", b_info.regions[i].base + (uint64_t)b_info.regions[i].length);
         }
@@ -54,6 +72,7 @@ void print_collected_info() {
     DEBUG_KERNEL("Total usable memory: %d bytes\n", (unsigned long long)usable_memory);
     DEBUG_KERNEL("Total reclaimable memory: %d bytes\n", (unsigned long long)reclaimable_memory);
     DEBUG_KERNEL("Total reserved memory: %d bytes\n", (unsigned long long)reserved_memory);
+    DEBUG_KERNEL("Total bad memory: %d bytes\n", (unsigned long long)bad_memory);
 
     DEBUG_KERNEL("Total usable memory: %d MiB\n", (unsigned long long)(usable_memory / 1048576));
     DEBUG_KERNEL("Total reclaimable memory: %d MiB\n", (unsigned long long)(reclaimable_memory / 1048576));
@@ -78,12 +97,12 @@ void kmain() {
 
     gdt_init();
     idt_init();
-
-    int test_var = 0;
-
-    DEBUG_KERNEL("[KERNEL][MAIN]: Address of the local variable 0x%x\n", &test_var);
-
     print_collected_info();
+
+    if (pmm_init(&b_info) == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize physical memory manager. ABORTING\n");
+        panic();
+    }
 
     while (1) __asm__ __volatile__("hlt");
 }

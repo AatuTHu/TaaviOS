@@ -12,6 +12,9 @@ enum boot_region_type {
     BOOT_REGION_RECLAIMABLE,
     BOOT_REGION_KERNEL,
     BOOT_REGION_FRAMEBUFFER,
+    BOOT_REGION_ACPI_RECLAIMABLE,
+    BOOT_REGION_ACPI_NVS,
+    BOOT_REGION_BAD_MEMORY,
 };
 
 struct boot_mem_region {
