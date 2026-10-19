@@ -14,19 +14,24 @@ SECTIONS
 {
     . = 0xffffffff80000000;
 
-    kernel_start = .;
+    _kernel_start = .;
 
     . = ALIGN(0x1000);
+    _text_start = .;
     .text : {
         *(.text .text.*)
     } :text
-
     . = ALIGN(0x1000);
+    _text_end = .;
+
+    _rodata_start = .;
     .rodata : {
         *(.rodata .rodata.*)
     } :rodata
-
     . = ALIGN(0x1000);
+    _rodata_end = .;
+
+    _data_start = .;
     .data : {
         *(.data .data.*)
 
@@ -35,13 +40,16 @@ SECTIONS
         KEEP(*(.limine_requests_end))
     } :data
 
+    _bss_start = .;
     .bss : {
         *(COMMON)
         *(.bss .bss.*)
     } :data
-
     . = ALIGN(0x1000);
-    kernel_end = .;
+    _bss_end = .;
+
+    _data_end = .;
+    _kernel_end = .;
 
     /DISCARD/ : {
         *(.eh_frame)

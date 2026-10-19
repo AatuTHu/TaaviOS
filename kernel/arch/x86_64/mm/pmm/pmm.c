@@ -151,7 +151,7 @@ int pmm_init(const struct boot_info *bi) {
  * Return: 0 on out of memory || address of the page(physical).
  */
 uint64_t pmm_alloc(void) {
-    DEBUG_CORE_MM("[PMM][ALLOC]: Allocating a page of physical memory\n");
+    //  DEBUG_CORE_MM("[PMM][ALLOC]: Allocating a page of physical memory\n");
     uint64_t page_index = last_found;
 
     while (page_index < max_pages) {
@@ -160,8 +160,8 @@ uint64_t pmm_alloc(void) {
             used_pages++;
             free_pages--;
             last_found = page_index + 1;
-            DEBUG_CORE_MM("[PMM][ALLOC]: Found a page on the first loop. pg_ind: 0x%x\n", page_index * PAGE_SIZE);
-            DEBUG_CORE_MM("[PMM][ALLOC]: Last_found now 0x%x\n", last_found);
+            //   DEBUG_CORE_MM("[PMM][ALLOC]: Found a page on the first loop. pg_ind: 0x%x\n", page_index * PAGE_SIZE);
+            //     DEBUG_CORE_MM("[PMM][ALLOC]: Last_found now 0x%x\n", last_found);
             return (page_index * PAGE_SIZE);
         }
         page_index++;
@@ -174,8 +174,8 @@ uint64_t pmm_alloc(void) {
             used_pages++;
             free_pages--;
             last_found = page_index + 1;
-            DEBUG_CORE_MM("[PMM][ALLOC]: Found a page on the second loop. pg_ind: 0x%x\n", page_index * PAGE_SIZE);
-            DEBUG_CORE_MM("[PMM][ALLOC]: Last_found now 0x%x\n", last_found);
+            //   DEBUG_CORE_MM("[PMM][ALLOC]: Found a page on the second loop. pg_ind: 0x%x\n", page_index * PAGE_SIZE);
+            //   DEBUG_CORE_MM("[PMM][ALLOC]: Last_found now 0x%x\n", last_found);
             return (page_index * PAGE_SIZE);
         }
         page_index++;

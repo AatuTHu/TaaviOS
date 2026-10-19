@@ -3,6 +3,7 @@
 #include "gdt.h"
 #include "idt.h"
 #include "klog.h"
+#include "paging.h"
 #include "pmm.h"
 #include "serial.h"
 #include <stdint.h>
@@ -101,6 +102,11 @@ void kmain() {
 
     if (pmm_init(&b_info) == STATUS_ERROR) {
         ERROR("[KERNEL]: Failed to initialize physical memory manager. ABORTING\n");
+        panic();
+    }
+
+    if (paging_init(&b_info) == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize paging\n");
         panic();
     }
 
