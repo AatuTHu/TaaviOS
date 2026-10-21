@@ -3,6 +3,7 @@
 #include "gdt.h"
 #include "idt.h"
 #include "klog.h"
+#include "kmalloc.h"
 #include "paging.h"
 #include "pmm.h"
 #include "serial.h"
@@ -112,6 +113,8 @@ void kmain() {
     }
 
     pmm_reclaim_bootloader(&b_info);
+
+    kmalloc_init((void *)HEAP_START_64, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE);
 
     while (1) __asm__ __volatile__("hlt");
 }
