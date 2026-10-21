@@ -6,6 +6,7 @@
 #include "paging.h"
 #include "pmm.h"
 #include "serial.h"
+#include "vmm.h"
 #include <stdint.h>
 
 struct boot_info b_info;
@@ -109,6 +110,8 @@ void kmain() {
         ERROR("[KERNEL]: Failed to initialize paging\n");
         panic();
     }
+
+    pmm_reclaim_bootloader(&b_info);
 
     while (1) __asm__ __volatile__("hlt");
 }

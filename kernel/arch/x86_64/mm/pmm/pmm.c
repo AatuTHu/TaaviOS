@@ -3,7 +3,6 @@
 #include "config.h"
 #include "klog.h"
 #include "kstring.h"
-#include <stddef.h>
 #include <stdint.h>
 
 #define MiB 1048576
@@ -41,19 +40,66 @@ uint64_t pmm_get_total_pages(void) {
 }
 
 /**
+ * pmm_reclaim_bootloader - Adds reclaimable regions to the memory pool.
+ * @bi: Holds Limine bootloader information.
+ *
+ * Description:
+ * This function adds bootloader-reclaimable memory regions to the physical
+ * memory manager's available pool. It loops over all memory regions, targets
+ * non-empty reclaimable regions, aligns them to 4 KiB page boundaries, and frees
+ * them page by page.
+ *
+ * Any addresses below 1 MiB are explicitly skipped to protect legacy BIOS
+ * structures, the Extended BIOS Data Area (EBDA), and critical ACPI tables
+ * required by the kernel.
+ *
+ * Return: VOID.
+ */
+void pmm_reclaim_bootloader(const struct boot_info *bi) {
+    uint64_t success_count = 0;
+
+    for (uint64_t i = 0; i < bi->region_count; i++) {
+        struct boot_mem_region curr_region = bi->regions[i];
+
+        if (curr_region.type == BOOT_REGION_RECLAIMABLE && curr_region.length != 0) {
+            uint64_t base = curr_region.base;
+            uint64_t top  = curr_region.base + curr_region.length;
+
+            base          = (base + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+            top           = top & ~(PAGE_SIZE - 1);
+
+            if (base < top) {
+                for (uint64_t addr = base; addr < top; addr += PAGE_SIZE) {
+
+                    if (addr < MiB) {
+                        continue;
+                    }
+
+                    if (pmm_free(addr) == STATUS_OK) {
+                        success_count++;
+                    }
+                }
+            }
+        }
+    }
+
+    DEBUG_CORE_MM("[PMM][RECLMEM]: Reclaimed %d pages\n", success_count);
+}
+
+/**
  * pmm_init - used to initialize physical memory manager for the available memory.
  * @boot_info *bi: holds memory information gathered via limine request.
  *
  * Description:
  * This function creates a basic bitmap physical manager out of the usable regions limine has
  * provided the kernel. First we look out of the usable regions the one that ends with the highest
- * address so that we dont create bitmap any lengthier than it has to be. If we find a potential top
+ * address so that we don't create bitmap any lengthier than it has to be. If we find a potential top
  * we calculate how many pages it can fit and how many bytes it holds. Then we look for the regions
  * for bottom address that is above one MiB but can too hold the size of the bitmap in it. If found
  * we set the bitmap to point at the top of the line. Then we round all regions to be exactly
- * 4096bits and simultaniosly freeing them. After this the function re reserves the pages that the
+ * 4096bits and simultaneously freeing them. After this the function re reserves the pages that the
  * bitmap uses and the very first page so that later when allocating the 0 can be used as OOM. (out
- * of mana :3 ). And that we dont accidentaly allocate the bitmap itself.
+ * of mana :3 ). And that we don't accidentally allocate the bitmap itself.
  *
  * Return: STATUS_OK || STATUS_ERROR.
  */
@@ -64,7 +110,8 @@ int pmm_init(const struct boot_info *bi) {
     uint64_t potential_bitmap_top = 0;
     for (uint64_t i = 0; i < bi->region_count; i++) {
         struct boot_mem_region curr_region = bi->regions[i];
-        if (curr_region.type == BOOT_REGION_USABLE && curr_region.base + (uint64_t)curr_region.length > (uint64_t)potential_bitmap_top) {
+        if ((curr_region.type == BOOT_REGION_USABLE || curr_region.type == BOOT_REGION_RECLAIMABLE) &&
+            curr_region.base + (uint64_t)curr_region.length > (uint64_t)potential_bitmap_top) {
             potential_bitmap_top = curr_region.base + (uint64_t)curr_region.length;
             highest_region_index = i;
         }
@@ -143,7 +190,7 @@ int pmm_init(const struct boot_info *bi) {
  *
  * Description:
  * The function looks for the first page from the bitmap that is free. Then returns the address of it.
- * The function uses pristeen optimization tech from the future by marking the last found page up.
+ * The function uses pristine optimization tech from the future by marking the last found page up.
  * So that later when somebody dares to ask for a page the loop can be started from the next page
  * after the last one given. If none is found in the first loop we default to start at the first
  * index forward. If not found then it defaults to 0 that means out of memory.
@@ -207,7 +254,7 @@ int pmm_free(const uint64_t phys) {
         return STATUS_ERROR;
     }
 
-    DEBUG_CORE_MM("[PMM][FREE]: Freeing index %d\n", page_index);
+    // DEBUG_CORE_MM("[PMM][FREE]: Freeing index %d\n", page_index);
 
     if (__pmm_test_bit(page_index) == 0) {
         ERROR("[PMM][FREE]: Page already free\n");
@@ -223,6 +270,6 @@ int pmm_free(const uint64_t phys) {
         last_found = page_index;
     }
 
-    DEBUG_CORE_MM("[PMM][FREE]: Page freed\n");
+    // DEBUG_CORE_MM("[PMM][FREE]: Page freed\n");
     return STATUS_OK;
 }
