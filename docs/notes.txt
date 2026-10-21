@@ -6,6 +6,7 @@
 **Doctor_task**
 - Make a diagnostic tool that sends requests to other clerks and makes report to shell for now.
 - Make a diagnostics user app for this
+- Should be the one that syncs kernel directory to all tasks IF required i.e dirty flag or something like that
 
 **Kernel / System calls / sched**
 - get ticks/get uptime system call

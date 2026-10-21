@@ -34,20 +34,21 @@
 - [ ] GUI_CLERK change the blueprint_t to window_t
 - [ ] Change all places where clerks are called 'task' to 'clerk'
 - [ ] Add comment blocks
-- [ ] Gui delete has unnecessary buffer wiping clean
-- [ ] Ledger collect doesn't handle failed req cases
+- [ ] Gui delete has unnecessary buffer clean
+- [X] Ledger collect doesn't handle failed req cases
 - [ ] DOCs gui tests should not do actual drawing to screen
+- [ ] DOC synchronise kernel directory if dirty to all tasks.
 
 64BIT
 
 - [x] BOOT VIA LIMINE & COLLECT INFORMATION
-- [ ] GDT
-- [ ] IDT
-- [ ] TSS
-- [ ] ISR
+- [X] GDT
+- [X] IDT
+- [X] TSS
+- [X] ISR
 - [ ] APIC
-- [ ] PAGING
-- [ ] HEAP
+- [X] PAGING
+- [X] HEAP
 - [ ] TASKS
 - [ ] SYSCALLS
 - [ ] SCHED
