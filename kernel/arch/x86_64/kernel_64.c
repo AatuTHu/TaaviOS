@@ -114,7 +114,10 @@ void kmain() {
 
     pmm_reclaim_bootloader(&b_info);
 
-    kmalloc_init((void *)HEAP_START_64, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE);
+    if (kmalloc_init((void *)HEAP_START, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize heap memory pool\n");
+        panic();
+    }
 
     while (1) __asm__ __volatile__("hlt");
 }

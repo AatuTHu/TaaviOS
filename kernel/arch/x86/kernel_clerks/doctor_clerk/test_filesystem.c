@@ -8,6 +8,12 @@
 #include "task.h"
 #include <stdint.h>
 
+/**
+ * doc_clerk
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 static int make_request_fetch_results(task_t *doc_clerk, uint8_t opcode, int fd, char *buf, uint32_t buf_len, uint32_t flags) {
 
     ledger_add_fs_req(doc_clerk_pid, opcode, fd, buf, buf_len, flags);

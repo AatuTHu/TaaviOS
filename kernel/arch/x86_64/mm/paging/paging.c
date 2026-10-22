@@ -5,6 +5,12 @@
 #include "pmm.h"
 #include <stdint.h>
 
+/**
+ * Paging
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 page_directory_t kernel_page_dir __attribute__((aligned(PAGE_SIZE_BYTES)));
 uint64_t paging_hhdm;
 uint64_t kernel_physical_base;

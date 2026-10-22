@@ -3,6 +3,7 @@
 #include "klog.h"
 #include "paging.h"
 #include "vmm.h"
+#include <stddef.h>
 #if defined(__i386__) || defined(__i686__)
 #include "task.h"
 #endif
@@ -27,14 +28,27 @@ static void update_remaining_heap_size() {
         current = current->next;
     }
     remaining_heap_size = total_free;
-    DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
+    // DEBUG_KMALLOC("[KMALLOC][REMAINING_HEAP_SIZE]: Remaining heap size: %d\n", remaining_heap_size);
 }
 
-void kmalloc_init(void *heap_start, uintptr_t heap_size) {
+int kmalloc_init(void *heap_start, uintptr_t heap_size) {
     DEBUG_KMALLOC("[KMALLOC]: Initializing kmalloc with heap_start: 0x%x\n", heap_start);
     DEBUG_KMALLOC("[KMALLOC]: Heap_size: %d\n", heap_size);
-    vmm_alloc(&kernel_page_dir, (uintptr_t)heap_start, heap_size,
-              PAGE_PRESENT | PAGE_RW);
+
+#if defined(__x86_64__)
+    if (vmm_alloc(&kernel_page_dir, (uintptr_t)heap_start, heap_size,
+                  PAGE_PRESENT | PAGE_RW | PAGE_NX) == STATUS_ERROR) {
+        ERROR("[KMALLOC]: Failed to map space for heap memroy\n");
+        return STATUS_ERROR;
+    }
+#else
+    if (vmm_alloc(&kernel_page_dir, (uintptr_t)heap_start, heap_size,
+                  PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
+        ERROR("[KMALLOC]: Failed to map space for heap memroy\n");
+        return STATUS_ERROR;
+    }
+#endif
+
     free_list            = (block_header_t *)heap_start;
     free_list->size      = (heap_size - sizeof(block_header_t));
     free_list->magic     = HEAP_MAGIC;
@@ -42,9 +56,15 @@ void kmalloc_init(void *heap_start, uintptr_t heap_size) {
     current_heap_ceiling = (uintptr_t)heap_start + heap_size;
     DEBUG_KMALLOC("[KMALLOC]: current heap ceiling: 0x%x\n", current_heap_ceiling);
     update_remaining_heap_size();
+    return STATUS_OK;
 }
 
 void *kmalloc(uintptr_t size) {
+
+    if (size == 0) {
+        ERROR("[KMALLOC][ALLOC]: Asked for size zero. Got null\n");
+        return NULL;
+    }
 
     DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
     block_header_t *current = free_list;
@@ -79,20 +99,26 @@ void *kmalloc(uintptr_t size) {
             current = current->next;
         }
         DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
-        int addition_size = (ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) * 2;
-        if ((addition_size + current_heap_ceiling) >= HEAP_CEIL) {
+        size_t addition_size = (ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) * 2;
+        if ((addition_size + current_heap_ceiling) > HEAP_CEIL) {
             ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
             break;
         }
 
+#if defined(__x86_64__)
+        if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW | PAGE_NX) == STATUS_ERROR) {
+            ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
+            break;
+        }
+#else
         if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
             ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
             break;
         }
 
-#if defined(__i386__) || defined(__i686__)
         task_sync_kernel_entries_to_all_tasks();
 #endif
+
         DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
         block_header_t *new_block = (block_header_t *)current_heap_ceiling;
         new_block->size           = addition_size - sizeof(block_header_t);
@@ -152,12 +178,13 @@ int kfree(void *ptr) {
         block_header_t *current = free_list;
 
         while (current != NULL && current < addr) {
-            if (current == addr) {
-                ERROR("[KMALLOC][FREE]: Double free detected at 0x%x\n", ptr);
-                return STATUS_ERROR;
-            }
             prev    = current;
             current = current->next;
+        }
+
+        if (current == addr) {
+            ERROR("[KMALLOC][FREE]: Double free detected at 0x%x\n", ptr);
+            return STATUS_ERROR;
         }
 
         addr->next = current;

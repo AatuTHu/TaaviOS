@@ -5,6 +5,12 @@
 #include "kstring.h"
 #include <stdint.h>
 
+/**
+ * Physical memory manager
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 #define MiB 1048576
 static uint64_t *bitmap    = NULL;
 static uint64_t max_pages  = 0;

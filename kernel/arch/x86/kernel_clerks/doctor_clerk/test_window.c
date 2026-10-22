@@ -8,6 +8,12 @@
 #include "task.h"
 #include <stdbool.h>
 
+/**
+ * doc_clerk
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 static int window_key = -1;
 
 static int __resize_window(task_t *doc_clerk, int width, int height) {

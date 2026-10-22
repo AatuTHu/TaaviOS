@@ -11,6 +11,12 @@
 #include "shared.h"
 #include "vmm.h"
 
+/**
+ * doc_clerk
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 #define TEST_BUFFER_SIZE 10
 
 static void print_ledger_status() {

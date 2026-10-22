@@ -7,6 +7,12 @@
 #include "stdbool.h"
 #include <stdint.h>
 
+/**
+ * Interrupt descriptor table
+ * Design & Implementation:
+ * @author: A.H, 2026
+ */
+
 static struct idt_entry idt[IDT_ENTRIES];
 static struct idt_ptr idt_pointer;
 irq_callback_t irq_callbacks[16] = {0};
