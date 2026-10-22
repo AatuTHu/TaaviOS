@@ -1,5 +1,6 @@
 #include "boot_info.h"
 #include "config.h"
+#include "fb.h"
 #include "gdt.h"
 #include "idt.h"
 #include "klog.h"
@@ -7,7 +8,6 @@
 #include "paging.h"
 #include "pmm.h"
 #include "serial.h"
-#include "vmm.h"
 #include <stdint.h>
 
 struct boot_info b_info;
@@ -116,6 +116,11 @@ void kmain() {
 
     if (kmalloc_init((void *)HEAP_START, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) == STATUS_ERROR) {
         ERROR("[KERNEL]: Failed to initialize heap memory pool\n");
+        panic();
+    }
+
+    if (fb_init_limine(&b_info) == STATUS_ERROR) {
+        ERROR("[KERNEL]: failed to initialize virtual memory\n");
         panic();
     }
 

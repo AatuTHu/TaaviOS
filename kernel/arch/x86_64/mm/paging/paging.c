@@ -1,4 +1,5 @@
 #include "paging.h"
+#include "boot_info.h"
 #include "config.h"
 #include "klog.h"
 #include "kstring.h"
@@ -420,7 +421,7 @@ int paging_init(const struct boot_info *bi) {
 
     for (size_t i = 0; i < bi->region_count; i++) {
         const struct boot_mem_region *entry = &bi->regions[i];
-        if (entry->length == 0)
+        if (entry->length == 0 || entry->type == BOOT_REGION_FRAMEBUFFER)
             continue;
 
         uint64_t base = entry->base & ~(HUGE_PAGE_SIZE_BYTES - 1);

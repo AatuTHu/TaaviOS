@@ -161,7 +161,7 @@ void kernel_main(const uint32_t *mboot_info) {
     check_for_modules(mboot_info);
     const struct multiboot_info *mboot =
         (struct multiboot_info *)phys_to_virt((uint32_t)mboot_info);
-    fb_init(mboot);
+    fb_init_mboot(mboot);
 
     init_arch();
 
