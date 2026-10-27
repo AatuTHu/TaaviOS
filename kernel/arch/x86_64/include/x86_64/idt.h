@@ -32,6 +32,9 @@ extern uint64_t isr_stub_table[];
 extern uint64_t irq_stub_table[];
 extern void idt_flush(uint64_t idt_ptr_address);
 extern void syscall_handler(void);
+extern void isr255(void);
+extern void *irq32;
+
 void irq_register_handler(int index, irq_callback_t cb);
 void idt_init(void);
 uint64_t irq_handler(struct registers *r);

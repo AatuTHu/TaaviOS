@@ -5,6 +5,9 @@
 #if defined(__i386__) || defined(__i686__)
 #include "isr.h"
 #include "sched.h"
+#else
+#include "apic.h"
+#include "idt.h"
 #endif
 #include "shared.h"
 #include <stdbool.h>
@@ -208,11 +211,18 @@ void keyboard_handler(uint8_t scancode) {
     }
 }
 
-void keyboard_init() {
+int keyboard_init() {
     keyboard_buffer->read           = 0;
     keyboard_buffer->write          = 0;
     keyboard_buffer->foreground_pid = -1;
 #if defined(__i386__) || defined(__i686__)
     irq_register_handler(1, keyboard_irq_handler);
+#else
+    irq_register_handler(1, keyboard_irq_handler);
+    if (ioapic_route_isa(1, 33, lapic_id()) == STATUS_ERROR) {
+        ERROR("[KBD][INIT]: Was not able to route keyboard interrupt\n");
+        return STATUS_ERROR;
+    }
 #endif
+    return STATUS_OK;
 }

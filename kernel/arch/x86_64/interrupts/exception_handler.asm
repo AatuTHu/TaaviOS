@@ -79,6 +79,7 @@ IRQ 12, 44  ; PS/2 — Mouse
 IRQ 13, 45  ; FPU  — Coprocessor / FPU error
 IRQ 14, 46  ; IDE  — Primary ATA channel (primary disk)
 IRQ 15, 47  ; IDE  — Secondary ATA channel (secondary disk)
+IRQ 32, 64  ; LAPIC
 
 
 isr_common:
@@ -97,6 +98,7 @@ isr_common:
     push r13
     push r14
     push r15
+    cld
 
     mov rdi, rsp
 
@@ -137,6 +139,7 @@ irq_common:
     push r13
     push r14
     push r15
+    cld
 
     mov rdi, rsp
 
@@ -161,6 +164,10 @@ irq_common:
     add rsp, 16
     iretq
 
+
+global isr255 ;lapic ghost vector
+isr255:
+    iretq ; instant iretq because of why not :) Tho most likely because of ghost or misfire.
 
 global isr_stub_table
 isr_stub_table:
@@ -197,6 +204,7 @@ syscall_handler:
     push r13
     push r14
     push r15
+    cld
 
     mov rdi, rsp
 

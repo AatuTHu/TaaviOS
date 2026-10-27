@@ -1,8 +1,11 @@
+#include "acpi.h"
+#include "apic.h"
 #include "boot_info.h"
 #include "config.h"
 #include "fb.h"
 #include "gdt.h"
 #include "idt.h"
+#include "keyboard.h"
 #include "klog.h"
 #include "kmalloc.h"
 #include "paging.h"
@@ -119,10 +122,29 @@ void kmain() {
         panic();
     }
 
-    if (fb_init_limine(&b_info) == STATUS_ERROR) {
-        ERROR("[KERNEL]: failed to initialize virtual memory\n");
+    if (acpi_init(&b_info) == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize acpi\n");
         panic();
     }
+
+    if (apic_init() == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize apic\n");
+        panic();
+    }
+
+    if (fb_init_limine(&b_info) == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize virtual memory\n");
+        panic();
+    }
+
+    if (keyboard_init() == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize keyborad driver\n");
+        panic();
+    }
+
+    lapic_timer_start_periodic(10);
+
+    __asm__ __volatile__("sti");
 
     while (1) __asm__ __volatile__("hlt");
 }

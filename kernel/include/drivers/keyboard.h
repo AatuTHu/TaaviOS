@@ -195,7 +195,7 @@ typedef struct keyboard_buffer_t {
     int foreground_pid;
 } keyboard_buffer_t;
 
-void keyboard_init(void);
+int keyboard_init(void);
 void keyboard_handler(uint8_t scancode);
 void keyboard_set_foreground_pid(int pid);
 int keyboard_read_from_buffer(char *out, uint32_t pid);

@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "apic.h"
 #include "config.h"
 #include "gdt.h"
 #include "io.h"
@@ -72,26 +73,25 @@ void isr_handler(struct registers *r) {
 }
 
 uint64_t irq_handler(struct registers *r) {
-    uint64_t raddr = (uint64_t)r;
-    int irq_index  = r->int_no - 32;
-
-    if (irq_index < 0 || irq_index > 15) {
-        outb(0x20, 0x20);
-        return raddr;
+    if (r->int_no == LAPIC_TIMER_VECTOR) {
+        lapic_tick_ticks(); // tick the ticks?
+        // scheduler_tick();
+        lapic_eoi();
+        return (uint64_t)r;
     }
 
-    if (irq_index == 0) {
-        //  next_esp = scheduler_tick(r);
+    if (r->int_no >= 32 && r->int_no <= 47) {
+        uint8_t irq = r->int_no - 32;
+        if (irq_callbacks[irq] != 0) {
+            irq_callbacks[irq]();
+        }
+        lapic_eoi();
+        return (uint64_t)r;
     }
 
-    if (irq_callbacks[irq_index] != 0) {
-        irq_callbacks[irq_index]();
-    }
-
-    if (r->int_no >= 40)
-        outb(0xA0, 0x20);
-    outb(0x20, 0x20);
-    return raddr;
+    DEBUG_KERNEL("[IRQ]: Unhandled interrupt vector: %u\n", r->int_no);
+    lapic_eoi();
+    return (uint64_t)r;
 }
 
 static void idt_set_gate(int vec, uint64_t handler, uint8_t type_attr, uint8_t ist) {
@@ -120,6 +120,12 @@ void idt_init(void) {
     for (int i = 32; i <= 47; i++) {
         idt_set_gate(i, irq_stub_table[i - 32], IDT_GATE_INTERRUPT, 0);
     }
+
+    DEBUG_KERNEL("[IDT]: Mapping LAPIC timer interrupt vector (0x40)\n");
+    idt_set_gate(LAPIC_TIMER_VECTOR, (uint64_t)&irq32, IDT_GATE_INTERRUPT, 0);
+
+    DEBUG_KERNEL("[IDT]: Mapping lapic spurrious vector\n");
+    idt_set_gate(255, (uint64_t)isr255, IDT_GATE_INTERRUPT, 0);
 
     idt_pointer.limit = sizeof(idt) - 1;
     idt_pointer.base  = (uint64_t)&idt;

@@ -47,7 +47,7 @@ INCLUDES := -I$(KERNEL_ARCH_DIR)/include \
             -I$(KERNEL_ARCH_DIR)/include/loader \
             -I$(KERNEL_ARCH_DIR)/include/kernel_clerks \
             -I$(KERNEL_ARCH_DIR)/include/protocols \
-			-I$(KERNEL_DIR)/include/boot \
+            -I$(KERNEL_DIR)/include/boot \
             -I$(KERNEL_DIR)/include/mm \
             -I$(KERNEL_DIR)/include \
             -I$(KERNEL_DIR)/include/shared \
@@ -108,20 +108,21 @@ iso-x86_64: $(BUILD)/taavi.bin
 	@cp userspace/build/bin/*.elf iso_root/boot/ 2>/dev/null || true
 	@cp $(LIMINE_CONF) iso_root/boot/limine/limine.conf
 	@cp $(LIMINE_DIR)/limine-bios.sys $(LIMINE_DIR)/limine-bios-cd.bin \
-	    $(LIMINE_DIR)/limine-uefi-cd.bin iso_root/boot/limine/
+		$(LIMINE_DIR)/limine-uefi-cd.bin iso_root/boot/limine/
 	@cp $(LIMINE_DIR)/BOOTX64.EFI iso_root/EFI/BOOT/
 	@xorriso -as mkisofs -R -r -J \
-	    -b boot/limine/limine-bios-cd.bin \
-	    -no-emul-boot -boot-load-size 4 -boot-info-table \
-	    -hfsplus -apm-block-size 2048 \
-	    --efi-boot boot/limine/limine-uefi-cd.bin \
-	    -efi-boot-part --efi-boot-image --protective-msdos-label \
-	    iso_root -o $(BUILD)/taavi.iso > /dev/null
+		-b boot/limine/limine-bios-cd.bin \
+		-no-emul-boot -boot-load-size 4 -boot-info-table \
+		-hfsplus -apm-block-size 2048 \
+		--efi-boot boot/limine/limine-uefi-cd.bin \
+		-efi-boot-part --efi-boot-image --protective-msdos-label \
+		iso_root -o $(BUILD)/taavi.iso > /dev/null
 	@$(LIMINE_DIR)/limine bios-install $(BUILD)/taavi.iso > /dev/null 2>&1
 
 debug: iso
 	@mkdir -p $(BUILD)
 	@$(QEMU) $(QEMU_FW) \
+		-smp 4 \
 		-drive file=$(BUILD)/taavi.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
 		-drive file=fat.img,format=raw,if=ide,bus=0,unit=1,media=disk \
 		-boot d -serial stdio -no-reboot -no-shutdown -s -S
@@ -129,6 +130,7 @@ debug: iso
 run: iso
 	@mkdir -p $(BUILD)
 	@$(QEMU) $(QEMU_FW) \
+		-smp 4 \
 		-drive file=$(BUILD)/taavi.iso,format=raw,if=ide,bus=0,unit=0,media=cdrom \
 		-drive file=fat.img,format=raw,if=ide,bus=0,unit=1,media=disk \
 		-boot d -serial stdio -no-reboot -no-shutdown -d int,cpu_reset 2>$(BUILD)/qemu_log.txt
