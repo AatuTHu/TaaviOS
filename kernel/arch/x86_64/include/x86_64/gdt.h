@@ -36,5 +36,6 @@ struct __attribute__((packed)) gdtr {
 
 extern void gdt_flush(uint64_t gdtr);
 extern void tss_flush();
+void tss_set_kernel_stack(uint64_t stack_top);
 void gdt_init(void);
 #endif

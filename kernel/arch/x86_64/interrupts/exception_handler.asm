@@ -144,6 +144,7 @@ irq_common:
     mov rdi, rsp
 
     call irq_handler
+    mov rsp, rax
 
     pop r15
     pop r14

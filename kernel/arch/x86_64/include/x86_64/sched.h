@@ -1,0 +1,18 @@
+#ifndef SCHED_H
+#define SCHED_H
+
+#include "task.h"
+#include <stdint.h>
+
+uint64_t scheduler_tick(struct registers *r);
+void scheduler_init(void);
+int scheduler_add(task_t *task);
+int scheduler_remove_task(uint32_t target_pid);
+void _set_scheduler_on();
+void scheduler_set_task_state(task_state_t state);
+void scheduler_wake_task(uint32_t pid);
+int scheduler_set_current_task(uint32_t pid);
+void scheduler_yield(struct registers *r);
+task_t *scheduler_get_current_task();
+
+#endif

@@ -5,6 +5,7 @@
 #include "io.h"
 #include "klog.h"
 #include "kstring.h"
+#include "sched.h"
 #include "stdbool.h"
 #include <stdint.h>
 
@@ -75,9 +76,8 @@ void isr_handler(struct registers *r) {
 uint64_t irq_handler(struct registers *r) {
     if (r->int_no == LAPIC_TIMER_VECTOR) {
         lapic_tick_ticks(); // tick the ticks?
-        // scheduler_tick();
         lapic_eoi();
-        return (uint64_t)r;
+        return scheduler_tick(r);
     }
 
     if (r->int_no >= 32 && r->int_no <= 47) {

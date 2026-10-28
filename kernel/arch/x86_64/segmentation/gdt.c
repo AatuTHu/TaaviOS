@@ -15,6 +15,10 @@ static struct tss_t tss;
 
 static uint8_t df_stack[4096] __attribute__((aligned(16)));
 
+void tss_set_kernel_stack(uint64_t stack_top) {
+    tss.rsp[0] = stack_top;
+}
+
 static void gdt_set_entry(struct gdt_entry *e, uint8_t access, uint8_t flags) {
     e->base_high        = 0;
     e->base_mid         = 0;
