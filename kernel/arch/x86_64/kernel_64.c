@@ -143,8 +143,7 @@ void kmain() {
     }
 
     lapic_timer_start_periodic(10);
-
     __asm__ __volatile__("sti");
 
-    while (1) __asm__ __volatile__("hlt");
+    while (1) __asm__ __volatile__("sti; hlt");
 }

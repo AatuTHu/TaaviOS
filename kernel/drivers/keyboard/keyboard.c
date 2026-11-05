@@ -202,7 +202,7 @@ void keyboard_handler(uint8_t scancode) {
         }
 
         if (c != 0) {
-            // DEBUG("[KEYBOARD][HANDLER]: fired!\n");
+            DEBUG("[KEYBOARD][HANDLER]: fired!\n");
             keyboard_write_to_buffer(c);
 #if defined(__i386__) || defined(__i686__)
             scheduler_wake_task(keyboard_buffer->foreground_pid);
@@ -212,6 +212,9 @@ void keyboard_handler(uint8_t scancode) {
 }
 
 int keyboard_init() {
+    while (inb(0x64) & 1) {
+        inb(0x60);
+    }
     keyboard_buffer->read           = 0;
     keyboard_buffer->write          = 0;
     keyboard_buffer->foreground_pid = -1;

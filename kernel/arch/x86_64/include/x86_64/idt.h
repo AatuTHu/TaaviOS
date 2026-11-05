@@ -1,3 +1,6 @@
+#ifndef IDT_H
+#define IDT_H
+
 #include <stdint.h>
 
 #define IDT_GATE_INTERRUPT 0x8E
@@ -39,3 +42,4 @@ void irq_register_handler(int index, irq_callback_t cb);
 void idt_init(void);
 uint64_t irq_handler(struct registers *r);
 void isr_handler(struct registers *r);
+#endif
