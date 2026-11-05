@@ -4,6 +4,7 @@
 #include "boot_info.h"
 #include <stdint.h>
 
+#define IA32_EFER 0xC0000080
 #define ENTRIES_PER_TABLE 512
 #define KERNEL_PD_INDEX_START 256
 #define KERNEL_PD_ENTRIES 256
@@ -32,10 +33,12 @@ typedef uint64_t page_directory_t[ENTRIES_PER_TABLE];
 typedef uint64_t page_table_t[ENTRIES_PER_TABLE];
 extern page_directory_t kernel_page_dir;
 extern uint64_t paging_hhdm;
+
 static inline void *phys_to_virt(uint64_t phys) {
     return (void *)(phys + paging_hhdm);
 }
 
+uint64_t paging_get_directory_phys_addr(page_directory_t *dir);
 extern void switch_page_dir(uint64_t addr);
 int paging_init(const struct boot_info *bi);
 int paging_map(page_directory_t *dir, uint64_t virt, uint64_t phys, uint64_t flags);

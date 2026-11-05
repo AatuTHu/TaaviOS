@@ -1,13 +1,11 @@
-
 #include "boot_info.h"
+#include "config.h"
 #include "cpu.h"
+#include "kernel.h"
 #include "serial.h"
 #include <stdint.h>
 
-#include "kernel.h"
-
-extern void stack_switch_and_call(uint64_t new_top, void (*fn)(void));
-static uint8_t kernel_stack[KERNEL_STACK_SIZE] __attribute__((aligned(16)));
+static uint8_t kernel_stack[KERNEL_STACK_SIZE_64b] __attribute__((aligned(16)));
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 
@@ -140,7 +138,12 @@ static int boot_info_collect(struct boot_info *out) {
 }
 
 uint64_t kernel_stack_top(void) {
-    return (uint64_t)(kernel_stack + KERNEL_STACK_SIZE);
+    return (uint64_t)(kernel_stack + KERNEL_STACK_SIZE_64b);
+}
+
+void ignite_core(uint64_t index, uint64_t core_struct, void *goto_addr) {
+    mp_req.response->cpus[index]->extra_argument = core_struct;
+    __atomic_store_n(&mp_req.response->cpus[index]->goto_address, goto_addr, __ATOMIC_RELEASE);
 }
 
 void _start(void) {
@@ -153,7 +156,7 @@ void _start(void) {
         hcf();
     }
 
-    stack_switch_and_call(kernel_stack_top(), kmain);
+    bsp_stack_switch_and_call(kernel_stack_top(), kmain);
 
     hcf();
 }

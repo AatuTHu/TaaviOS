@@ -4,11 +4,13 @@
 #include "io.h"
 #include "klog.h"
 #include "paging.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 static volatile uint64_t ticks;
 static volatile uint32_t *lapic_base;
 static uint32_t lapic_ticks_per_ms;
+static bool use_false_id = true;
 
 static struct {
     volatile uint8_t *base;
@@ -41,7 +43,14 @@ void lapic_eoi(void) {
     lapic_write(LAPIC_REG_EOI, 0);
 }
 
+// use_false_id. Spinlock tech. Cause pmm/vmm/paging/kmalloc uses spinlocks before lapic is
+// initialized we cannot read the real id since lapic is not mapped. Instead just return 0.
+// lapic init sets use_false_id to false and then we read the real id as it would be no onse
+// bussiness
 uint32_t lapic_id(void) {
+    if (use_false_id) {
+        return 0;
+    }
     return (lapic_read(LAPIC_REG_ID) >> 24);
 }
 
@@ -265,6 +274,7 @@ int ioapic_route_gsi(uint32_t gsi, uint8_t vector, uint8_t dest_apic_id, uint16_
 int ioapic_route_isa(uint8_t irq, uint8_t vector, uint8_t dest_apic_id) {
     for (uint32_t i = 0; i < acpi_info.iso_count; i++) {
         if (acpi_info.isos[i].source_irq == irq) {
+            DEBUG_KERNEL("[IOAPIC][ROUTE]: Found a mach from isos\n");
             uint32_t gsi   = acpi_info.isos[i].gsi;
             uint16_t flags = acpi_info.isos[i].flags;
 
@@ -356,49 +366,54 @@ static int ioapic_init(void) {
 }
 
 /**
- * lapic_init - used to initialize local advanced programmable interrupt controller.
- * @lapic: physical address of local apic.
+ * lapic_enable_local - Enables and initializes the Local APIC on the current core.
  *
  * Description:
- * First we read the model specific register of IA32_APIC_BASE. Then we check that bit 11 (software
- * enable/disable) is on, if not then set it on and write it back. Then it compares the register to
- * the lapic_phys and warns if not.
- *
- * Next step is to map the lapic to kernel page dir. As it is not virtual address and our 2mb pages
- * do not allow us to map few singe 4KiB pages we don't add to it the hhdm value. We instead map it
- * to a special regions chosen by me (see config.h between kstack and heap).
- *
- * Finally we set the all outside interrupts on and set spurious vectors on
- *
- * Return: STATUS_OK || STATUS_ERROR.
+ * Ensures IA32_APIC_BASE MSR has bit 11 set, sets Task Priority Register (TPR) to 0,
+ * and configures the spurious interrupt vector register.
  */
-static int lapic_init(uint64_t lapic_phys) {
+void lapic_enable_local() {
     uint64_t ia32_bmsr = rdmsr(IA32_APIC_BASE_MSR);
 
-    if (!(ia32_bmsr & (1ULL << 11))) {
-        DEBUG_KERNEL("[LAPIC][INIT]: LAPIC not enabled, Enabling it\n");
-        ia32_bmsr |= (1ULL << 11);
+    if (!(ia32_bmsr & APIC_BASE_ENABLE)) {
+        DEBUG_KERNEL("[LAPIC][MAP]: LAPIC not enabled, Enabling it\n");
+        ia32_bmsr |= APIC_BASE_ENABLE;
         wrmsr(IA32_APIC_BASE_MSR, ia32_bmsr);
     }
 
-    if ((ia32_bmsr & ~0xFFFULL) != lapic_phys) {
-        DEBUG_KERNEL("[LAPIC][INIT]: MSR differs compared to physical lapic address\n");
-    }
-
-    uint64_t lapic_vaddr = lapic_phys + KMMIO_REGION_BASE;
-
-    if (paging_map(&kernel_page_dir, lapic_vaddr, lapic_phys, PAGE_RW | PAGE_PWT | PAGE_PCD | PAGE_NX) == STATUS_ERROR) {
-        ERROR("[LAPIC][INIT]: Failed to map lapic to kernel directory\n");
-        return STATUS_ERROR;
-    }
-
-    lapic_base = (uint32_t *)lapic_vaddr;
     lapic_write(LAPIC_REG_TPR, 0);
     lapic_write(LAPIC_REG_SPURIOUS, LAPIC_SPURIOUS_ENABLE | LAPIC_SPURIOUS_VECTOR);
 
     uint32_t ver_reg = lapic_read(LAPIC_REG_VERSION);
-    DEBUG_KERNEL("[LAPIC][INIT]: Lapic id: %d, version: 0x%x (ver: %d, max lvt: %d). LAPIC ENABLED\n",
+    DEBUG_KERNEL("[LAPIC][ENABLE]: Lapic id: %d, version: 0x%x (ver: %d, max lvt: %d). LAPIC ENABLED\n",
                  lapic_id(), ver_reg, ver_reg & 0xFF, (ver_reg >> 16) & 0xFF);
+}
+
+/**
+ * lapic_init - used to initialize local advanced programmable interrupt controller on BSP.
+ * @lapic_phys: physical address of local apic.
+ *
+ * Description:
+ * First this function maps the lapic to kernel directory and then calls to enablor. Which read base
+ * model specific register, checks that nxe bit is set on. After that it sets spurious vector
+ * handler on.
+ *
+ * Return: STATUS_OK || STATUS_ERROR.
+ */
+static int lapic_init(uint64_t lapic_phys) {
+
+    uint64_t lapic_vaddr = lapic_phys + KMMIO_REGION_BASE;
+
+    if (paging_map(&kernel_page_dir, lapic_vaddr, lapic_phys, PAGE_RW | PAGE_PWT | PAGE_PCD | PAGE_NX) == STATUS_ERROR) {
+        ERROR("[LAPIC][MAP]: Failed to map lapic to kernel directory\n");
+        return STATUS_ERROR;
+    }
+
+    lapic_base = (uint32_t *)lapic_vaddr;
+
+    lapic_enable_local();
+
+    use_false_id = false;
     return STATUS_OK;
 }
 

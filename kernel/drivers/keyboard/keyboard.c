@@ -1,5 +1,6 @@
 #include "keyboard.h"
 #include "config.h"
+#include "cpu.h"
 #include "io.h"
 #include "klog.h"
 #if defined(__i386__) || defined(__i686__)
@@ -222,7 +223,7 @@ int keyboard_init() {
     irq_register_handler(1, keyboard_irq_handler);
 #else
     irq_register_handler(1, keyboard_irq_handler);
-    if (ioapic_route_isa(1, 33, lapic_id()) == STATUS_ERROR) {
+    if (ioapic_route_isa(1, 33, bsp_lapic_id) == STATUS_ERROR) {
         ERROR("[KBD][INIT]: Was not able to route keyboard interrupt\n");
         return STATUS_ERROR;
     }

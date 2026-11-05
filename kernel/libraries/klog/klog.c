@@ -1,7 +1,11 @@
 #include "klog.h"
 #include "serial.h"
+#include "spinlock.h"
 #include "vga.h"
 #include <stdarg.h>
+#include <stdint.h>
+
+static spinlock_t klogger = SPINLOCK_INIT("klogger");
 
 /*
  * Good enough
@@ -107,6 +111,7 @@ static void kwrite(const char *fmt, va_list args) {
     }
 }
 void klog(const char *fmt, ...) {
+    uint64_t flags = spin_lock_disable_all_intr(&klogger);
     va_list args;        // not important
     va_start(args, fmt); // not important
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
@@ -114,10 +119,11 @@ void klog(const char *fmt, ...) {
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt, args); // main writer function call ->
     va_end(args);      // not important
+    spin_unlock_restore_all_intr(&klogger, flags);
 }
 
 void klog_debug(const char *fmt, ...) {
-
+    uint64_t flags = spin_lock_disable_all_intr(&klogger);
     va_list args;        // not important
     va_start(args, fmt); // not important
     vga_set_color(VGA_COLOR_GREEN, VGA_COLOR_BLACK);
@@ -125,10 +131,11 @@ void klog_debug(const char *fmt, ...) {
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt, args); // main writer function call ->
     va_end(args);      // not important
+    spin_unlock_restore_all_intr(&klogger, flags);
 }
 
 void klog_error(const char *fmt, ...) {
-
+    uint64_t flags = spin_lock_disable_all_intr(&klogger);
     va_list args;        // not important
     va_start(args, fmt); // not important
     vga_set_color(VGA_COLOR_RED, VGA_COLOR_BLACK);
@@ -136,4 +143,5 @@ void klog_error(const char *fmt, ...) {
     vga_set_color(VGA_COLOR_WHITE, VGA_COLOR_BLACK);
     kwrite(fmt, args); // main writer function call ->
     va_end(args);      // not important
+    spin_unlock_restore_all_intr(&klogger, flags);
 }

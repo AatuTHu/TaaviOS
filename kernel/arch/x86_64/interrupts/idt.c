@@ -24,7 +24,11 @@ void irq_register_handler(int index, irq_callback_t cb) {
     irq_callbacks[index] = cb;
 }
 
-void isr_handler(struct registers *r) {
+uint64_t isr_handler(struct registers *r) {
+
+    if (r->int_no == 129) {
+        return scheduler_tick(r);
+    }
 
     uint64_t cr2;
     __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
@@ -71,9 +75,12 @@ void isr_handler(struct registers *r) {
     while (1) {
         __asm__ __volatile__("hlt");
     }
+
+    return STATUS_OK;
 }
 
 uint64_t irq_handler(struct registers *r) {
+
     if (r->int_no == LAPIC_TIMER_VECTOR) {
         lapic_tick_ticks(); // tick the ticks?
         lapic_eoi();
@@ -104,7 +111,11 @@ static void idt_set_gate(int vec, uint64_t handler, uint8_t type_attr, uint8_t i
     idt[vec].reserved    = 0;
 }
 
-void idt_init(void) {
+void idt_load() {
+    idt_flush((uint64_t)&idt_pointer);
+}
+
+void idt_init() {
     memset(&idt, 0, sizeof(idt));
 
     DEBUG_KERNEL("[IDT]: Mapping 32 cpu exception stubs\n");
@@ -127,10 +138,13 @@ void idt_init(void) {
     DEBUG_KERNEL("[IDT]: Mapping lapic spurrious vector\n");
     idt_set_gate(255, (uint64_t)isr255, IDT_GATE_INTERRUPT, 0);
 
+    DEBUG_KERNEL("[IDT]: Setting task yield gate to 0x81\n");
+    idt_set_gate(0x81, (uint64_t)isr129, IDT_GATE_INTERRUPT, 0);
+
     idt_pointer.limit = sizeof(idt) - 1;
     idt_pointer.base  = (uint64_t)&idt;
 
     DEBUG_KERNEL("[IDT]: IDT FLUSH BEGINS\n");
-    idt_flush((uint64_t)&idt_pointer);
+    idt_load();
     DEBUG_KERNEL("[IDT]: IDT INITIALIZED SUCCESFULLY\n");
 }

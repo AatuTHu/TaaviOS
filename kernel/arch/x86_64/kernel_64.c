@@ -1,16 +1,22 @@
 #include "acpi.h"
 #include "apic.h"
+#include "ata.h"
 #include "boot_info.h"
 #include "config.h"
+#include "fat32.h"
 #include "fb.h"
 #include "gdt.h"
 #include "idt.h"
 #include "keyboard.h"
 #include "klog.h"
 #include "kmalloc.h"
+#include "mbr.h"
 #include "paging.h"
 #include "pmm.h"
+#include "sched.h"
 #include "serial.h"
+#include "smp.h"
+#include "task.h"
 #include <stdint.h>
 
 struct boot_info b_info;
@@ -97,10 +103,40 @@ static void print_collected_info() {
     DEBUG_KERNEL("[KERNEL]: rsdp address: 0x%x\n", b_info.rsdp);
 }
 
+static void init_drivers() {
+    if (fb_init_limine(&b_info) == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize virtual memory\n");
+        panic();
+    }
+
+    if (keyboard_init() == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize keyborad driver\n");
+        panic();
+    }
+
+    ata_init();
+}
+
+static void init_filesystems() {
+    uint32_t fat32_lba     = 0;
+    uint32_t fat32_sectors = 0;
+
+    for (int i = 0; i < 4; i++) {
+        ata_drive_t *drive = ata_get_drive(i);
+        if (drive == NULL) {
+            continue;
+        }
+        if (mbr_find_fat32(drive, &fat32_lba, &fat32_sectors) == STATUS_OK) {
+            DEBUG_KERNEL("[MBR]: Partition found, initializing filesystem\n");
+            fat32_init(drive, fat32_lba);
+            break;
+        }
+    }
+}
+
 void kmain() {
 
     serial_init();
-
     gdt_init();
     idt_init();
     print_collected_info();
@@ -115,14 +151,12 @@ void kmain() {
         panic();
     }
 
-    pmm_reclaim_bootloader(&b_info);
-
     if (kmalloc_init((void *)HEAP_START, ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) == STATUS_ERROR) {
         ERROR("[KERNEL]: Failed to initialize heap memory pool\n");
         panic();
     }
 
-    if (acpi_init(&b_info) == STATUS_ERROR) {
+    if (run_acpi_protocol(&b_info) == STATUS_ERROR) {
         ERROR("[KERNEL]: Failed to initialize acpi\n");
         panic();
     }
@@ -132,18 +166,17 @@ void kmain() {
         panic();
     }
 
-    if (fb_init_limine(&b_info) == STATUS_ERROR) {
-        ERROR("[KERNEL]: Failed to initialize virtual memory\n");
+    if (smp_init() == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize SMP\n");
         panic();
     }
 
-    if (keyboard_init() == STATUS_ERROR) {
-        ERROR("[KERNEL]: Failed to initialize keyborad driver\n");
-        panic();
-    }
+    pmm_reclaim_bootloader(&b_info);
+    init_drivers();
+    init_filesystems();
 
     lapic_timer_start_periodic(10);
-    __asm__ __volatile__("sti");
+    DEBUG_KERNEL("[KERNEL]: Ready to RUN SOME TASKS\n");
 
     while (1) __asm__ __volatile__("sti; hlt");
 }

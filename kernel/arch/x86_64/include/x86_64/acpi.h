@@ -2,11 +2,8 @@
 #define ACPI_H
 
 #include "boot_info.h"
+#include "config.h"
 #include <stdint.h>
-
-#define ACPI_MAX_CPUS 64
-#define ACPI_MAX_IOAPICS 8
-#define ACPI_MAX_ISOS 16
 
 struct acpi_rsdp {
     char signature[8];
@@ -94,6 +91,6 @@ struct acpi_info {
 };
 
 extern struct acpi_info acpi_info;
-int acpi_init(const struct boot_info *bi);
+int run_acpi_protocol(const struct boot_info *bi);
 
 #endif

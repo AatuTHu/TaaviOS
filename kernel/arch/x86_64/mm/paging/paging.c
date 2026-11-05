@@ -1,9 +1,11 @@
 #include "paging.h"
 #include "boot_info.h"
 #include "config.h"
+#include "io.h"
 #include "klog.h"
 #include "kstring.h"
 #include "pmm.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -16,6 +18,29 @@ page_directory_t kernel_page_dir __attribute__((aligned(PAGE_SIZE_BYTES)));
 uint64_t paging_hhdm;
 uint64_t kernel_physical_base;
 uint64_t kernel_virtual_base;
+
+inline uint64_t paging_get_directory_phys_addr(page_directory_t *dir) {
+    return ((uint64_t)dir >= kernel_virtual_base)
+               ? ((uint64_t)dir - kernel_virtual_base + kernel_physical_base)
+               : ((uint64_t)dir - paging_hhdm);
+}
+
+static inline bool is_canonical(uint64_t virt) {
+    int64_t sign_extended = ((int64_t)virt << 16) >> 16;
+    if (sign_extended != (int64_t)virt) {
+        ERROR("[PAGING][IS_CANONICAL_TEST]: Address not canonical\n");
+        return false;
+    }
+    return true;
+}
+
+static inline bool is_address_viable(uint64_t addr) {
+    if ((addr & (PAGE_SIZE - 1)) != 0) {
+        ERROR("[PAGING][ARE_ADDRESSES_VIABLE]: Invalide virtaul or physical address\n");
+        return false;
+    }
+    return true;
+}
 
 /**
  * __search_or_create_table - Used to descend tables. Can create an entry if wanted.
@@ -52,7 +77,6 @@ static uint64_t *__search_or_create_table(uint64_t *table, int index, int create
         return NULL;
     }
 
-    DEBUG_CORE_MM("[PAGING][NEXT_TABLE]: Table not found, Creating it\n");
     uint64_t phys_page = pmm_alloc();
 
     if (phys_page == 0) {
@@ -85,14 +109,16 @@ static uint64_t *__search_or_create_table(uint64_t *table, int index, int create
  * Return: STATUS_OK || STATUS_ERROR.
  */
 int paging_map(page_directory_t *dir, uint64_t virt, uint64_t phys, uint64_t flags) {
-    if ((virt & (PAGE_SIZE - 1)) != 0 || (phys & (PAGE_SIZE - 1)) != 0) {
-        ERROR("[PAGING][PAGING_MAP]: Invalide virtaul or physical address\n");
+
+    if (!is_address_viable(virt)) {
         return STATUS_ERROR;
     }
 
-    int64_t sign_extended = ((int64_t)virt << 16) >> 16;
-    if (sign_extended != (int64_t)virt) {
-        ERROR("[PAGING][PAGING_MAP]: Address not canonical\n");
+    if (!is_address_viable(phys)) {
+        return STATUS_ERROR;
+    }
+
+    if (!is_canonical(virt)) {
         return STATUS_ERROR;
     }
 
@@ -131,7 +157,7 @@ int paging_map(page_directory_t *dir, uint64_t virt, uint64_t phys, uint64_t fla
 }
 
 /**
- * paging_map_huge - maps huge entry to given page directory.
+ * paging_map_huge - maps huge (2mib) entry to given page directory.
  * @dir: target directory.
  * @virt: virtual address from where to start descending.
  * @phys: new page to be mapped
@@ -143,19 +169,23 @@ int paging_map(page_directory_t *dir, uint64_t virt, uint64_t phys, uint64_t fla
  * using __search_or_create_table helper function creating the tables on the way there. Then the new
  * entry is store to page directory with the given flags set on. After that it flushes tlb
  *
+ * context: Should be used when in need of aprox 2mib of space. For ease of translation
  * Return: STATUS_OK || STATUS_ERROR.
  */
 int paging_map_huge(page_directory_t *dir, uint64_t virt, uint64_t phys, uint64_t flags) {
-    if ((virt & (HUGE_PAGE_SIZE_BYTES - 1)) != 0 || (phys & (HUGE_PAGE_SIZE_BYTES - 1)) != 0) {
-        ERROR("[PAGING][PAGING_MAP]: Invalide virtaul or physical address\n");
+
+    if (!is_address_viable(virt)) {
         return STATUS_ERROR;
     }
 
-    int64_t sign_extended = ((int64_t)virt << 16) >> 16;
-    if (sign_extended != (int64_t)virt) {
-        ERROR("[PAGING][PAGING_MAP_HUGE]: Address not canonical\n");
+    if (!is_address_viable(phys)) {
         return STATUS_ERROR;
     }
+
+    if (!is_canonical(virt)) {
+        return STATUS_ERROR;
+    }
+
     uint64_t *pdp_table = __search_or_create_table((uint64_t *)dir,
                                                    ((virt >> PML4_SHIFT) & PT_INDEX_MASK), 1, flags);
     if (pdp_table == NULL) {
@@ -195,8 +225,7 @@ int paging_map_huge(page_directory_t *dir, uint64_t virt, uint64_t phys, uint64_
  * Return: STATUS_OK || STATUS_ERROR.
  */
 int paging_unmap(page_directory_t *dir, uint64_t virt) {
-    if ((virt & (PAGE_SIZE - 1)) != 0) {
-        ERROR("[PAGING][PAGING_UNMAP]: Virtual address not aligned, aborting\n");
+    if (!is_address_viable(virt)) {
         return STATUS_ERROR;
     }
 
@@ -333,16 +362,9 @@ void paging_switch(page_directory_t *dir) {
     if (!dir) {
         return;
     }
-    uint64_t addr = (uint64_t)dir;
-    if (addr >= kernel_virtual_base) {
-        DEBUG_CORE_MM("[PAGING][PAGING_SWITCH]: Address over the virtual base 0x%x\n", addr - kernel_virtual_base + kernel_physical_base);
-        addr = addr - kernel_virtual_base + kernel_physical_base;
-    } else {
-        DEBUG_CORE_MM("[PAGING][PAGING_SWITCH]: Address below virtual base 0x%x\n", addr - paging_hhdm);
-        addr = addr - paging_hhdm;
-    }
 
-    switch_page_dir(addr);
+    uint64_t dir_phys_addr = paging_get_directory_phys_addr(dir);
+    switch_page_dir(dir_phys_addr);
 }
 
 /**
@@ -374,12 +396,12 @@ int paging_init(const struct boot_info *bi) {
     paging_hhdm          = bi->hhdm_offset;
     kernel_physical_base = bi->kernel_phys_base;
     kernel_virtual_base  = bi->kernel_virt_base;
-    uint32_t eax, edx;
-    __asm__ volatile("rdmsr" : "=a"(eax), "=d"(edx) : "c"(0xC0000080));
 
-    if (!(eax & (1 << 11))) {
-        eax |= (1 << 11);
-        __asm__ volatile("wrmsr" : : "c"(0xC0000080), "a"(eax), "d"(edx));
+    uint32_t msr         = rdmsr(IA32_EFER);
+    if (!(msr & PAGE_NX)) {
+        DEBUG_CORE_MM("[PAGING][INIT]: NX bit was not set. Enabling it\n");
+        msr |= PAGE_NX;
+        wrmsr(IA32_EFER, msr);
     }
     memset(&kernel_page_dir, 0, PAGE_SIZE);
     for (int i = KERNEL_PD_INDEX_START; i < ENTRIES_PER_TABLE; i++) {

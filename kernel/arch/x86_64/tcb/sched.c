@@ -1,4 +1,3 @@
-
 #include "sched.h"
 #include "config.h"
 #include "gdt.h"
@@ -6,7 +5,7 @@
 #include "kstring.h"
 // #include "ledger.h"
 #include "task.h"
-// #include "tss.h"
+#include "tss.h"
 #include "vmm.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -43,8 +42,7 @@ static int scheduler_has_runnable_task() {
     return 0;
 }
 
-/*
-static void scheduler_check_clerks() {
+/*static void scheduler_check_clerks() {
 
     // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;

@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 #define IA32_APIC_BASE_MSR 0x1B
+#define IA32_GS_BASE 0xC0000101
 #define APIC_BASE_ENABLE (1ULL << 11)
-#define APIC_BASE_BSP (1ULL << 8)
 #define APIC_BASE_ADDR_MASK 0xFFFFFFFFFFFFF000ULL
 
 #define LAPIC_REG_ID 0x020
@@ -68,9 +68,11 @@ int ioapic_route_gsi(uint32_t gsi, uint8_t vector,
 int ioapic_route_isa(uint8_t irq, uint8_t vector, uint8_t dest_apic_id);
 int ioapic_mask_gsi(uint32_t gsi, int masked);
 
+uint32_t lapic_get_ms_per_ticks();
+void lapic_enable_local();
 void lapic_tick_ticks();
-void lapic_eoi(void);
-uint32_t lapic_id(void);
+void lapic_eoi();
+uint32_t lapic_id();
 uint64_t lapic_get_ticks();
 int lapic_timer_start_periodic(uint32_t ms);
 int apic_init();

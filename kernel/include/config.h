@@ -33,6 +33,10 @@
 
 #define ADDITION_HEAP_PAGE_SIZE 256
 
+#define ACPI_MAX_CPUS 64
+#define ACPI_MAX_IOAPICS 8
+#define ACPI_MAX_ISOS 16
+
 #if defined(__x86_64__)
 #define HEAP_MAX_SIZE (1ULL << 30)
 #define HEAP_START 0xFFFFE00000000000ULL
@@ -83,6 +87,7 @@
 #define EFLAGS_IF (1 << 9) // interrupts flag
 #define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
 #define KERNEL_STACK_SIZE 4096
+#define KERNEL_STACK_SIZE_64b 64 * 1024
 #define USER_STACK_SIZE (4096 * 4)
 #define USER_STACK_TOP 0x800000
 

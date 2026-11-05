@@ -4,6 +4,8 @@
 
 #define GDT_IST_DOUBLE_FAULT 1
 
+struct core_t;
+
 struct __attribute__((packed)) gdt_entry {
     uint16_t limit_low;
     uint16_t base_low;
@@ -13,29 +15,13 @@ struct __attribute__((packed)) gdt_entry {
     uint8_t base_high;
 };
 
-struct __attribute__((packed)) gdt_tss_entry {
-    struct gdt_entry low;
-    uint32_t base_upper;
-    uint32_t reserved;
-};
-
-struct __attribute__((packed)) tss_t {
-    uint32_t reserved0;
-    uint64_t rsp[3];
-    uint64_t reserved1;
-    uint64_t ist[7];
-    uint64_t reserved2;
-    uint16_t reserved3;
-    uint16_t iopb_offset;
-};
-
 struct __attribute__((packed)) gdtr {
     uint16_t limit;
     uint64_t base;
 };
 
 extern void gdt_flush(uint64_t gdtr);
-extern void tss_flush();
-void tss_set_kernel_stack(uint64_t stack_top);
+void gdt_init_core(struct core_t *c);
+void gdt_flush_core(struct core_t *c);
 void gdt_init(void);
 #endif

@@ -1,7 +1,7 @@
 #include "kmalloc.h"
 #include "config.h"
 #include "klog.h"
-#include "paging.h"
+#include "spinlock.h"
 #include "vmm.h"
 #include <stddef.h>
 #if defined(__i386__) || defined(__i686__)
@@ -9,6 +9,7 @@
 #endif
 #include <stdint.h>
 
+static spinlock_t heap_lock      = SPINLOCK_INIT("heap");
 /**
  * Heap allocator
  * Design & Implementation:
@@ -32,6 +33,11 @@ static void update_remaining_heap_size() {
 }
 
 int kmalloc_init(void *heap_start, uintptr_t heap_size) {
+
+    if (heap_start == NULL || heap_size == 0) {
+        return STATUS_ERROR;
+    }
+
     DEBUG_KMALLOC("[KMALLOC]: Initializing kmalloc with heap_start: 0x%x\n", heap_start);
     DEBUG_KMALLOC("[KMALLOC]: Heap_size: %d\n", heap_size);
 
@@ -59,88 +65,7 @@ int kmalloc_init(void *heap_start, uintptr_t heap_size) {
     return STATUS_OK;
 }
 
-void *kmalloc(uintptr_t size) {
-
-    if (size == 0) {
-        ERROR("[KMALLOC][ALLOC]: Asked for size zero. Got null\n");
-        return NULL;
-    }
-
-    DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
-    block_header_t *current = free_list;
-    block_header_t *prev    = NULL;
-
-    while (1) {
-        while (current != NULL) {
-            if (current->size >= size) {
-                if (current->size >= size + sizeof(block_header_t) + 1) {
-                    block_header_t *split_block =
-                        (block_header_t *)((uint8_t *)current +
-                                           sizeof(block_header_t) + size);
-                    split_block->size =
-                        current->size - size - sizeof(block_header_t);
-                    split_block->magic = HEAP_MAGIC;
-                    split_block->next  = current->next;
-                    current->size      = size;
-                    current->next      = split_block;
-                    DEBUG_KMALLOC("[KMALLOC][ALLOC]: Block split — new block at 0x%x size: %d\n", split_block, split_block->size);
-                }
-                if (prev == NULL) {
-                    free_list = current->next;
-                } else {
-                    prev->next = current->next;
-                }
-                update_remaining_heap_size();
-                DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocated at 0x%x\n", (uint8_t *)current + sizeof(block_header_t));
-
-                return (void *)((uint8_t *)current + sizeof(block_header_t));
-            }
-            prev    = current;
-            current = current->next;
-        }
-        DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
-        size_t addition_size = (ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) * 2;
-        if ((addition_size + current_heap_ceiling) > HEAP_CEIL) {
-            ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
-            break;
-        }
-
-#if defined(__x86_64__)
-        if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW | PAGE_NX) == STATUS_ERROR) {
-            ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
-            break;
-        }
-#else
-        if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
-            ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
-            break;
-        }
-
-        task_sync_kernel_entries_to_all_tasks();
-#endif
-
-        DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
-        block_header_t *new_block = (block_header_t *)current_heap_ceiling;
-        new_block->size           = addition_size - sizeof(block_header_t);
-        new_block->magic          = HEAP_MAGIC;
-        new_block->next           = NULL;
-        kfree((void *)((uint8_t *)new_block + sizeof(block_header_t)));
-
-        current_heap_ceiling += addition_size;
-        current = free_list;
-        prev    = NULL;
-
-        DEBUG_KMALLOC("[KMALLOC][ALLOC]: heap size: %d\n", free_list->size);
-        DEBUG_KMALLOC("[KMALLOC][ALLOC]: current heap ceiling: 0x%x\n\n", current_heap_ceiling);
-        update_remaining_heap_size();
-    }
-
-    ERROR("[KMALLOC][ALLOC]: Out of heap memory!\n");
-
-    return NULL;
-}
-
-static int merge() {
+static int __merge() {
     block_header_t *current = free_list;
     while (current != NULL && current->next != NULL) {
         if (current->next->magic != HEAP_MAGIC) {
@@ -149,9 +74,9 @@ static int merge() {
         }
 
         if ((block_header_t *)((uint8_t *)current + sizeof(block_header_t) + current->size) == current->next) {
-            DEBUG_KMALLOC("[KMALLOC][MERGE]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
+            //  DEBUG_KMALLOC("[KMALLOC][MERGE]: Merging blocks at 0x%x and 0x%x\n", current, current->next);
             current->size += sizeof(block_header_t) + current->next->size;
-            DEBUG_KMALLOC("[KMALLOC][MERGE]: Currents size after merge: %d\n", current->size);
+            //  DEBUG_KMALLOC("[KMALLOC][MERGE]: Currents size after merge: %d\n", current->size);
 
             current->next = current->next->next;
         } else {
@@ -162,11 +87,9 @@ static int merge() {
     return STATUS_OK;
 }
 
-int kfree(void *ptr) {
-    if (!ptr)
-        return STATUS_ERROR;
+int __kfree(void *ptr) {
 
-    DEBUG_KMALLOC("[KMALLOC][FREE]: Freeing at 0x%x\n", ptr);
+    //   DEBUG_KMALLOC("[KMALLOC][FREE]: Freeing at 0x%x\n", ptr);
     block_header_t *addr =
         (block_header_t *)((uint8_t *)ptr - sizeof(block_header_t));
     if (addr->magic != HEAP_MAGIC) {
@@ -193,10 +116,107 @@ int kfree(void *ptr) {
         } else {
             prev->next = addr;
         }
-        DEBUG_KMALLOC("[KMALLOC][FREE]: Block returned to free list, merging\n");
-        if (merge() == STATUS_ERROR) {
+        //   DEBUG_KMALLOC("[KMALLOC][FREE]: Block returned to free list, merging\n");
+        if (__merge() == STATUS_ERROR) {
             return STATUS_ERROR;
         }
     }
     return STATUS_OK;
+}
+
+void *__kmalloc(uintptr_t size) {
+
+    // DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocating %d bytes\n", size);
+    block_header_t *current = free_list;
+    block_header_t *prev    = NULL;
+
+    while (1) {
+        while (current != NULL) {
+            if (current->size >= size) {
+                if (current->size >= size + sizeof(block_header_t) + 1) {
+                    block_header_t *split_block =
+                        (block_header_t *)((uint8_t *)current +
+                                           sizeof(block_header_t) + size);
+                    split_block->size =
+                        current->size - size - sizeof(block_header_t);
+                    split_block->magic = HEAP_MAGIC;
+                    split_block->next  = current->next;
+                    current->size      = size;
+                    current->next      = split_block;
+                    //        DEBUG_KMALLOC("[KMALLOC][ALLOC]: Block split — new block at 0x%x size: %d\n", split_block, split_block->size);
+                }
+                if (prev == NULL) {
+                    free_list = current->next;
+                } else {
+                    prev->next = current->next;
+                }
+                update_remaining_heap_size();
+                //  DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocated at 0x%x\n", (uint8_t *)current + sizeof(block_header_t));
+
+                return (void *)((uint8_t *)current + sizeof(block_header_t));
+            }
+            prev    = current;
+            current = current->next;
+        }
+        // DEBUG_KMALLOC("\n[KMALLOC][ALLOC]: Size asked was bigger than remaining size. Drying to allocate more heap\n");
+        size_t addition_size = (ADDITION_HEAP_PAGE_SIZE * PAGE_SIZE) * 2;
+        if ((addition_size + current_heap_ceiling) > HEAP_CEIL) {
+            ERROR("[KMALLOC][ALLOC]: Heap ceiling achieved. No more memory left to allocate.\n");
+            break;
+        }
+
+#if defined(__x86_64__)
+        if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW | PAGE_NX) == STATUS_ERROR) {
+            ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
+            break;
+        }
+#else
+        if (vmm_alloc(&kernel_page_dir, current_heap_ceiling, addition_size, PAGE_PRESENT | PAGE_RW) == STATUS_ERROR) {
+            ERROR("[KMALLOC][ALLOC]: Failed to allocate more virtual memory\n");
+            break;
+        }
+
+        task_sync_kernel_entries_to_all_tasks();
+#endif
+
+        //  DEBUG_KMALLOC("[KMALLOC][ALLOC]: Allocation was successful\n");
+        block_header_t *new_block = (block_header_t *)current_heap_ceiling;
+        new_block->size           = addition_size - sizeof(block_header_t);
+        new_block->magic          = HEAP_MAGIC;
+        new_block->next           = NULL;
+        __kfree((void *)((uint8_t *)new_block + sizeof(block_header_t)));
+
+        current_heap_ceiling += addition_size;
+        current = free_list;
+        prev    = NULL;
+
+        //   DEBUG_KMALLOC("[KMALLOC][ALLOC]: heap size: %d\n", free_list->size);
+        //  DEBUG_KMALLOC("[KMALLOC][ALLOC]: current heap ceiling: 0x%x\n\n", current_heap_ceiling);
+        update_remaining_heap_size();
+    }
+
+    ERROR("[KMALLOC][ALLOC]: Out of heap memory!\n");
+
+    return NULL;
+}
+
+void *kmalloc(uintptr_t size) {
+
+    if (size == 0) {
+        ERROR("[KMALLOC][ALLOC]: Asked for size zero. Got null\n");
+        return NULL;
+    }
+    uintptr_t flags = spin_lock_disable_all_intr(&heap_lock);
+    void *res       = __kmalloc(size);
+    spin_unlock_restore_all_intr(&heap_lock, flags);
+    return res;
+}
+
+int kfree(void *ptr) {
+    if (!ptr)
+        return STATUS_ERROR;
+    uintptr_t flags = spin_lock_disable_all_intr(&heap_lock);
+    int res         = __kfree(ptr);
+    spin_unlock_restore_all_intr(&heap_lock, flags);
+    return res;
 }

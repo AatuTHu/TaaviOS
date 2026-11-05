@@ -110,7 +110,7 @@ static const struct acpi_sdt_header *acpi_find_table(const struct acpi_rsdp *rsd
 }
 
 /**
- * acpi_sdt_header - .
+ * run_acpi_protocol - collects information about the universe.
  * @bi: hold rsdp and hhdm.
  *
  * Description:
@@ -128,7 +128,7 @@ static const struct acpi_sdt_header *acpi_find_table(const struct acpi_rsdp *rsd
  * Return: NULL || found table structure.
  */
 
-int acpi_init(const struct boot_info *bi) {
+int run_acpi_protocol(const struct boot_info *bi) {
     if (bi->rsdp == 0) {
         return STATUS_ERROR;
     }
@@ -136,32 +136,30 @@ int acpi_init(const struct boot_info *bi) {
     struct acpi_rsdp *rsdp = (struct acpi_rsdp *)(bi->rsdp + bi->hhdm_offset);
 
     if (memcmp(rsdp->signature, "RSD PTR ", 8) != 0) {
-        ERROR("[ACPI][INIT]: Invalid RSDP sig\n");
+        ERROR("[ACPI][PROTOCOL]: Pointer to rsdp had invalid signature\n");
         return STATUS_ERROR;
     }
 
     if (!acpi_cheksum(rsdp, 20)) {
-        ERROR("[ACPI][INIT]: initial rsdp checksum failed\n");
+        ERROR("[ACPI][PROTOCOL]: rsdp checksum failed\n");
         return STATUS_ERROR;
     }
 
-    DEBUG_KERNEL("[ACPI][INIT]: RSDP Revision: %d\n", rsdp->revision);
-
     if (rsdp->revision >= 2) {
         if (!acpi_cheksum(rsdp, rsdp->length)) {
-            ERROR("[ACPI][INIT]: RSDP extension checksum failed\n");
+            ERROR("[ACPI][PROTOCOL]: RSDP extension checksum failed\n");
             return STATUS_ERROR;
         }
     }
 
     const struct acpi_sdt_header *acpi_header = acpi_find_table(rsdp, bi->hhdm_offset, "APIC");
     if (acpi_header == NULL) {
-        ERROR("[ACPI][INIT]: Failed to find MADT table!\n");
+        ERROR("[ACPI][PROTOCOL]: Failed to find MADT table!\n");
         return STATUS_ERROR;
     }
 
     if (acpi_header->length < sizeof(struct acpi_madt)) {
-        ERROR("[ACPI][INIT]: MADT table length %d is too small for struct acpi_madt %d.\n",
+        ERROR("[ACPI][PROTOCOL]: MADT table length %d is too small for struct acpi_madt %d.\n",
               acpi_header->length, sizeof(struct acpi_madt));
         return STATUS_ERROR;
     }
@@ -169,7 +167,7 @@ int acpi_init(const struct boot_info *bi) {
     const struct acpi_madt *madt = (struct acpi_madt *)acpi_header;
     acpi_info.lapic_phys         = madt->lapic_addr;
 
-    DEBUG_KERNEL("[ACPI][INIT]: MADT Flags: 0x%x (PCAT_COMPAT: %d)\n",
+    DEBUG_KERNEL("[ACPI][PROTOCOL]: MADT Flags: 0x%x (PCAT_COMPAT: %d)\n",
                  madt->flags, (madt->flags & 1));
 
     uint8_t *current = (uint8_t *)madt + sizeof(struct acpi_madt);
@@ -241,21 +239,21 @@ int acpi_init(const struct boot_info *bi) {
         current += length;
     }
 
-    DEBUG_KERNEL("[ACPI][INIT]: Local APIC Physical Address: 0x%x\n", acpi_info.lapic_phys);
+    DEBUG_KERNEL("[ACPI][PROTOCOL]: Local APIC Physical Address: 0x%x\n", acpi_info.lapic_phys);
 
-    DEBUG_KERNEL("[ACPI][INIT]: Found %d CPUs:\n", acpi_info.cpu_count);
+    DEBUG_KERNEL("[ACPI][PROTOCOL]: Found %d CPUs:\n", acpi_info.cpu_count);
     for (uint32_t i = 0; i < acpi_info.cpu_count; i++) {
         DEBUG_KERNEL("CPU table index %d: APIC ID = %d, Enabled = %d\n",
                      i, acpi_info.cpus[i].apic_id, acpi_info.cpus[i].enabled);
     }
 
-    DEBUG_KERNEL("[ACPI][INIT]: Found %d I/O APICs:\n", acpi_info.ioapic_count);
+    DEBUG_KERNEL("[ACPI][PROTOCOL]: Found %d I/O APICs:\n", acpi_info.ioapic_count);
     for (uint32_t i = 0; i < acpi_info.ioapic_count; i++) {
         DEBUG_KERNEL("IOAPIC table index: %d, id: %d, phys: 0x%x, GSI base: %d\n",
                      i, acpi_info.ioapics[i].id, acpi_info.ioapics[i].phys, acpi_info.ioapics[i].gsi_base);
     }
 
-    DEBUG_KERNEL("[ACPI][INIT]: Found %d Interrupt Source Overrides (ISOs):\n", acpi_info.iso_count);
+    DEBUG_KERNEL("[ACPI][PROTOCOL]: Found %d Interrupt Source Overrides (ISOs):\n", acpi_info.iso_count);
     for (uint32_t i = 0; i < acpi_info.iso_count; i++) {
         DEBUG_KERNEL("ISO table index: %d, source IRQ: %d, GSI: %d, flags: 0x%x\n",
                      i, acpi_info.isos[i].source_irq, acpi_info.isos[i].gsi, acpi_info.isos[i].flags);
