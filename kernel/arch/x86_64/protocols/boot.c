@@ -1,10 +1,10 @@
 
 #include "boot_info.h"
+#include "cpu.h"
 #include "serial.h"
 #include <stdint.h>
-#define LIMINE_API_REVISION 2
+
 #include "kernel.h"
-#include "limine.h"
 
 extern void stack_switch_and_call(uint64_t new_top, void (*fn)(void));
 static uint8_t kernel_stack[KERNEL_STACK_SIZE] __attribute__((aligned(16)));
@@ -36,6 +36,12 @@ __attribute__((used, section(".limine_requests"))) static volatile struct limine
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_rsdp_request rsdp_req = {
     .id       = LIMINE_RSDP_REQUEST,
     .revision = 0,
+};
+
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_mp_request mp_req = {
+    .id       = LIMINE_MP_REQUEST,
+    .revision = 0,
+    .flags    = 0,
 };
 
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
@@ -125,6 +131,11 @@ static int boot_info_collect(struct boot_info *out) {
     if (rsdp_req.response != NULL) {
         out->rsdp = rsdp_req.response->address;
     }
+
+    if (mp_req.response != NULL) {
+        fill_cpu_struct(mp_req.response);
+    }
+
     return 0;
 }
 
