@@ -1,9 +1,7 @@
 # TaaviOS
-A 32/64-bit x86 hobby OS exploring asynchronous kernel architecture and fault tolerance.
+A 32/64-bit x86 hobby OS exploring kernel microlithic architecture and fault tolerance.
 
 ## Architecture
-
-> **[NOTE]** The features described here work only on the 32-bit architecture, but will be ported to 64-bit later.
 
 TaaviOS uses a **microlithic kernel** model designed and implemented by me. It has service kernel tasks ("clerks") that run in Ring 0. Clerks use the existing `task_t` structure (the same one that is used by userspace tasks), but they do not get their own page directory. This allows incoming system calls to make seamless requests to clerks via a ledger. After a request has been made, the clerk is awoken from sleep and becomes eligible for scheduling. When a clerk is picked, the scheduler does not force a CR3 switch because all clerks reside on the active user task's page directory. Clerks leverage three custom protocols during servicing:
 
@@ -20,13 +18,13 @@ TaaviOS uses a **microlithic kernel** model designed and implemented by me. It h
 
 ## Status
 
-64-bit architecture port in progress.
+The kernel requests from limine the following; memmap, mp, framebuffer, rsdp, hhdm and kernel virt/phys  addresses. After these request are collected the BSP core initializes, gdt, idt, pmm, paging and heap. Then it runs acpi protocol to discover ioapic and lapics and inits both. Then the kernel starts symmetric multiprocessing by providing the goto address for ap cores. The ap cores switch to their own stack, change to kernel page directory and load gdt and idt. Finally BSP then inits filesystem and drivers.
 
 After GRUB successfully hands control over, the kernel initializes the GDT, IDT, ISR, TSS, PAGING, PMM, and transitions to protected mode. Following that, it creates the clerks, initializes the file system, programmable interrupt timer, and heap memory manager, and finally creates the init task and jumps to Ring 3 to execute.
 
 ## Tradeoffs of Microlithic Kernel Model
 
-In essence, a microlithic kernel combines the high performance of a monolithic kernel with the modular organization of a microkernel. Consequently, it inherits aspects of both designs—maximizing speed while requiring specific safeguards for fault tolerance.
+In essence, a microlithic kernel combines the high performance of a monolithic kernel with the modular organization of a microkernel. Consequently, it inherits aspects of both designs maximizing speed while requiring specific safeguards for fault tolerance.
 
 ### Advantages
 * **Zero-Overhead IPC:** Because clerks execute within the active user task's page directory, requests via the Ledger Protocol require absolutely no physical or virtual memory copying (CR3 switches are completely bypassed). This provides the performance speed of a standard monolithic system call with the modular structural isolation of a microkernel.
@@ -34,6 +32,6 @@ In essence, a microlithic kernel combines the high performance of a monolithic k
 
 ### Risks & Mitigations
 * **Shared Fault Domain:** Running more service code in Ring 0 inherently increases the risk of system-wide failures or deadlocks compared to pure microkernels.
-* **The Hail Mary Safeguard:** To combat Ring 0 panic risks, the Hail Mary Protocol acts as a safety net—intercepting Ring 0 exceptions, safely releasing the blocked user process with an error, and resetting the faulting clerk without bringing down the entire kernel.
+* **The Hail Mary Safeguard:** To combat Ring 0 panic risks, the Hail Mary Protocol acts as a safety net intercepting Ring 0 exceptions, safely releasing the blocked user process with an error, and resetting the faulting clerk without bringing down the entire kernel.
 
-// A.H — 2026
+// A.H - 2026
