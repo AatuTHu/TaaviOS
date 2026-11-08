@@ -220,18 +220,25 @@ void kmain() {
         panic();
     }
 
+    init_drivers();
+    init_filesystems();
+    init_microlithic();
+
     if (smp_init() == STATUS_ERROR) {
         ERROR("[KERNEL]: Failed to initialize SMP\n");
         panic();
     }
 
     pmm_reclaim_bootloader(&b_info);
-    init_drivers();
-    init_filesystems();
-    init_microlithic();
+
+    scheduler_init();
+    scheduler_set_current_task(idle_task_pid);
+    _set_scheduler_on();
 
     lapic_timer_start_periodic(10);
     DEBUG_KERNEL("[KERNEL]: Ready to RUN SOME TASKS\n");
+
+    scheduler_yield(NULL);
 
     while (1) __asm__ __volatile__("sti; hlt");
 }

@@ -11,6 +11,10 @@ struct core_t {
     uint32_t processor_id;
     uint32_t lapic_id;
     uint64_t kstack_top;
+    int current_pid;
+    uint8_t scheduler_on;
+    int high_prio_pick_count;
+    int doc_maintenaince_counter;
     volatile uint32_t online;
     volatile uint64_t ticks;
     struct tss_t tss;

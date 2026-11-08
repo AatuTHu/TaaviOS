@@ -1,9 +1,11 @@
 #include "sched.h"
 #include "config.h"
-#include "gdt.h"
+#include "cpu.h"
+#include "idt.h"
 #include "klog.h"
 #include "kstring.h"
-// #include "ledger.h"
+#include "ledger.h"
+#include "spinlock.h"
 #include "task.h"
 #include "tss.h"
 #include "vmm.h"
@@ -22,16 +24,13 @@
  * example the os has two userspace task_table. The init and the shell. Init starts
  * the shell and then kills itself via syscall exit the shell is the only one
  * that can be picked to run. But what if shell is blocked? What does the
- * scheduler do then? My asnwer is to activate kernel clerks like reaper_task,
- * fs_task or if there is literally nothing else to do then activate idle_task.
+ * scheduler do then? My asnwer is to activate kernel clerks like reaper_clerk,
+ * fs_clerk or if there is literally nothing else to do then activate idle_task.
  */
 
+spinlock_t sched = SPINLOCK_INIT("sched");
 #define HIGH_PRIORITY_PICK_LIMIT 3
 #define DOC_ANALYTICS_RUN_INTERVAL 7000
-static int current_pid               = -1;
-static volatile uint8_t scheduler_on = 0;
-static int high_prio_pick_count      = 0;
-static int doc_maintenaince_counter  = 0;
 
 static int scheduler_has_runnable_task() {
     for (int i = 0; i < MAX_TASKS; i++) {
@@ -42,13 +41,13 @@ static int scheduler_has_runnable_task() {
     return 0;
 }
 
-/*static void scheduler_check_clerks() {
+static void scheduler_check_clerks() {
 
     // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
 
-    if (ledger_count_clerk_reqs(gui_task_pid) > 0 || task_has_dirty_buffer() > 0) {
-        clerk = task_table[gui_task_pid];
+    if (ledger_count_clerk_reqs(gui_clerk_pid) > 0 || task_has_dirty_buffer() > 0) {
+        clerk = task_table[gui_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
@@ -57,8 +56,8 @@ static int scheduler_has_runnable_task() {
             }
         }
     }
-    if (ledger_count_clerk_reqs(fs_task_pid) > 0) {
-        clerk = task_table[fs_task_pid];
+    if (ledger_count_clerk_reqs(fs_clerk_pid) > 0) {
+        clerk = task_table[fs_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //  DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
@@ -68,8 +67,8 @@ static int scheduler_has_runnable_task() {
         }
     }
 
-    if (ledger_count_clerk_reqs(reaper_task_pid) > 0 || ledger_has_killable_reqs() > 0) {
-        clerk = task_table[reaper_task_pid];
+    if (ledger_count_clerk_reqs(reaper_clerk_pid) > 0 || ledger_has_killable_reqs() > 0) {
+        clerk = task_table[reaper_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //    DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");
@@ -87,7 +86,7 @@ static int scheduler_has_runnable_task() {
         }
     }
 
-    if (++doc_maintenaince_counter > DOC_ANALYTICS_RUN_INTERVAL) {
+    if (++cpu_current()->doc_maintenaince_counter > DOC_ANALYTICS_RUN_INTERVAL) {
         clerk = task_table[doc_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
@@ -95,13 +94,13 @@ static int scheduler_has_runnable_task() {
                 clerk->priority = PRIORITY_LOW;
             }
         }
-        doc_maintenaince_counter = 0;
+        cpu_current()->doc_maintenaince_counter = 0;
     }
-}*/
+}
 
 static int __scheduler_search_by_priority(uint8_t priority, int *out_pid, uint32_t starting_pos) {
     for (int i = starting_pos; i <= MAX_TASKS; i++) {
-        int next_idx = (current_pid + i) % MAX_TASKS;
+        int next_idx = (cpu_current()->current_pid + i) % MAX_TASKS;
         if (task_table[next_idx] != NULL && task_table[next_idx]->priority == priority &&
             (task_table[next_idx]->state == TASK_READY ||
              task_table[next_idx]->state == TASK_RUNNING)) {
@@ -115,35 +114,49 @@ static int __scheduler_search_by_priority(uint8_t priority, int *out_pid, uint32
 static int scheduler_find_next_task() {
 
     int next_idx = -1;
-    if (high_prio_pick_count < HIGH_PRIORITY_PICK_LIMIT &&
+    if (cpu_current()->high_prio_pick_count < HIGH_PRIORITY_PICK_LIMIT &&
         __scheduler_search_by_priority(PRIORITY_HIGH, &next_idx, 1) == STATUS_OK) {
-        high_prio_pick_count++;
+        cpu_current()->high_prio_pick_count++;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_NORMAL, &next_idx, 1) == STATUS_OK) {
-        high_prio_pick_count = 0;
+        cpu_current()->high_prio_pick_count = 0;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_HIGH, &next_idx, 0) == STATUS_OK) {
-        high_prio_pick_count = 1;
+        cpu_current()->high_prio_pick_count = 1;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_NORMAL, &next_idx, 0) == STATUS_OK) {
-        high_prio_pick_count = 0;
+        cpu_current()->high_prio_pick_count = 0;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_LOW, &next_idx, 1) == STATUS_OK) {
-        high_prio_pick_count = 0;
+        cpu_current()->high_prio_pick_count = 0;
         return next_idx;
     }
 
     return STATUS_ERROR;
 }
 
+/**
+ * scheduler_init_frame - create fake interrupt frame.
+ *
+ * Description:
+ * This function creaters a interrupt frame for every task that has never been ran before
+ * First it checks if the task at hand is userspace task or a clerk, becuase the clerk is a
+ * ring 0 task its interrupt frame has fewer registers compared to ring 3. Then
+ * it takes the address of the kernel stack and converts it to a pointer.
+ * Then it creates the frame the registers_count amount off from the top
+ * so that the frame always ends at the top of the stack.
+ * saves the task context on to it and then saves the pointer to that frame
+ * to task->interrupt_frame.
+ *
+ */
 static void scheduler_init_frame(task_t *t) {
     struct registers *frame = (struct registers *)(t->kernel_stack - sizeof(struct registers));
     memcpy(frame, &t->context, sizeof(struct registers));
@@ -159,6 +172,7 @@ static uint64_t scheduler_switch(struct registers *r) {
 
     if (current != NULL && current->started && current->state != TASK_DEAD &&
         current->state != TASK_SLEEPING) {
+        DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d Saving task %s\n", cpu_current()->processor_id, current->name);
         current->interrupt_frame = (uint64_t)r;
 
         if (current->state == TASK_RUNNING) {
@@ -166,7 +180,7 @@ static uint64_t scheduler_switch(struct registers *r) {
         }
     }
 
-    // scheduler_check_clerks();
+    scheduler_check_clerks();
 
     int next_pid = scheduler_find_next_task();
 
@@ -177,7 +191,7 @@ static uint64_t scheduler_switch(struct registers *r) {
 
     task_t *next = task_table[next_pid];
 
-    if (next->state == TASK_READY) {
+    if (next->state == TASK_READY && next->pid != idle_task_pid) {
         next->state = TASK_RUNNING;
     }
 
@@ -187,15 +201,15 @@ static uint64_t scheduler_switch(struct registers *r) {
 
     next->started = 1;
 
-    if (next_pid != current_pid) {
+    if (next_pid != cpu_current()->current_pid) {
         DEBUG_SCHED("[SCHEDULER][SWITCH]: Running with %s\n", next->name);
-        current_pid = next_pid;
+        cpu_current()->current_pid = next_pid;
 
         if (next->task_mode == USER_TASK) {
             vmm_switch(next->page_dir);
         }
+        tss_set_kernel_stack(next->kernel_stack);
     }
-    tss_set_kernel_stack(next->kernel_stack);
 
     return next->interrupt_frame;
 }
@@ -206,11 +220,18 @@ void scheduler_yield(struct registers *r) {
     __asm__ __volatile__("int $0x81");
 }
 
-uint64_t scheduler_tick(struct registers *r) {
-    if (current_pid == -1 || scheduler_on == 0) {
+uint64_t __scheduler_tick(struct registers *r) {
+    if (cpu_current()->current_pid == -1 || cpu_current()->scheduler_on == 0) {
         return (uint64_t)r;
     }
     return scheduler_switch(r);
+}
+
+uint64_t scheduler_tick(struct registers *r) {
+    uint64_t flags = spin_lock_disable_all_intr(&sched);
+    uint64_t frame = __scheduler_tick(r);
+    spin_unlock_restore_all_intr(&sched, flags);
+    return frame;
 }
 
 /*
@@ -245,26 +266,20 @@ int scheduler_set_current_task(uint32_t pid) {
         return STATUS_ERROR;
     }
 
-    current_pid = pid;
+    cpu_current()->current_pid = pid;
     return STATUS_OK;
 }
 
 task_t *scheduler_get_current_task() {
-    if (current_pid == -1) {
+    if (cpu_current()->current_pid == -1) {
         ERROR("[SCHEDULER]: no task_table added to scheduler yet\n");
         return NULL;
     }
-    return task_table[current_pid];
+    return task_table[cpu_current()->current_pid];
 }
 
 void scheduler_set_task_state(task_state_t state) {
-
-    if (current_pid < 0 || scheduler_on == 0) {
-        ERROR("[SCHEDULER][STATE_SETTER]: Scheduler is not on or current pid was invalid. Aborting\n");
-        return;
-    }
-
-    task_t *current = task_table[current_pid];
+    task_t *current = task_table[cpu_current()->current_pid];
 
     if (current == NULL) {
         ERROR("[SCHEDULER][STATE_SETTER]: Could not set state as current task was invalid\n");
@@ -328,17 +343,16 @@ int scheduler_add(task_t *task) {
         task->state = TASK_READY;
     }
 
-    if (current_pid == -1) {
-        current_pid = 0;
-    }
-
     return STATUS_OK;
 }
 
 void _set_scheduler_on() {
-    scheduler_on = 1;
+    cpu_current()->scheduler_on = 1;
 }
 
 void scheduler_init() {
     DEBUG_SCHED("[SCHEDULER] SCHEDULER INITIALIZED\n");
+    cpu_current()->scheduler_on         = 0;
+    cpu_current()->current_pid          = -1;
+    cpu_current()->high_prio_pick_count = 0;
 }

@@ -9,6 +9,7 @@
 #include "kernel.h"
 #include "klog.h"
 #include "paging.h"
+#include "sched.h"
 #include "vmm.h"
 #include <stdint.h>
 
@@ -26,8 +27,13 @@ static void ap_main() {
     c->online = 1;
 
     DEBUG_KERNEL("[SMP][AP_MAIN] cpu %d online, lapic id %d\n", c->processor_id, c->lapic_id);
+    scheduler_init();
+    scheduler_set_current_task(idle_task_pid);
+    _set_scheduler_on();
 
     lapic_timer_start_periodic(10);
+
+    scheduler_yield(NULL);
 
     while (1) {
         __asm__ __volatile__("sti; hlt");
