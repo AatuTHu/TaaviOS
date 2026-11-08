@@ -1,14 +1,13 @@
 #include "keyboard.h"
 #include "config.h"
-#include "cpu.h"
 #include "io.h"
+#include "isr.h"
 #include "klog.h"
 #if defined(__i386__) || defined(__i686__)
-#include "isr.h"
 #include "sched.h"
 #else
 #include "apic.h"
-#include "idt.h"
+#include "cpu.h"
 #endif
 #include "shared.h"
 #include <stdbool.h>

@@ -1,16 +1,14 @@
 #include "apic.h"
 #include "acpi.h"
 #include "config.h"
+#include "cpu.h"
 #include "io.h"
 #include "klog.h"
 #include "paging.h"
-#include <stdbool.h>
 #include <stdint.h>
 
-static volatile uint64_t ticks;
 static volatile uint32_t *lapic_base;
 static uint32_t lapic_ticks_per_ms;
-static bool use_false_id = true;
 
 static struct {
     volatile uint8_t *base;
@@ -41,25 +39,6 @@ static inline void lapic_write(uint32_t reg, uint32_t val) {
 
 void lapic_eoi(void) {
     lapic_write(LAPIC_REG_EOI, 0);
-}
-
-// use_false_id. Spinlock tech. Cause pmm/vmm/paging/kmalloc uses spinlocks before lapic is
-// initialized we cannot read the real id since lapic is not mapped. Instead just return 0.
-// lapic init sets use_false_id to false and then we read the real id as it would be no onse
-// bussiness
-uint32_t lapic_id(void) {
-    if (use_false_id) {
-        return 0;
-    }
-    return (lapic_read(LAPIC_REG_ID) >> 24);
-}
-
-void lapic_tick_ticks() {
-    ticks++;
-}
-
-uint64_t lapic_get_ticks() {
-    return ticks;
 }
 
 /**
@@ -137,53 +116,6 @@ int lapic_timer_start_periodic(uint32_t ms) {
     lapic_write(LAPIC_REG_TIMER_INIT, initial_count);
     DEBUG_KERNEL("[LAPIC][TIMER]: Timer started\n");
     return STATUS_OK;
-}
-
-/**
- * PIC_REMAP_AND_MASK - Used to silence older PIC.
- *
- * Description:
- * This function moves the older pics interrupts vectors to safer zones
- * and then disables the pic. First we send to pic1/2 cmd port info that tells to expect
- * initialization params. Then we send to pic1/2 the addr from where the interrupt vectors
- * start (0x20/0x28). After that we connect master and salve to each other. Then
- * we set them to the ancient 8086 arch. And finally we mask the ports. After that
- * we check if the all went as planned and then return status according to check
- *
- * Return: STATUS_OK || STATUS_ERROR.
- */
-static int pic_remap_and_mask(void) {
-
-    outb(PIC1_CMD, PIC_ICW1_INIT | PIC_ICW1_ICW4);
-    io_wait();
-    outb(PIC2_CMD, PIC_ICW1_INIT | PIC_ICW1_ICW4);
-    io_wait();
-
-    outb(PIC1_DATA, PIC1_VECTOR_BASE);
-    io_wait();
-    outb(PIC2_DATA, PIC2_VECTOR_BASE);
-    io_wait();
-
-    outb(PIC1_DATA, 0x04);
-    io_wait();
-    outb(PIC2_DATA, 0x02);
-    io_wait();
-
-    outb(PIC1_DATA, PIC_ICW4_8086);
-    io_wait();
-    outb(PIC2_DATA, PIC_ICW4_8086);
-    io_wait();
-
-    outb(PIC1_DATA, 0xFF);
-    io_wait();
-    outb(PIC2_DATA, 0xFF);
-    io_wait();
-
-    if (inb(PIC1_DATA) == 0xFF && inb(PIC2_DATA) == 0xFF) {
-        return STATUS_OK;
-    } else {
-        return STATUS_ERROR;
-    }
 }
 
 /**
@@ -386,7 +318,7 @@ void lapic_enable_local() {
 
     uint32_t ver_reg = lapic_read(LAPIC_REG_VERSION);
     DEBUG_KERNEL("[LAPIC][ENABLE]: Lapic id: %d, version: 0x%x (ver: %d, max lvt: %d). LAPIC ENABLED\n",
-                 lapic_id(), ver_reg, ver_reg & 0xFF, (ver_reg >> 16) & 0xFF);
+                 cpu_get_lapic_id(), ver_reg, ver_reg & 0xFF, (ver_reg >> 16) & 0xFF);
 }
 
 /**
@@ -413,7 +345,6 @@ static int lapic_init(uint64_t lapic_phys) {
 
     lapic_enable_local();
 
-    use_false_id = false;
     return STATUS_OK;
 }
 
@@ -426,10 +357,6 @@ static int lapic_init(uint64_t lapic_phys) {
  * Return: STATUS_OK || STATUS_ERROR.
  */
 int apic_init() {
-    if (pic_remap_and_mask() == STATUS_ERROR) {
-        ERROR("[APIC][INIT]: Failed to remap and mask PIC\n");
-        return STATUS_ERROR;
-    }
 
     if (lapic_init(acpi_info.lapic_phys) == STATUS_ERROR) {
         ERROR("[APIC][INIT]: Failed to initialize lapic\n");

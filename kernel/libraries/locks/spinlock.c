@@ -1,7 +1,7 @@
 #include "spinlock.h"
-#include "apic.h"
 #include <stdint.h>
 #if defined(__x86_64__)
+#include "apic.h"
 #include "cpu.h"
 #endif
 #include "kstring.h"
@@ -31,7 +31,7 @@ void spin_light_lock(spinlock_t *l) {
             if (++spin_laps > SPIN_LIMIT) {
                 char cpuid[10];
 #if defined(__x86_64__)
-                itoa(lapic_id(), cpuid);
+                itoa(cpu_get_lapic_id(), cpuid);
 #else
                 itoa(0, cpuid);
 #endif
@@ -44,7 +44,7 @@ void spin_light_lock(spinlock_t *l) {
         }
     }
 #if defined(__x86_64__)
-    l->owner = lapic_id();
+    l->owner = cpu_get_lapic_id();
 #else
     l->owner = 0;
 #endif

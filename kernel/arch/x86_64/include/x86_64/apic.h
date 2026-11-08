@@ -70,10 +70,7 @@ int ioapic_mask_gsi(uint32_t gsi, int masked);
 
 uint32_t lapic_get_ms_per_ticks();
 void lapic_enable_local();
-void lapic_tick_ticks();
 void lapic_eoi();
-uint32_t lapic_id();
-uint64_t lapic_get_ticks();
 int lapic_timer_start_periodic(uint32_t ms);
 int apic_init();
 #endif

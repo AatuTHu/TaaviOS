@@ -28,20 +28,10 @@ struct __attribute__((packed)) registers {
     uint64_t rip, cs, eflags, rsp, ss;
 };
 
-typedef void (*irq_callback_t)(void);
-
-extern irq_callback_t irq_callbacks[16];
 extern uint64_t isr_stub_table[];
 extern uint64_t irq_stub_table[];
 extern void idt_flush(uint64_t idt_ptr_address);
-extern void syscall_handler();
-extern void isr255();
-extern void *irq32;
-extern void isr129(); // scheduler yield vector
 void idt_load();
-void irq_register_handler(int index, irq_callback_t cb);
 void idt_init();
-uint64_t irq_handler(struct registers *r);
-uint64_t isr_handler(struct registers *r);
 
 #endif

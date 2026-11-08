@@ -3,9 +3,9 @@
 #include "config.h"
 #include "gdt.h"
 #include "io.h"
+#include "isr.h"
 #include "klog.h"
 #include "kstring.h"
-#include "sched.h"
 #include "stdbool.h"
 #include <stdint.h>
 
@@ -15,90 +15,54 @@
  * @author: A.H, 2026
  */
 
-static struct idt_entry idt[IDT_ENTRIES];
 static struct idt_ptr idt_pointer;
-irq_callback_t irq_callbacks[16] = {0};
+static struct idt_entry idt[IDT_ENTRIES];
 
-void irq_register_handler(int index, irq_callback_t cb) {
-    DEBUG("[ISR] Registering callback %x\n", cb);
-    irq_callbacks[index] = cb;
-}
+/**
+ * PIC_REMAP_AND_MASK - Used to silence older PIC.
+ *
+ * Description:
+ * This function moves the older pics interrupts vectors to safer zones
+ * and then disables the pic. First we send to pic1/2 cmd port info that tells to expect
+ * initialization params. Then we send to pic1/2 the addr from where the interrupt vectors
+ * start (0x20/0x28). After that we connect master and salve to each other. Then
+ * we set them to the ancient 8086 arch. And finally we mask the ports. After that
+ * we check if the all went as planned and then return status according to check
+ *
+ * Return: STATUS_OK || STATUS_ERROR.
+ */
+static int pic_remap_and_mask(void) {
 
-uint64_t isr_handler(struct registers *r) {
+    outb(PIC1_CMD, PIC_ICW1_INIT | PIC_ICW1_ICW4);
+    io_wait();
+    outb(PIC2_CMD, PIC_ICW1_INIT | PIC_ICW1_ICW4);
+    io_wait();
 
-    if (r->int_no == 129) {
-        return scheduler_tick(r);
-    }
+    outb(PIC1_DATA, PIC1_VECTOR_BASE);
+    io_wait();
+    outb(PIC2_DATA, PIC2_VECTOR_BASE);
+    io_wait();
 
-    uint64_t cr2;
-    __asm__ __volatile__("mov %%cr2, %0" : "=r"(cr2));
+    outb(PIC1_DATA, 0x04);
+    io_wait();
+    outb(PIC2_DATA, 0x02);
+    io_wait();
 
-    int is_user = (r->cs & 0x3) == 3;
+    outb(PIC1_DATA, PIC_ICW4_8086);
+    io_wait();
+    outb(PIC2_DATA, PIC_ICW4_8086);
+    io_wait();
 
-    ERROR("\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    ERROR("                     KERNEL PANIC                           \n");
-    ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    ERROR("REASON: ");
-    if (r->int_no == 14) {
-        ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
-              (r->err_code & 0x1) ? "Yes" : "No",
-              (r->err_code & 0x2) ? "Write" : "Read",
-              (r->err_code & 0x4) ? "User" : "Kernel");
-        ERROR("FAULTING ADDRESS: 0x%x\n", cr2);
-    } else if (r->int_no == 13) {
-        ERROR("GENERAL PROTECTION FAULT\n");
+    outb(PIC1_DATA, 0xFF);
+    io_wait();
+    outb(PIC2_DATA, 0xFF);
+    io_wait();
+
+    if (inb(PIC1_DATA) == 0xFF && inb(PIC2_DATA) == 0xFF) {
+        return STATUS_OK;
     } else {
-        ERROR("EXCEPTION %d\n", r->int_no);
+        return STATUS_ERROR;
     }
-
-    ERROR("LOCATION: %s mode at RIP 0x%x\n", is_user ? "USER" : "KERNEL", r->rip);
-    ERROR("INTERRUPT: %d (Error Code: 0x%x)\n", r->int_no, r->err_code);
-
-    ERROR("--- REGISTER DUMP ---\n");
-    ERROR("RAX: 0x%x  RBX: 0x%x  RCX: 0x%x  RDX: 0x%x\n",
-          r->rax, r->rbx, r->rcx, r->rdx);
-    ERROR("RSI: 0x%x  RDI: 0x%x  RBP: 0x%x  RSP: 0x%x\n",
-          r->rsi, r->rdi, r->rbp, r->rsp);
-    ERROR("R8:  0x%x  R9:  0x%x  R10: 0x%x  R11: 0x%x\n",
-          r->r8, r->r9, r->r10, r->r11);
-    ERROR("R12: 0x%x  R13: 0x%x  R14: 0x%x  R15: 0x%x\n",
-          r->r12, r->r13, r->r14, r->r15);
-    ERROR("CS:  0x%x  EFLAGS: 0x%x  SS: 0x%x\n",
-          r->cs, r->eflags, r->ss);
-
-    if (is_user) {
-        ERROR("USER STACK (RSP): 0x%x\n", r->rsp);
-    }
-    ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
-    ERROR("System halted.\n");
-
-    while (1) {
-        __asm__ __volatile__("hlt");
-    }
-
-    return STATUS_OK;
-}
-
-uint64_t irq_handler(struct registers *r) {
-
-    if (r->int_no == LAPIC_TIMER_VECTOR) {
-        lapic_tick_ticks(); // tick the ticks?
-        lapic_eoi();
-        return scheduler_tick(r);
-    }
-
-    if (r->int_no >= 32 && r->int_no <= 47) {
-        uint8_t irq = r->int_no - 32;
-        if (irq_callbacks[irq] != 0) {
-            irq_callbacks[irq]();
-        }
-        lapic_eoi();
-        return (uint64_t)r;
-    }
-
-    DEBUG_KERNEL("[IRQ]: Unhandled interrupt vector: %u\n", r->int_no);
-    lapic_eoi();
-    return (uint64_t)r;
 }
 
 static void idt_set_gate(int vec, uint64_t handler, uint8_t type_attr, uint8_t ist) {
@@ -117,6 +81,11 @@ void idt_load() {
 
 void idt_init() {
     memset(&idt, 0, sizeof(idt));
+
+    if (pic_remap_and_mask() == STATUS_ERROR) {
+        ERROR("[APIC][INIT]: Failed to remap and mask PIC\n");
+        return;
+    }
 
     DEBUG_KERNEL("[IDT]: Mapping 32 cpu exception stubs\n");
     for (int i = 0; i <= 31; i++) {
