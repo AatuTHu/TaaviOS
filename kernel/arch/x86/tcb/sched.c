@@ -22,8 +22,8 @@
  * example the os has two userspace task_table. The init and the shell. Init starts
  * the shell and then kills itself via syscall exit the shell is the only one
  * that can be picked to run. But what if shell is blocked? What does the
- * scheduler do then? My asnwer is to activate kernel clerks like reaper_task,
- * fs_task or if there is literally nothing else to do then activate idle_task.
+ * scheduler do then? My asnwer is to activate kernel clerks like reaper_clerk,
+ * fs_clerk or if there is literally nothing else to do then activate idle_task.
  */
 
 #define HIGH_PRIORITY_PICK_LIMIT 3
@@ -47,8 +47,8 @@ static void scheduler_check_clerks() {
     // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Activating Clerks\n");
     task_t *clerk = NULL;
 
-    if (ledger_count_clerk_reqs(gui_task_pid) > 0 || task_has_dirty_buffer() > 0) {
-        clerk = task_table[gui_task_pid];
+    if (ledger_count_clerk_reqs(gui_clerk_pid) > 0 || task_has_dirty_buffer() > 0) {
+        clerk = task_table[gui_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 // DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Gui activated!\n");
@@ -57,8 +57,8 @@ static void scheduler_check_clerks() {
             }
         }
     }
-    if (ledger_count_clerk_reqs(fs_task_pid) > 0) {
-        clerk = task_table[fs_task_pid];
+    if (ledger_count_clerk_reqs(fs_clerk_pid) > 0) {
+        clerk = task_table[fs_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //  DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Fs activated!\n");
@@ -68,8 +68,8 @@ static void scheduler_check_clerks() {
         }
     }
 
-    if (ledger_count_clerk_reqs(reaper_task_pid) > 0 || ledger_has_killable_reqs() > 0) {
-        clerk = task_table[reaper_task_pid];
+    if (ledger_count_clerk_reqs(reaper_clerk_pid) > 0 || ledger_has_killable_reqs() > 0) {
+        clerk = task_table[reaper_clerk_pid];
         if (clerk != NULL && clerk->task_mode != USER_TASK) {
             if (clerk->state == TASK_SLEEPING) {
                 //    DEBUG_SCHED("[SCHEDULER][SCHEDULER_CHECK_CLERKS]: Reaper activated!\n");

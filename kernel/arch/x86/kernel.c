@@ -115,7 +115,7 @@ static void init_microlithic() {
     }
 
     DEBUG_KERNEL("[KERNEL]: Creating an filesystem kernel task\n");
-    kernel_task = task_create(fs_task_pid, (uint32_t)fs_task_loop, 0,
+    kernel_task = task_create(fs_clerk_pid, (uint32_t)fs_task_loop, 0,
                               "fs_task", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
@@ -124,7 +124,7 @@ static void init_microlithic() {
     }
 
     DEBUG_KERNEL("[KERNEL]: Creating an reaper kernel task\n");
-    kernel_task = task_create(reaper_task_pid, (uint32_t)reaper_task_loop, 0,
+    kernel_task = task_create(reaper_clerk_pid, (uint32_t)reaper_task_loop, 0,
                               "reaper", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {
@@ -133,7 +133,7 @@ static void init_microlithic() {
     }
 
     DEBUG_KERNEL("[KERNEL]: Creating an graphical user interface kernel task\n");
-    kernel_task = task_create(gui_task_pid, (uint32_t)gui_task_loop, 0,
+    kernel_task = task_create(gui_clerk_pid, (uint32_t)gui_task_loop, 0,
                               "gui_task", &kernel_page_dir, KERNEL_TASK);
 
     if (kernel_task != NULL) {

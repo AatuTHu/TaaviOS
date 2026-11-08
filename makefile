@@ -45,8 +45,8 @@ INCLUDES := -I$(KERNEL_ARCH_DIR)/include \
             -I$(ARCH_INC) \
             -I$(KERNEL_ARCH_DIR)/include/drivers \
             -I$(KERNEL_ARCH_DIR)/include/loader \
-            -I$(KERNEL_ARCH_DIR)/include/kernel_clerks \
-            -I$(KERNEL_ARCH_DIR)/include/protocols \
+            -I$(KERNEL_DIR)/include/kernel_clerks \
+            -I$(KERNEL_DIR)/include/protocols \
             -I$(KERNEL_DIR)/include/boot \
             -I$(KERNEL_DIR)/include/mm \
             -I$(KERNEL_DIR)/include \

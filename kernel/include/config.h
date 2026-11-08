@@ -79,9 +79,9 @@
 
 #define CLERK_COUNT 5 // amount of clerks. Very important. hardcoded for now
 #define idle_task_pid 0
-#define fs_task_pid 1
-#define reaper_task_pid 2
-#define gui_task_pid 3
+#define fs_clerk_pid 1
+#define reaper_clerk_pid 2
+#define gui_clerk_pid 3
 #define doc_clerk_pid 4
 
 #define EFLAGS_IF (1 << 9) // interrupts flag

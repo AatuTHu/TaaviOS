@@ -27,7 +27,7 @@ static int reaper_kill_task(uint32_t target_pid) {
 
 void reaper_task_loop() {
     while (1) {
-        request_table *req = ledger_fetch_next_req(reaper_task_pid);
+        request_table *req = ledger_fetch_next_req(reaper_clerk_pid);
         if (req != NULL) {
             if (req->status == PENDING || req->status == IN_PROGRESS) {
                 req->status = (reaper_kill_task(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
@@ -44,18 +44,22 @@ void reaper_task_loop() {
             ledger_remove_request();
         }
 
-        blankie_activate(reaper_task_pid);
+        blankie_activate(reaper_clerk_pid);
     }
 }
 
 static void reaper_recovery() {
     ERROR("[REAPER][RECOVERY]:\n");
-    ledger_check_request(reaper_task_pid);
-    blankie_activate(reaper_task_pid);
+    ledger_check_request(reaper_clerk_pid);
+    blankie_activate(reaper_clerk_pid);
 }
 
 void reaper_init(const task_t *reaper_task) {
-    blankie_register(reaper_task_pid, reaper_task->context.eip,
+#if defined(__x86_64__)
+    blankie_register(reaper_clerk_pid, reaper_task->context.rip, reaper_task->kernel_stack);
+#else
+    blankie_register(reaper_clerk_pid, reaper_task->context.eip,
                      reaper_task->kernel_stack);
-    register_hail_mary_function(reaper_task_pid, reaper_recovery);
+#endif
+    register_hail_mary_function(reaper_clerk_pid, reaper_recovery);
 }

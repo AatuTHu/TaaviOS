@@ -177,5 +177,5 @@ int32_t sys_window(struct registers *r) {
     }
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
-    return ledger_collect(current->pid, gui_task_pid, params->buf);
+    return ledger_collect(current->pid, gui_clerk_pid, params->buf);
 }

@@ -25,7 +25,7 @@ static uint32_t maintenance_counter = 0;
 void fs_task_loop() {
     fs_maintain_virt_dir();
     while (1) {
-        request_table *req = ledger_fetch_next_req(fs_task_pid);
+        request_table *req = ledger_fetch_next_req(fs_clerk_pid);
 
         if (req != NULL) {
             if (req->status == PENDING || req->status == IN_PROGRESS) {
@@ -38,7 +38,7 @@ void fs_task_loop() {
             maintenance_counter = 0;
         }
 
-        blankie_activate(fs_task_pid);
+        blankie_activate(fs_clerk_pid);
     }
 }
 
@@ -53,11 +53,15 @@ void fs_task_loop() {
  */
 static void fs_recovery() {
     ERROR("[FS_TASK][RECOVERY]: PROTOCOL HAIL MARY LAUNCHED\n");
-    ledger_check_request(fs_task_pid);
-    blankie_activate(fs_task_pid);
+    ledger_check_request(fs_clerk_pid);
+    blankie_activate(fs_clerk_pid);
 }
 
-void fs_init(const task_t *fs_task) {
-    register_hail_mary_function(fs_task_pid, fs_recovery);
-    blankie_register(fs_task_pid, fs_task->context.eip, fs_task->kernel_stack);
+void fs_init(const task_t *fs_clerk) {
+    register_hail_mary_function(fs_clerk_pid, fs_recovery);
+#if defined(__x86_64__)
+    blankie_register(fs_clerk_pid, fs_clerk->context.rip, fs_clerk->kernel_stack);
+#else
+    blankie_register(fs_clerk_pid, fs_clerk->context.eip, fs_clerk->kernel_stack);
+#endif
 }

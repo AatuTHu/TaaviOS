@@ -21,7 +21,7 @@ static int make_request_fetch_results(task_t *doc_clerk, uint8_t opcode, int fd,
     doc_clerk->state = TASK_BLOCKED;
     scheduler_yield(&doc_clerk->context);
 
-    return ledger_collect(doc_clerk_pid, fs_task_pid, buf);
+    return ledger_collect(doc_clerk_pid, fs_clerk_pid, buf);
 }
 
 int doc_test_filesystem(task_t *doc_clerk) {

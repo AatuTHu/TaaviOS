@@ -22,11 +22,11 @@
 static void print_ledger_status() {
     int request_count = ledger_count_active_reqs();
     DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: Current active requests %d\n", request_count);
-    request_count = ledger_count_clerk_reqs(fs_task_pid);
+    request_count = ledger_count_clerk_reqs(fs_clerk_pid);
     DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: Fs request count %d\n", request_count);
-    request_count = ledger_count_clerk_reqs(gui_task_pid);
+    request_count = ledger_count_clerk_reqs(gui_clerk_pid);
     DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: Gui request count %d\n", request_count);
-    request_count = ledger_count_clerk_reqs(reaper_task_pid);
+    request_count = ledger_count_clerk_reqs(reaper_clerk_pid);
     DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: Reaper request count %d\n", request_count);
     request_count = ledger_count_clerk_reqs(doc_clerk_pid);
     DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: Doc request count %d\n", request_count);
@@ -142,6 +142,10 @@ static void doc_recovery() {
 }
 
 void doc_init(const task_t *doc_clerk) {
+#if defined(__x86_64__)
+    blankie_register(doc_clerk_pid, doc_clerk->context.rip, doc_clerk->kernel_stack);
+#else
     blankie_register(doc_clerk_pid, doc_clerk->context.eip, doc_clerk->kernel_stack);
+#endif
     register_hail_mary_function(doc_clerk_pid, doc_recovery);
 }

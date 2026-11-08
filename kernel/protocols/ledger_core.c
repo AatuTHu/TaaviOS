@@ -25,15 +25,15 @@ request_table *doc_table[MAX_DOC_REQ_ENTRIES];
 int last_doc_req_idx                  = -1;
 
 clerk_queue clerk_queues[CLERK_COUNT] = {
-    [fs_task_pid]     = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
-    [gui_task_pid]    = {gui_table, MAX_GUI_REQ_ENTRIES, &last_gui_req_idx},
-    [reaper_task_pid] = {reaper_table, MAX_REAPER_REQ_ENTRIES, &last_reaper_req_idx},
-    [doc_clerk_pid]   = {doc_table, MAX_DOC_REQ_ENTRIES, &last_doc_req_idx},
+    [fs_clerk_pid]     = {fs_table, MAX_FS_REQ_ENTRIES, &last_fs_req_idx},
+    [gui_clerk_pid]    = {gui_table, MAX_GUI_REQ_ENTRIES, &last_gui_req_idx},
+    [reaper_clerk_pid] = {reaper_table, MAX_REAPER_REQ_ENTRIES, &last_reaper_req_idx},
+    [doc_clerk_pid]    = {doc_table, MAX_DOC_REQ_ENTRIES, &last_doc_req_idx},
 };
 
 static void wake_clerk(uint32_t clerk_pid) {
     task_t *clerk = task_get(clerk_pid);
-    if (clerk != NULL && clerk_pid != reaper_task_pid && clerk_pid != doc_clerk_pid) {
+    if (clerk != NULL && clerk_pid != reaper_clerk_pid && clerk_pid != doc_clerk_pid) {
         clerk->priority = PRIORITY_HIGH;
     }
     scheduler_wake_task(clerk_pid);
@@ -375,7 +375,7 @@ int ledger_queue_free_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t targ
  */
 int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const char *buf, uint32_t buffer_size, uint32_t flags) {
 
-    if (ledger_count_all_clerk_reqs(fs_task_pid) >= MAX_FS_REQ_ENTRIES) {
+    if (ledger_count_all_clerk_reqs(fs_clerk_pid) >= MAX_FS_REQ_ENTRIES) {
         goto case_error;
     }
 
@@ -392,7 +392,7 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
 
     memset(new_request, 0, sizeof(request_table));
     new_request->caller_pid   = caller_pid;
-    new_request->clerk_pid    = fs_task_pid;
+    new_request->clerk_pid    = fs_clerk_pid;
     new_request->request_type = type;
     new_request->flags        = flags;
     new_request->status       = PENDING;
@@ -439,7 +439,7 @@ case_error:
  */
 int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
 
-    if (ledger_count_all_clerk_reqs(gui_task_pid) >= MAX_GUI_REQ_ENTRIES) {
+    if (ledger_count_all_clerk_reqs(gui_clerk_pid) >= MAX_GUI_REQ_ENTRIES) {
         goto case_error;
     }
 
@@ -452,7 +452,7 @@ int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
     memset(new_request, 0, sizeof(request_table));
     new_request->caller_pid   = caller_pid;
     new_request->struct_key   = params->struct_key;
-    new_request->clerk_pid    = gui_task_pid;
+    new_request->clerk_pid    = gui_clerk_pid;
     new_request->target_pid   = caller_pid;
     new_request->request_type = params->opcode;
     new_request->status       = PENDING;

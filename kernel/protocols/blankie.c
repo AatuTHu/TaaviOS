@@ -65,11 +65,18 @@ int blankie_activate(uint32_t pid) {
         return STATUS_ERROR;
     }
 
+#if defined(__x86_64__)
+    task->context.rip = b_registry[slot]->entry_point;
+    task->context.rsp = b_registry[slot]->stack_top;
+    task->context.rbp = b_registry[slot]->stack_top;
+
+#else
     task->context.eip = b_registry[slot]->entry_point;
     task->context.esp = b_registry[slot]->stack_top;
     task->context.ebp = b_registry[slot]->stack_top;
-    task->started     = 0;
-    task->state       = TASK_SLEEPING;
+#endif
+    task->started = 0;
+    task->state   = TASK_SLEEPING;
     scheduler_yield(&task->context);
     return STATUS_OK;
 }

@@ -34,7 +34,7 @@ static int __resize_window(task_t *doc_clerk, int width, int height) {
     doc_clerk->state = TASK_BLOCKED;
     scheduler_yield(&doc_clerk->context);
 
-    return ledger_collect(doc_clerk_pid, gui_task_pid, NULL);
+    return ledger_collect(doc_clerk_pid, gui_clerk_pid, NULL);
 }
 
 static int __create_window(task_t *doc_clerk, int width, int height, int x, int y) {
@@ -56,7 +56,7 @@ static int __create_window(task_t *doc_clerk, int width, int height, int x, int 
     doc_clerk->state = TASK_BLOCKED;
     scheduler_yield(&doc_clerk->context);
 
-    window_key = ledger_collect(doc_clerk_pid, gui_task_pid, NULL);
+    window_key = ledger_collect(doc_clerk_pid, gui_clerk_pid, NULL);
 
     return window_key == STATUS_ERROR ? STATUS_ERROR : STATUS_OK;
 }
@@ -64,13 +64,13 @@ static int __create_window(task_t *doc_clerk, int width, int height, int x, int 
 static int __delete_window(task_t *doc_clerk) {
 
     doc_clerk->state = TASK_BLOCKED;
-    if (ledger_queue_free_req(doc_clerk_pid, gui_task_pid, doc_clerk_pid) == STATUS_ERROR) {
+    if (ledger_queue_free_req(doc_clerk_pid, gui_clerk_pid, doc_clerk_pid) == STATUS_ERROR) {
         ERROR("[DOC][DELETE_WINDOW]: queue failed\n");
         return STATUS_ERROR;
     }
     scheduler_yield(&doc_clerk->context);
 
-    int delete_result = ledger_collect(doc_clerk_pid, gui_task_pid, NULL);
+    int delete_result = ledger_collect(doc_clerk_pid, gui_clerk_pid, NULL);
 
     return delete_result == STATUS_ERROR ? STATUS_ERROR : STATUS_OK;
 }

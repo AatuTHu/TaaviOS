@@ -3,9 +3,13 @@
 #include "ata.h"
 #include "boot_info.h"
 #include "config.h"
+#include "doc_clerk.h"
 #include "fat32.h"
 #include "fb.h"
+#include "fs_clerk.h"
 #include "gdt.h"
+#include "gui_clerk.h"
+#include "idle_clerk.h"
 #include "idt.h"
 #include "keyboard.h"
 #include "klog.h"
@@ -13,6 +17,7 @@
 #include "mbr.h"
 #include "paging.h"
 #include "pmm.h"
+#include "reaper_clerk.h"
 #include "sched.h"
 #include "serial.h"
 #include "smp.h"
@@ -134,6 +139,55 @@ static void init_filesystems() {
     }
 }
 
+static void init_microlithic() {
+    DEBUG_KERNEL("[KERNEL]: --INIT KERNEL TASKS--\n");
+    DEBUG_KERNEL("[KERNEL]: Creating an idle kernel task\n");
+    task_t *kernel_task = task_create(idle_task_pid, (uint64_t)idle, 0,
+                                      "idle", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        scheduler_add(kernel_task);
+    }
+
+    DEBUG_KERNEL("[KERNEL]: Creating an filesystem kernel task\n");
+    kernel_task = task_create(fs_clerk_pid, (uint64_t)fs_task_loop, 0,
+                              "fs_task", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        fs_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
+
+    DEBUG_KERNEL("[KERNEL]: Creating an reaper kernel task\n");
+    kernel_task = task_create(reaper_clerk_pid, (uint64_t)reaper_task_loop, 0,
+                              "reaper", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        reaper_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
+
+    DEBUG_KERNEL("[KERNEL]: Creating an graphical user interface kernel task\n");
+    kernel_task = task_create(gui_clerk_pid, (uint64_t)gui_task_loop, 0,
+                              "gui_task", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        gui_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
+
+    DEBUG_KERNEL("[KERNEL]: Creating a system doctor clerk\n");
+    kernel_task = task_create(doc_clerk_pid, (uint64_t)doc_clerk_loop, 0,
+                              "doc_clerk", &kernel_page_dir, KERNEL_TASK);
+
+    if (kernel_task != NULL) {
+        doc_init(kernel_task);
+        scheduler_add(kernel_task);
+    }
+
+    ledger_init();
+}
+
 void kmain() {
 
     serial_init();
@@ -174,6 +228,7 @@ void kmain() {
     pmm_reclaim_bootloader(&b_info);
     init_drivers();
     init_filesystems();
+    init_microlithic();
 
     lapic_timer_start_periodic(10);
     DEBUG_KERNEL("[KERNEL]: Ready to RUN SOME TASKS\n");

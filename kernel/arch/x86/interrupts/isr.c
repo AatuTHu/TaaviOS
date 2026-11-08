@@ -27,7 +27,7 @@ uint32_t isr_handler(struct registers *r) {
     int is_user     = (r->cs & 0x3) == 3;
     task_t *current = scheduler_get_current_task();
 
-    if (current != NULL && current->task_mode == KERNEL_TASK && current->pid != reaper_task_pid) {
+    if (current != NULL && current->task_mode == KERNEL_TASK && current->pid != reaper_clerk_pid) {
         ERROR("[ISR]: %s made a fatal mistake. Resetting\n", current->name);
         print_registers_to_console(r);
         current->state = TASK_SLEEPING;

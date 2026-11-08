@@ -18,26 +18,26 @@ static syscall_fn_t syscall_table[MAX_SYSCALLS];
 static int signal_clerks_to_release_memory(struct registers *r, uint32_t caller_pid, uint32_t target_pid) {
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting fs_task release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_queue_free_req(caller_pid, fs_task_pid, target_pid);
+    ledger_queue_free_req(caller_pid, fs_clerk_pid, target_pid);
     scheduler_yield(r);
 
-    if (ledger_collect(caller_pid, fs_task_pid, NULL) == STATUS_ERROR) {
+    if (ledger_collect(caller_pid, fs_clerk_pid, NULL) == STATUS_ERROR) {
         ERROR("[SIG_RELEASE_MEMORY]: FS_TASK failed to release memory \n");
     }
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting gui_task to release allocated memory\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_queue_free_req(caller_pid, gui_task_pid, target_pid);
+    ledger_queue_free_req(caller_pid, gui_clerk_pid, target_pid);
     scheduler_yield(r);
-    if (ledger_collect(caller_pid, gui_task_pid, NULL) == STATUS_ERROR) {
+    if (ledger_collect(caller_pid, gui_clerk_pid, NULL) == STATUS_ERROR) {
         ERROR("[SIG_RELEASE_MEMORY]: GUI_TASK failed to release memory \n");
     }
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting reaper to kill the task\n");
     scheduler_set_task_state(TASK_BLOCKED);
-    ledger_queue_free_req(caller_pid, reaper_task_pid, target_pid);
+    ledger_queue_free_req(caller_pid, reaper_clerk_pid, target_pid);
     scheduler_yield(r);
-    if (ledger_collect(caller_pid, reaper_task_pid, NULL) == STATUS_ERROR) {
+    if (ledger_collect(caller_pid, reaper_clerk_pid, NULL) == STATUS_ERROR) {
         ERROR("[SIG_RELEASE_MEMORY]: REAPER_TASK failed to release memory \n");
     }
 
@@ -110,7 +110,7 @@ static int32_t sys_read(struct registers *r) {
     ledger_add_fs_req(current->pid, READ, fd, buf, buff_size, O_RDONLY);
     scheduler_yield(r);
 
-    if (ledger_collect(current->pid, fs_task_pid, buf) == STATUS_ERROR)
+    if (ledger_collect(current->pid, fs_clerk_pid, buf) == STATUS_ERROR)
         return STATUS_ERROR;
 
     return STATUS_OK;
@@ -149,7 +149,7 @@ static int32_t sys_write(struct registers *r) {
         ledger_add_fs_req(current->pid, WRITE, fd, buf, len, O_WRONLY);
         scheduler_set_task_state(TASK_BLOCKED);
         scheduler_yield(r);
-        return ledger_collect(current->pid, fs_task_pid, NULL);
+        return ledger_collect(current->pid, fs_clerk_pid, NULL);
     }
 
     return STATUS_OK;
@@ -176,7 +176,7 @@ static int32_t sys_open(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return ledger_collect(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_clerk_pid, NULL);
 }
 
 /**
@@ -201,7 +201,7 @@ static int32_t sys_close(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return ledger_collect(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_clerk_pid, NULL);
 }
 
 static int32_t sys_unlink(struct registers *r) {
@@ -218,7 +218,7 @@ static int32_t sys_unlink(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return ledger_collect(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_clerk_pid, NULL);
 }
 
 static int32_t sys_getpid(struct registers *r) {
@@ -248,7 +248,7 @@ static int32_t sys_chdir(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return ledger_collect(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_clerk_pid, NULL);
 }
 
 static int32_t sys_sbrk(struct registers *r) {
@@ -394,7 +394,7 @@ static int32_t sys_mkdir(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return ledger_collect(current->pid, fs_task_pid, NULL);
+    return ledger_collect(current->pid, fs_clerk_pid, NULL);
 }
 
 static int32_t sys_getdents(struct registers *r) {
@@ -412,7 +412,7 @@ static int32_t sys_getdents(struct registers *r) {
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
 
-    return ledger_collect(current->pid, fs_task_pid, buffer);
+    return ledger_collect(current->pid, fs_clerk_pid, buffer);
 }
 
 static int32_t sys_idle(struct registers *r) {

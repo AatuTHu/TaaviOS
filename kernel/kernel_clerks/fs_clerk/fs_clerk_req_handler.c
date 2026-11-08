@@ -614,7 +614,7 @@ static int delete(request_table *req) {
  * Context: The main entry point for the file system server task loop.
  */
 void fs_handle_request(request_table *req) {
-    task_t *fs_task = task_get(fs_task_pid);
+    task_t *fs_task = task_get(fs_clerk_pid);
 
     if (fs_task == NULL || req == NULL) {
         return;

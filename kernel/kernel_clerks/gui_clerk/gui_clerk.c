@@ -252,7 +252,7 @@ static int gui_move_window(const request_table *req) {
 }
 
 static void gui_handle_request(request_table *req) {
-    task_t *gui_task = task_get(gui_task_pid);
+    task_t *gui_task = task_get(gui_clerk_pid);
 
     if (gui_task == NULL || req == NULL)
         return;
@@ -286,14 +286,14 @@ void gui_task_loop() {
             gui_flush_pixels();
         }
 
-        request_table *req = ledger_fetch_next_req(gui_task_pid);
+        request_table *req = ledger_fetch_next_req(gui_clerk_pid);
         if (req != NULL) {
             if (req->status == PENDING || req->status == IN_PROGRESS) {
                 gui_handle_request(req);
             }
         }
 
-        blankie_activate(gui_task_pid);
+        blankie_activate(gui_clerk_pid);
     }
 }
 
@@ -301,14 +301,18 @@ static void gui_recovery() {
     ERROR("\n[GUI_TASK][RECOVERY]: activated %d times\n", hail_mary_act_count);
 
     hail_mary_act_count++;
-    ledger_check_request(gui_task_pid);
-    blankie_activate(gui_task_pid);
+    ledger_check_request(gui_clerk_pid);
+    blankie_activate(gui_clerk_pid);
 }
 
 void gui_init(const task_t *gui_task) {
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Initializing GUI\n");
-    blankie_register(gui_task_pid, gui_task->context.eip, gui_task->kernel_stack);
-    register_hail_mary_function(gui_task_pid, gui_recovery);
+#if defined(__x86_64__)
+    blankie_register(gui_clerk_pid, gui_task->context.rip, gui_task->kernel_stack);
+#else
+    blankie_register(gui_clerk_pid, gui_task->context.eip, gui_task->kernel_stack);
+#endif
+    register_hail_mary_function(gui_clerk_pid, gui_recovery);
     bg_color = COLOR_DARKER_GREEN;
 
     DEBUG_GUI_TASK("[GUI_TASK][INIT]: Initializing program windows\n");
