@@ -2,6 +2,8 @@
 #include "config.h"
 #include "cpu.h"
 #include "kernel.h"
+#include "kstring.h"
+#include "limine.h"
 #include "serial.h"
 #include <stdint.h>
 
@@ -40,6 +42,11 @@ __attribute__((used, section(".limine_requests"))) static volatile struct limine
     .id       = LIMINE_MP_REQUEST,
     .revision = 0,
     .flags    = 0,
+};
+
+__attribute__((used, section(".limine_requests"))) static volatile struct limine_module_request module_req = {
+    .id       = LIMINE_MODULE_REQUEST,
+    .revision = 0,
 };
 
 __attribute__((used, section(".limine_requests_end"))) static volatile LIMINE_REQUESTS_END_MARKER;
@@ -132,6 +139,21 @@ static int boot_info_collect(struct boot_info *out) {
 
     if (mp_req.response != NULL) {
         fill_cpu_struct(mp_req.response);
+    }
+
+    if (module_req.response != NULL) {
+        out->module_count = module_req.response->module_count;
+
+        for (uint64_t i = 0; i < module_req.response->module_count; i++) {
+            struct limine_file *entry       = module_req.response->modules[i];
+            out->modules[i].address         = (uint64_t)entry->address;
+            out->modules[i].size            = entry->size;
+            out->modules[i].media_type      = entry->media_type;
+            out->modules[i].path            = entry->path;
+            out->modules[i].cmdline         = entry->cmdline;
+            out->modules[i].mbr_disk_id     = entry->mbr_disk_id;
+            out->modules[i].partition_index = entry->partition_index;
+        }
     }
 
     return 0;

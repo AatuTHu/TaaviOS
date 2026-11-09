@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define BOOT_MAX_REGIONS 128
+#define MAX_MODULE_COUNT 10
 
 enum boot_region_type {
     BOOT_REGION_USABLE,
@@ -38,6 +39,19 @@ struct boot_framebuffer {
     uint8_t blue_mask_shift;
 };
 
+struct boot_modules {
+    uint64_t address;
+    uint64_t size;
+    char *path;
+    char *cmdline;
+    uint32_t media_type;
+    uint32_t unused;
+    uint32_t tftp_ip;
+    uint32_t tftp_port;
+    uint32_t partition_index;
+    uint32_t mbr_disk_id;
+};
+
 struct boot_info {
     uint64_t hhdm_offset;
     uint64_t kernel_phys_base;
@@ -45,6 +59,8 @@ struct boot_info {
     uint64_t rsdp;
     struct boot_framebuffer fb;
     size_t region_count;
+    uint64_t module_count;
+    struct boot_modules modules[MAX_MODULE_COUNT];
     struct boot_mem_region regions[BOOT_MAX_REGIONS];
 };
 

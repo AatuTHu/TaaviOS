@@ -96,16 +96,29 @@ static void print_collected_info() {
 
     if (b_info.fb.addr != 0) {
         DEBUG_KERNEL("[KERNEL]: Framebuffer information\n");
-        DEBUG_KERNEL("Framebuffer addr: 0x%x\n", b_info.fb.addr);
-        DEBUG_KERNEL("Framebuffer width: %d\n", b_info.fb.width);
-        DEBUG_KERNEL("Framebuffer height: %d\n", b_info.fb.height);
-        DEBUG_KERNEL("Framebuffer pitch: %d\n", b_info.fb.pitch);
-        DEBUG_KERNEL("Framebuffer bpp: %d\n", b_info.fb.bpp);
+        DEBUG_KERNEL("- Framebuffer addr: 0x%x\n", b_info.fb.addr);
+        DEBUG_KERNEL("- Framebuffer width: %d\n", b_info.fb.width);
+        DEBUG_KERNEL("- Framebuffer height: %d\n", b_info.fb.height);
+        DEBUG_KERNEL("- Framebuffer pitch: %d\n", b_info.fb.pitch);
+        DEBUG_KERNEL("- Framebuffer bpp: %d\n", b_info.fb.bpp);
     } else {
         DEBUG_KERNEL("No framebuffer detected\n");
     }
 
     DEBUG_KERNEL("[KERNEL]: rsdp address: 0x%x\n", b_info.rsdp);
+
+    DEBUG_KERNEL("[KERNEL]: kernel module count: %d\n", b_info.module_count);
+    for (uint64_t i = 0; i < b_info.module_count; i++) {
+        struct boot_modules entry = b_info.modules[i];
+
+        DEBUG_KERNEL("- Module address: 0x%x\n", entry.address);
+        DEBUG_KERNEL("- Module size: %d\n", entry.size);
+        DEBUG_KERNEL("- Module path: %s\n", entry.path);
+        DEBUG_KERNEL("- Module cmdline: %s\n", entry.cmdline);
+        DEBUG_KERNEL("- Module mediatype: %d\n", entry.media_type);
+        DEBUG_KERNEL("- Module partition index: %d\n", entry.partition_index);
+        DEBUG_KERNEL("- Module mbr disk index: %d\n", entry.mbr_disk_id);
+    }
 }
 
 static void init_drivers() {

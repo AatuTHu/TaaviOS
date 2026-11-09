@@ -172,7 +172,7 @@ static uint64_t scheduler_switch(struct registers *r) {
 
     if (current != NULL && current->started && current->state != TASK_DEAD &&
         current->state != TASK_SLEEPING) {
-        DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d Saving task %s\n", cpu_current()->processor_id, current->name);
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d Saving task %s\n", cpu_current()->processor_id, current->name);
         current->interrupt_frame = (uint64_t)r;
 
         if (current->state == TASK_RUNNING) {
