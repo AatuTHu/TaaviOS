@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 typedef struct {
-    uint32_t phys_addr;
-    uint32_t virt_addr;
+    uint64_t phys_addr;
+    uintptr_t virt_addr;
     uint32_t pitch;
     uint32_t width;
     uint32_t height;

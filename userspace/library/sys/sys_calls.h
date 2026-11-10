@@ -36,6 +36,6 @@ int sys_ioctl(int operation, int p1, int p2);
 
 int sys_kill(uint32_t target_pid);
 
-int sys_sbrk(uint32_t size);
+uintptr_t sys_sbrk(uintptr_t size);
 
 #endif

@@ -20,7 +20,7 @@
 
 static blankie_registry_t *b_registry[CLERK_COUNT];
 
-int blankie_register(uint32_t pid, uint32_t entry_point, uint32_t stack_top) {
+int blankie_register(uint32_t pid, uintptr_t entry_point, uintptr_t stack_top) {
     for (uint8_t i = 0; i < CLERK_COUNT; i++) {
         if (b_registry[i] == NULL) {
             blankie_registry_t *blankie_req =

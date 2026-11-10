@@ -10,8 +10,8 @@
  */
 
 static block_header_t *free_list = NULL;
-static uint32_t remaining_heap_size;
-static uint32_t current_heap_ceiling = 0;
+static uintptr_t remaining_heap_size;
+static uintptr_t current_heap_ceiling = 0;
 
 static void update_remaining_heap_size() {
     size_t total_free       = 0;
@@ -23,16 +23,16 @@ static void update_remaining_heap_size() {
     remaining_heap_size = total_free;
 }
 
-void malloc_init(void *heap_start, uint32_t heap_size) {
+void malloc_init(void *heap_start, uintptr_t heap_size) {
     free_list            = (block_header_t *)heap_start;
     free_list->size      = (heap_size - sizeof(block_header_t));
     free_list->magic     = HEAP_MAGIC;
     free_list->next      = NULL;
-    current_heap_ceiling = (uint32_t)heap_start + heap_size;
+    current_heap_ceiling = (uintptr_t)heap_start + heap_size;
     update_remaining_heap_size();
 }
 
-void *malloc(uint32_t size) {
+void *malloc(uintptr_t size) {
     block_header_t *current = free_list;
     block_header_t *prev    = NULL;
     while (1) {

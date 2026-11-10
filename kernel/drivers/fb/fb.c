@@ -4,7 +4,6 @@
 #include "klog.h"
 #include "kstring.h"
 #include "paging.h"
-#include "vmm.h"
 #include <stdint.h>
 
 #if defined(__x86_64__)
