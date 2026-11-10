@@ -7,7 +7,7 @@
 #include "serial.h"
 #include <stdint.h>
 
-static uint8_t kernel_stack[KERNEL_STACK_SIZE_64b] __attribute__((aligned(16)));
+static uint8_t kernel_stack[KERNEL_STACK_SIZE] __attribute__((aligned(16)));
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 
@@ -160,7 +160,7 @@ static int boot_info_collect(struct boot_info *out) {
 }
 
 uint64_t kernel_stack_top(void) {
-    return (uint64_t)(kernel_stack + KERNEL_STACK_SIZE_64b);
+    return (uint64_t)(kernel_stack + KERNEL_STACK_SIZE);
 }
 
 void ignite_core(uint64_t index, uint64_t core_struct, void *goto_addr) {

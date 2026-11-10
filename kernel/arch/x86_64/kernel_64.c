@@ -4,6 +4,7 @@
 #include "boot_info.h"
 #include "config.h"
 #include "doc_clerk.h"
+#include "elf.h"
 #include "fat32.h"
 #include "fb.h"
 #include "fs_clerk.h"
@@ -21,10 +22,14 @@
 #include "sched.h"
 #include "serial.h"
 #include "smp.h"
+#include "syscall.h"
 #include "task.h"
+#include "tss.h"
+#include "vmm.h"
 #include <stdint.h>
 
 struct boot_info b_info;
+task_t *task = NULL;
 
 static void panic() {
     while (1) __asm__ __volatile__("hlt");
@@ -201,6 +206,40 @@ static void init_microlithic() {
     ledger_init();
 }
 
+void load_modules() {
+    for (uint64_t i = 0; i < b_info.module_count; i++) {
+
+        struct boot_modules entry = b_info.modules[i];
+
+        page_directory_t *init_pd = vmm_create_dir();
+
+        if (init_pd == NULL) {
+            ERROR("Failed to create directory for the module. Aborting\n");
+            return;
+        }
+
+        uint64_t init_phys   = entry.address;
+        uint64_t heap_start  = 0;
+        uint64_t entry_point = elf_load((void *)init_phys, init_pd, &heap_start);
+        if (entry_point == 0) {
+            ERROR("Failed to load the elf file. Aborting\n");
+            continue;
+        }
+        DEBUG_KERNEL("[KERNEL]: ELF loaded at 0x%x.\n", entry_point);
+        DEBUG_KERNEL("[KERNEL]: Creating init task\n");
+        task = task_create(-1, entry_point, heap_start, "init", init_pd, USER_TASK);
+        // first_task->priority = PRIORITY_HIGH;
+
+        if (task == NULL) {
+            if (vmm_free_user_space(init_pd) == STATUS_ERROR) {
+                ERROR("[TASK]: Failed to free virtual page directory\n");
+            }
+        } else {
+            scheduler_add(task);
+        }
+    }
+}
+
 void kmain() {
 
     serial_init();
@@ -236,22 +275,27 @@ void kmain() {
     init_drivers();
     init_filesystems();
     init_microlithic();
+    load_modules();
 
-    if (smp_init() == STATUS_ERROR) {
-        ERROR("[KERNEL]: Failed to initialize SMP\n");
-        panic();
-    }
+    /* if (smp_init() == STATUS_ERROR) {
+         ERROR("[KERNEL]: Failed to initialize SMP\n");
+         panic();
+     }*/
 
     pmm_reclaim_bootloader(&b_info);
 
     scheduler_init();
-    scheduler_set_current_task(idle_task_pid);
-    _set_scheduler_on();
+    syscall_init();
 
     lapic_timer_start_periodic(10);
     DEBUG_KERNEL("[KERNEL]: Ready to RUN SOME TASKS\n");
 
-    scheduler_yield(NULL);
+    if (task != NULL) {
+        DEBUG_KERNEL("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
+        scheduler_set_current_task(idle_task_pid);
+        _set_scheduler_on();
+        scheduler_yield(NULL);
+    }
 
-    while (1) __asm__ __volatile__("sti; hlt");
+    panic();
 }

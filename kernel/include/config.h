@@ -5,13 +5,20 @@
 
 #define SEG_KERNEL_CODE 0x08
 #define SEG_KERNEL_DATA 0x10
+
+#if defined(__x86_64__)
+#define SEG_USER_DATA 0x1B
+#define SEG_USER_CODE 0x23
+#define GDT_TSS_SEL 0x28
+#define GDT_TSS_STRIDE 16
+#define KERNEL_STACK_SIZE 64 * 1024
+#else
 #define SEG_USER_CODE 0x1B
 #define SEG_USER_DATA 0x23
 #define GDT_TSS_SEL 0x2B
-
-#define SEG_64_USER_DATA 0x18
-#define SEG_64_USER_CODE 0x20
-#define GDT_TSS 0x28
+#define GDT_TSS_STRIDE 8
+#define KERNEL_STACK_SIZE 4096
+#endif
 
 #define TASK_NAME_LENGTH 9
 #define PIT_FREQUENCY 1000
@@ -86,8 +93,7 @@
 
 #define EFLAGS_IF (1 << 9) // interrupts flag
 #define EFLAGS_DEFAULT (EFLAGS_IF | (1 << 1))
-#define KERNEL_STACK_SIZE 4096
-#define KERNEL_STACK_SIZE_64b 64 * 1024
+
 #define USER_STACK_SIZE (4096 * 4)
 #define USER_STACK_TOP 0x800000
 

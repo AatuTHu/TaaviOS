@@ -1,8 +1,8 @@
-global _start
-extern main
-extern __init_task
+GLOBAL _start
+EXTERN main
+EXTERN __init_task
 
-section .text
+SECTION .text
 _start:
     xor eax, eax
     xor ebx, ebx
@@ -21,4 +21,3 @@ _start:
     mov eax, 1
     mov ebx, -1
     int 0x80
-    ;hlt
