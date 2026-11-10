@@ -104,6 +104,9 @@ void idt_init() {
     DEBUG_KERNEL("[IDT]: Mapping LAPIC timer interrupt vector (0x40)\n");
     idt_set_gate(LAPIC_TIMER_VECTOR, (uint64_t)&irq32, IDT_GATE_INTERRUPT, 0);
 
+    DEBUG_KERNEL("[IDT]: Setting system call gate to 0x80\n");
+    idt_set_gate(0x80, (uint64_t)syscall_handler, IDT_GATE_TRAP | 0x60, 0);
+
     DEBUG_KERNEL("[IDT]: Mapping lapic spurrious vector\n");
     idt_set_gate(255, (uint64_t)isr255, IDT_GATE_INTERRUPT, 0);
 

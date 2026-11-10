@@ -3,9 +3,8 @@
 #include "io.h"
 #include "isr.h"
 #include "klog.h"
-#if defined(__i386__) || defined(__i686__)
 #include "sched.h"
-#else
+#if defined(__x86_64__)
 #include "apic.h"
 #include "cpu.h"
 #endif
@@ -176,9 +175,7 @@ void keyboard_handler(uint8_t scancode) {
             break;
         }
         if (did_press_arrow_key) {
-#if defined(__i386__) || defined(__i686__)
             scheduler_wake_task(keyboard_buffer->foreground_pid);
-#endif
         }
         return;
     }
@@ -202,11 +199,9 @@ void keyboard_handler(uint8_t scancode) {
         }
 
         if (c != 0) {
-            DEBUG("[KEYBOARD][HANDLER]: fired!\n");
+            // DEBUG("[KEYBOARD][HANDLER]: fired!\n");
             keyboard_write_to_buffer(c);
-#if defined(__i386__) || defined(__i686__)
             scheduler_wake_task(keyboard_buffer->foreground_pid);
-#endif
         }
     }
 }

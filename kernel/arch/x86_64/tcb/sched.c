@@ -202,7 +202,7 @@ static uint64_t scheduler_switch(struct registers *r) {
     next->started = 1;
 
     if (next_pid != cpu_current()->current_pid) {
-        DEBUG_SCHED("[SCHEDULER][SWITCH]: Running with %s\n", next->name);
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Running with %s\n", next->name);
         cpu_current()->current_pid = next_pid;
 
         if (next->task_mode == USER_TASK) {

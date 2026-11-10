@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define IDT_GATE_INTERRUPT 0x8E
+#define IDT_GATE_TRAP 0xEF
 
 struct __attribute__((packed)) idt_entry {
     uint16_t offset_low;

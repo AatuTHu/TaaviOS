@@ -23,6 +23,13 @@ irq%1:
     jmp irq_common
 %endmacro
 
+%macro SWAPGS_ENTRY 1 ;test if the interrupt came from uspace or from kspace
+    test qword [rsp + %1], 3
+    jz %%skip
+    swapgs ;swapgs if came from uspace
+%%skip:
+%endmacro
+
 extern isr_handler
 extern irq_handler
 
@@ -122,6 +129,10 @@ isr_common:
     pop rax
 
     add rsp, 16
+    test qword [rsp + 8], 3
+    jz .ret
+    swapgs
+.ret:
     iretq
 
 irq_common:
@@ -164,6 +175,10 @@ irq_common:
     pop rax
 
     add rsp, 16
+    test qword [rsp + 8], 3
+    jz .ret
+    swapgs
+.ret:
     iretq
 
 
@@ -191,6 +206,10 @@ extern syscall_dispatch
 
 global syscall_handler
 syscall_handler:
+
+    push qword 0
+    push qword 0x80
+    SWAPGS_ENTRY 24
     push rax
     push rbx
     push rcx
@@ -210,7 +229,7 @@ syscall_handler:
 
     mov rdi, rsp
 
-   ; call syscall_dispatch
+    call syscall_dispatch
 
     pop r15
     pop r14
@@ -228,5 +247,9 @@ syscall_handler:
     pop rbx
     pop rax
 
-    add rsp, 16
+ add rsp, 16
+    test qword [rsp + 8], 3
+    jz .ret
+    swapgs
+.ret:
     iretq

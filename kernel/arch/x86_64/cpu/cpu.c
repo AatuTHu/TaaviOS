@@ -19,8 +19,10 @@ void fill_cpu_struct(struct limine_mp_response *info) {
     cores[0].lapic_id     = bsp_lapic_id;
     cores[0].online       = 1;
     cores[0].self         = &cores[0];
+    // save to both uspace and kspace gs the core struct so that it can be alwasys found when
+    // spwapped the geeäs during iterrupts
     wrmsr(IA32_GS_BASE, (uint64_t)&cores[0]);
-
+    wrmsr(IA32_KERNEL_GS_BASE, (uint64_t)&cores[0]);
     for (uint64_t i = 0; i < info->cpu_count; i++) {
         struct limine_mp_info *cpu = info->cpus[i];
         if (cpu->lapic_id == bsp_lapic_id) {
