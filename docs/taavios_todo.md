@@ -18,11 +18,11 @@
 - [ ] fs_int more complex file system management.
 - [ ] First real text editor
 - [x] Virtual tasks return adds random chars at the end of the list
-- [ ] Batch render operations. (Many requests on one sys call)
+- [might not be needed?] Batch render operations. (Many requests on one sys call)
 - [x] refresh section and set cursor to original state
 - [x] render.h abstractions to stand so that it doesn't have to be included.
-- [ ] rework gui to handle multiple requests before blankie protocol.
-- [ ] small self made compiler
+- [might not be needed?] rework gui to handle multiple requests before blankie protocol.
+- [ ] small self made assembler
 - [ ] system doctor clerk
 - [ ] calculate section based on x and y so that keys are not needed
 - [x] get_dents should expose more than just the name? Attributes, size for example
@@ -32,7 +32,7 @@
 - [x] FAT32 delete dir/file.
 - [ ] GUI_CLERK opcode to receive screen info like resolution, other windows width/height/x/y
 - [ ] GUI_CLERK change the blueprint_t to window_t
-- [ ] Change all places where clerks are called 'task' to 'clerk'
+- [98%?] Change all places where clerks are called 'task' to 'clerk'
 - [ ] Add comment blocks
 - [ ] Gui delete has unnecessary buffer clean
 - [X] Ledger collect doesn't handle failed req cases
@@ -46,14 +46,16 @@
 - [X] IDT
 - [X] TSS
 - [X] ISR
-- [ ] APIC
+- [X] APIC
 - [X] PAGING
 - [X] HEAP
-- [ ] TASKS
-- [ ] SYSCALLS
-- [ ] SCHED
-- [ ] MICROLITHIC ARCH
+- [X] TASKS
+- [X] SYSCALLS
+- [X] SCHED (bsp only)
+- [X] MICROLITHIC ARCH
+- [ ] Spinlock everything
+- [ ] Schedule with smp
 
 BOTH
-
-- [ ] Port as much as possible from 32bit so that both can use the same code
+- [X] Port as much as possible from 32bit so that both can use the same code
+- [ ] Scheduler & task to common/ ?
