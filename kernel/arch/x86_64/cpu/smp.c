@@ -4,12 +4,14 @@
 #include "config.h"
 #include "cpu.h"
 #include "gdt.h"
+#include "idle_clerk.h"
 #include "idt.h"
 #include "io.h"
 #include "kernel.h"
 #include "klog.h"
 #include "paging.h"
 #include "sched.h"
+#include "task.h"
 #include "vmm.h"
 #include <stdint.h>
 
@@ -35,16 +37,23 @@ static void ap_main() {
 
     DEBUG_KERNEL("[SMP][AP_MAIN] cpu %d online, lapic id %d\n", c->processor_id, c->lapic_id);
     scheduler_init();
-    scheduler_set_current_task(idle_task_pid);
-    _set_scheduler_on();
 
-    lapic_timer_start_periodic(10);
+    task_t *kernel_task = task_create(-1, (uint64_t)idle, 0,
+                                      "idle", &kernel_page_dir, KERNEL_TASK);
 
-    scheduler_yield(NULL);
-
-    while (1) {
-        __asm__ __volatile__("sti; hlt");
+    if (kernel_task == NULL) {
+        while (1) __asm__ __volatile__("sti; hlt");
     }
+
+    kernel_task->is_idle          = 1;
+    kernel_task->on_core          = 1;
+    kernel_task->state            = TASK_READY;
+    cpu_current()->sched.idle_pid = kernel_task->pid;
+    scheduler_add(kernel_task);
+    scheduler_set_current_task(kernel_task->pid);
+    _set_scheduler_on();
+    lapic_timer_start_periodic(10);
+    scheduler_yield(NULL);
 }
 
 // ap_warmup
@@ -60,7 +69,7 @@ static void ap_warmup(struct limine_mp_info *info) {
     wrmsr(IA32_GS_BASE, (uint64_t)c_entry);
     wrmsr(IA32_KERNEL_GS_BASE, (uint64_t)c_entry);
     uint64_t pml4_phys = paging_get_directory_phys_addr(&kernel_page_dir);
-    ap_stack_switch_and_call(c_entry->kstack_top, ap_main, pml4_phys);
+    ap_stack_switch_and_call(c_entry->kernel_stack, ap_main, pml4_phys);
     __builtin_unreachable();
 }
 
@@ -88,7 +97,7 @@ static void ap_setup() {
             continue;
         }
 
-        if (vmm_alloc_kstack(&c_entry->kstack_top) == STATUS_ERROR) {
+        if (vmm_alloc_kstack(&c_entry->kernel_stack) == STATUS_ERROR) {
             ERROR("[SMP][INIT]: Failed to map kernel stack for the cpu core %d\n", c_entry->lapic_id);
             continue;
         }

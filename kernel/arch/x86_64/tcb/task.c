@@ -3,8 +3,11 @@
 #include "klog.h"
 #include "kmalloc.h"
 #include "kstring.h"
+#include "spinlock.h"
 #include "vmm.h"
 #include <stdint.h>
+
+static spinlock_t task_lock = SPINLOCK_INIT("task");
 
 /*
  * Task
@@ -14,8 +17,8 @@
 task_t *task_table[MAX_TASKS];
 blueprint_t *program_windows[MAX_TASKS];
 
-task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const char *name,
-                    page_directory_t *page_dir, uint8_t task_mode) {
+task_t *__task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const char *name,
+                      page_directory_t *page_dir, uint8_t task_mode) {
 
     if (page_dir == NULL) {
         return NULL;
@@ -55,12 +58,18 @@ task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const
         return NULL;
     }
 
+    if (kernel_stack == 0) {
+        return NULL;
+    }
+
     memset(&task->context, 0, sizeof(struct registers));
 
     task->pid      = slot;
     task->state    = task_mode == USER_TASK ? TASK_BLOCKED : TASK_SLEEPING;
     task->page_dir = page_dir;
     task->started  = 0;
+    task->is_idle  = 0;
+    task->on_core  = 0;
 
     strncpy(task->name, name, sizeof(task->name));
     task->name[TASK_NAME_LENGTH - 1] = '\0';
@@ -68,7 +77,7 @@ task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const
     task->context.rip                = entry; // Begining of the task like the main function
     task->context.rsp                = task_mode == USER_TASK
                                            ? USER_STACK_TOP + USER_STACK_SIZE
-                                           : task->kernel_stack - 8; // stack pointer?
+                                           : task->kernel_stack; // stack pointer?
     task->priority                   = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
     task->heap_start                 = heap_start;
     task->heap_end                   = heap_start;
@@ -79,6 +88,14 @@ task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const
     task->task_mode                  = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
     task_table[slot]                 = task;
 
+    return task;
+}
+
+task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const char *name,
+                    page_directory_t *page_dir, uint8_t task_mode) {
+    uint64_t flags = spin_lock_disable_all_intr(&task_lock);
+    task_t *task   = __task_create(reserved_pid, entry, heap_start, name, page_dir, task_mode);
+    spin_unlock_restore_all_intr(&task_lock, flags);
     return task;
 }
 
@@ -100,7 +117,6 @@ int task_destroy(task_t *task) {
         return STATUS_ERROR;
     }
 
-    task_table[task->pid] = NULL;
     kfree(task);
     DEBUG_TASK("[TASK]: Task destroyed\n");
     return STATUS_OK;

@@ -1,11 +1,36 @@
 #include "spinlock.h"
 #include <stdint.h>
 #if defined(__x86_64__)
-#include "apic.h"
 #include "cpu.h"
 #endif
 #include "kstring.h"
 #include "serial.h"
+
+static spinlock_t serial_lock = SPINLOCK_INIT("serial_lock");
+
+static void print_lock_info(spinlock_t *l) {
+    spin_light_lock(&serial_lock);
+    char cpuid[10];
+    itoa(cpu_get_lapic_id(), cpuid);
+    serial_write(cpuid);
+    serial_write(" trying to lock ");
+    serial_write(l->name);
+    serial_write(" \n");
+    spin_light_unlock(&serial_lock);
+}
+
+static void print_unlock_info(spinlock_t *l) {
+    spin_light_lock(&serial_lock);
+
+    char cpuid[10];
+    itoa(cpu_get_lapic_id(), cpuid);
+
+    serial_write(cpuid);
+    serial_write(" trying to unlock ");
+    serial_write(l->name);
+    serial_write(" \n");
+    spin_light_unlock(&serial_lock);
+}
 
 static uintptr_t irq_save(void) {
     uintptr_t rflags = 0;
@@ -35,9 +60,15 @@ void spin_light_lock(spinlock_t *l) {
 #else
                 itoa(0, cpuid);
 #endif
-                serial_write("[SPIN_LOCK]: Spin limit surpassed by ");
+                serial_write("[SPIN_LOCK]: ");
                 serial_write(cpuid);
+                serial_write(" tried to lock ");
                 serial_write(l->name);
+                serial_write(" owner of the lock was ");
+                itoa(l->owner, cpuid);
+                serial_write(cpuid);
+                serial_write("\n");
+                cpu_current()->online = 0;
                 while (1) __asm__ __volatile__("cli; hlt");
             }
             __builtin_ia32_pause();
@@ -60,12 +91,18 @@ void spin_light_unlock(spinlock_t *l) {
 }
 
 uintptr_t spin_lock_disable_all_intr(spinlock_t *l) {
+    // if (memcmp(l->name, "klogger", strlen(l->name)) != 0) {
+    //  print_lock_info(l);
+    // }
     uintptr_t flags = irq_save();
     spin_light_lock(l);
     return flags;
 }
 
 void spin_unlock_restore_all_intr(spinlock_t *l, uintptr_t flags) {
+    // if (memcmp(l->name, "klogger", strlen(l->name)) != 0) {
+    //  print_unlock_info(l);
+    // }
     spin_light_unlock(l);
     irq_restore(flags);
 }

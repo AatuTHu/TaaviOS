@@ -259,7 +259,7 @@ static int64_t sys_sbrk(struct registers *r) {
     uint64_t size   = r->rbx;
     if (current == NULL) {
         ERROR("[SYSCALL][SYS_SBRK]: Could not find current task\n");
-        return STATUS_ERROR;
+        return 0;
     }
 
     if (size == 0) {
@@ -272,7 +272,7 @@ static int64_t sys_sbrk(struct registers *r) {
 
     if (vmm_alloc(current->page_dir, current->heap_end, aligned_size, PAGE_USER_RW) == STATUS_ERROR) {
         ERROR("[SYSCALL][SYS_SBRK]: Allocating more heap failed\n");
-        return STATUS_ERROR;
+        return 0;
     }
 
     current->heap_end = old_end + aligned_size;

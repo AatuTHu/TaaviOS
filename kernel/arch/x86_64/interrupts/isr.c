@@ -3,6 +3,7 @@
 #include "cpu.h"
 #include "klog.h"
 #include "sched.h"
+#include <stdint.h>
 
 irq_callback_t irq_callbacks[16] = {0};
 
@@ -27,10 +28,11 @@ uint64_t isr_handler(struct registers *r) {
     ERROR("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
     ERROR("REASON: ");
     if (r->int_no == 14) {
-        ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s)\n",
+        ERROR("PAGE FAULT (Present: %s, Access: %s, Mode: %s, running on core %d)\n",
               (r->err_code & 0x1) ? "Yes" : "No",
               (r->err_code & 0x2) ? "Write" : "Read",
-              (r->err_code & 0x4) ? "User" : "Kernel");
+              (r->err_code & 0x4) ? "User" : "Kernel",
+              cpu_current()->processor_id);
         ERROR("FAULTING ADDRESS: 0x%x\n", cr2);
     } else if (r->int_no == 13) {
         ERROR("GENERAL PROTECTION FAULT\n");

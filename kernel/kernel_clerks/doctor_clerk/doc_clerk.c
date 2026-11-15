@@ -1,6 +1,7 @@
 #include "doc_clerk.h"
 #include "blankie.h"
 #include "config.h"
+#include "cpu.h"
 #include "hail_mary.h"
 #include "klog.h"
 #include "kmalloc.h"
@@ -10,6 +11,7 @@
 #include "sched.h"
 #include "shared.h"
 #include "vmm.h"
+#include <stdint.h>
 
 /**
  * doc_clerk
@@ -18,6 +20,19 @@
  */
 
 #define TEST_BUFFER_SIZE 10
+
+static void print_system_status() {
+
+    for (uint64_t i = 0; i < cpu_count; i++) {
+        struct core_t core = cores[i];
+        DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: Core %d \n", core.processor_id);
+        DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: - status: ");
+        cores->online == 1 ? DEBUG_DOC("Online\n") : DEBUG_DOC("Offline \n");
+
+        DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: - current pid: %d \n", core.sched.current_pid);
+        DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: - prev pid: %d\n", core.sched.prev_pid);
+    }
+}
 
 static void print_ledger_status() {
     int request_count = ledger_count_active_reqs();
@@ -123,6 +138,7 @@ void doc_clerk_loop() {
     // DEBUG_DOC("[DOC][DOC_LOOP]\n");
     while (1) {
         print_ledger_status();
+        print_system_status();
 
         request_table *req = ledger_fetch_next_req(doc_clerk_pid);
         if (req != NULL) {

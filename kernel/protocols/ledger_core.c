@@ -5,12 +5,15 @@
 #include "ledger.h"
 #include "sched.h"
 #include "shared.h"
+#include "spinlock.h"
 #include "task.h"
 #include <stdint.h>
 /*
  * Ledger Protocol
  * Design & Implementation: A.H, 2026
  */
+
+static spinlock_t ledger_lock = SPINLOCK_INIT("ledger_lock");
 
 request_table *fs_table[MAX_FS_REQ_ENTRIES];
 int last_fs_req_idx = -1;
@@ -68,6 +71,7 @@ int ledger_remove_request() {
     // DEBUG_LEDGER("[LEDGER][REMOVE]: Don't fear the reaper\n");
     int kill_count = 0;
 
+    uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
     for (int c = 0; c < CLERK_COUNT; c++) {
         clerk_queue *q = ledger_get_queue(c);
         if (q == NULL) {
@@ -92,6 +96,7 @@ int ledger_remove_request() {
             }
         }
     }
+    spin_unlock_restore_all_intr(&ledger_lock, flags);
 
     DEBUG_LEDGER("[LEDGER][REMOVE]: Reaper exiting with kill count of %d\n", kill_count);
     return kill_count;
@@ -126,21 +131,24 @@ static inline int queue_req(request_table *new_request) {
 
     clerk_queue *q = ledger_get_queue(new_request->clerk_pid);
     if (!q) {
-        kfree(new_request);
         scheduler_wake_task(new_request->caller_pid);
+        kfree(new_request);
         return STATUS_ERROR;
     }
 
+    uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
     for (int i = 0; i < q->max_entries; i++) {
         if (q->table[i] == NULL) {
             q->table[i] = new_request;
+            spin_unlock_restore_all_intr(&ledger_lock, flags);
             wake_clerk(new_request->clerk_pid);
             return STATUS_OK;
         }
     }
 
-    kfree(new_request);
+    spin_unlock_restore_all_intr(&ledger_lock, flags);
     scheduler_wake_task(new_request->caller_pid);
+    kfree(new_request);
     return STATUS_ERROR;
 }
 
@@ -169,10 +177,13 @@ int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out) {
     }
 
     for (int i = 0; i < q->max_entries; i++) {
+        uint64_t flags     = spin_lock_disable_all_intr(&ledger_lock);
         request_table *req = q->table[i];
-        if (req == NULL || req->caller_pid != caller_pid) {
+        if (req == NULL || req->caller_pid != caller_pid || req->status == TERMINATED) {
+            spin_unlock_restore_all_intr(&ledger_lock, flags);
             continue;
         }
+        spin_unlock_restore_all_intr(&ledger_lock, flags);
 
         if (req->status == COMPLETE) {
             switch (req->request_type) {
@@ -234,18 +245,24 @@ request_table *ledger_fetch_next_req(uint32_t clerk_pid) {
     }
 
     for (int i = 0; i < q->max_entries; i++) {
+        uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
         if (q->table[i] != NULL && q->table[i]->status == IN_PROGRESS) {
             *q->last_idx = i;
+            spin_unlock_restore_all_intr(&ledger_lock, flags);
             return q->table[i];
         }
+        spin_unlock_restore_all_intr(&ledger_lock, flags);
     }
 
     for (int i = 0; i < q->max_entries; i++) {
+        uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
         if (q->table[i] != NULL && q->table[i]->status == PENDING) {
             *q->last_idx        = i;
             q->table[i]->status = IN_PROGRESS;
+            spin_unlock_restore_all_intr(&ledger_lock, flags);
             return q->table[i];
         }
+        spin_unlock_restore_all_intr(&ledger_lock, flags);
     }
 
     // DEBUG_LEDGER("[LEDGER][FETCH_NEXT_TASK]: No tasks found for :%d\n", clerk_pid);
@@ -269,9 +286,11 @@ int ledger_count_clerk_reqs(uint32_t clerk_pid) {
     int req_count = 0;
 
     for (int i = 0; i < q->max_entries; i++) {
+        uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
         if (q->table[i] != NULL && (q->table[i]->status == PENDING || q->table[i]->status == IN_PROGRESS)) {
             req_count++;
         }
+        spin_unlock_restore_all_intr(&ledger_lock, flags);
     }
 
     return req_count;
@@ -293,9 +312,11 @@ int ledger_count_all_clerk_reqs(uint32_t clerk_pid) {
     int req_count = 0;
 
     for (int i = 0; i < q->max_entries; i++) {
+        uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
         if (q->table[i] != NULL) {
             req_count++;
         }
+        spin_unlock_restore_all_intr(&ledger_lock, flags);
     }
 
     // DEBUG_LEDGER("[LEDGER][COUNT_ALL_CLERK_REQS]: Counted %d reqs for %s\n", req_count, task_get(clerk_pid)->name);
@@ -310,9 +331,11 @@ int ledger_count_active_reqs() {
             continue;
         }
         for (int i = 0; i < q->max_entries; i++) {
+            uint64_t flags = spin_lock_disable_all_intr(&ledger_lock);
             if (q->table[i] != NULL && (q->table[i]->status == PENDING || q->table[i]->status == IN_PROGRESS)) {
                 req_count++;
             }
+            spin_unlock_restore_all_intr(&ledger_lock, flags);
         }
     }
 
@@ -506,7 +529,6 @@ case_error:
 }
 
 int ledger_add_doc_req(uint32_t caller_pid, uint32_t opcode) {
-
     request_table *new_request = (request_table *)kmalloc(sizeof(request_table));
     if (new_request == NULL) {
         ERROR("[LEDGER][ADD_DOC_REQUEST]: could not allocate new request. Aborting\n");

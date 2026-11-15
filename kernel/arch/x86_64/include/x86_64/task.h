@@ -31,6 +31,8 @@ typedef struct task_t {
     uint64_t interrupt_frame;
     uint8_t started;
     uint8_t priority;
+    uint8_t is_idle;
+    uint8_t on_core;
     uint8_t task_mode;
 } task_t;
 
@@ -50,6 +52,6 @@ task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const
                     page_directory_t *page_dir, uint8_t task_mode);
 task_t *task_get(uint32_t index);
 int task_destroy(task_t *task);
-void task_sync_kernel_entries_to_all_tasks();
+int create_idle_task();
 int task_has_dirty_buffer();
 #endif

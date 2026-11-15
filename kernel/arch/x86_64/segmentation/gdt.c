@@ -24,7 +24,7 @@ static void gdt_set_entry(struct gdt_entry *e, uint8_t access, uint8_t flags) {
 
 void gdt_init_core(struct core_t *c) {
     memset(&c->tss, 0, sizeof(c->tss));
-    c->tss.rsp[0]                        = c->kstack_top;
+    c->tss.rsp[0]                        = c->kernel_stack;
     c->tss.ist[GDT_IST_DOUBLE_FAULT - 1] = (uint64_t)c->df_stack + sizeof(c->df_stack);
     c->tss.iopb_offset                   = sizeof(struct tss_t);
     tss_create(&gdt.tss_entry[c->processor_id], (uint64_t)&c->tss, sizeof(struct tss_t) - 1);

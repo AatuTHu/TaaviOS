@@ -3,6 +3,7 @@
 #include "ata.h"
 #include "boot_info.h"
 #include "config.h"
+#include "cpu.h"
 #include "doc_clerk.h"
 #include "elf.h"
 #include "fat32.h"
@@ -29,7 +30,6 @@
 #include <stdint.h>
 
 struct boot_info b_info;
-task_t *task = NULL;
 
 static void panic() {
     while (1) __asm__ __volatile__("hlt");
@@ -165,6 +165,13 @@ static void init_microlithic() {
 
     if (kernel_task != NULL) {
         scheduler_add(kernel_task);
+        kernel_task->is_idle          = 1;
+        kernel_task->on_core          = 1;
+        kernel_task->state            = TASK_READY;
+        cpu_current()->sched.idle_pid = kernel_task->pid;
+    } else {
+        ERROR("[SMP][AP_MAIN] coud not create idle task for the core\n");
+        panic();
     }
 
     DEBUG_KERNEL("[KERNEL]: Creating an filesystem kernel task\n");
@@ -208,6 +215,7 @@ static void init_microlithic() {
 
 void load_modules() {
     for (uint64_t i = 0; i < b_info.module_count; i++) {
+        task_t *task              = NULL;
 
         struct boot_modules entry = b_info.modules[i];
 
@@ -276,26 +284,21 @@ void kmain() {
     init_filesystems();
     init_microlithic();
     load_modules();
+    syscall_init();
 
-    /* if (smp_init() == STATUS_ERROR) {
-         ERROR("[KERNEL]: Failed to initialize SMP\n");
-         panic();
-     }*/
+    if (smp_init() == STATUS_ERROR) {
+        ERROR("[KERNEL]: Failed to initialize SMP\n");
+        panic();
+    }
 
     pmm_reclaim_bootloader(&b_info);
 
     scheduler_init();
-    syscall_init();
 
     lapic_timer_start_periodic(10);
-    DEBUG_KERNEL("[KERNEL]: Ready to RUN SOME TASKS\n");
+    _set_scheduler_on();
+    scheduler_set_current_task(cpu_current()->sched.idle_pid);
+    scheduler_yield(NULL);
 
-    if (task != NULL) {
-        DEBUG_KERNEL("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
-        scheduler_set_current_task(idle_task_pid);
-        _set_scheduler_on();
-        scheduler_yield(NULL);
-    }
-
-    panic();
+    while (1) __asm__ __volatile__("sti;hlt");
 }

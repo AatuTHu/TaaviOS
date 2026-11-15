@@ -3,18 +3,25 @@
 
 #include "config.h"
 #include "kernel.h"
+#include "paging.h"
 #include "tss.h"
 #include <stdint.h>
 
+struct sched_info {
+    int current_pid;
+    int prev_pid;
+    int idle_pid;
+    int high_prio_pick_count;
+    uint8_t scheduler_on;
+    page_directory_t *current_dir;
+};
+
 struct core_t {
     struct core_t *self;
+    struct sched_info sched;
     uint32_t processor_id;
     uint32_t lapic_id;
-    uint64_t kstack_top;
-    int current_pid;
-    uint8_t scheduler_on;
-    int high_prio_pick_count;
-    int doc_maintenaince_counter;
+    uint64_t kernel_stack;
     volatile uint32_t online;
     volatile uint64_t ticks;
     struct tss_t tss;
