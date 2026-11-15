@@ -141,16 +141,24 @@ static int scheduler_find_next_task() {
  *
  */
 static void scheduler_init_frame(task_t *t) {
+#if defined(__x86_64__)
     struct registers *frame = (struct registers *)(t->kernel_stack - sizeof(struct registers));
     memcpy(frame, &t->context, sizeof(struct registers));
+#else
+    uint32_t register_count = t->task_mode == USER_TASK ? 15 : 13;
+    uint32_t *top           = (uint32_t *)(uintptr_t)t->kernel_stack;
+    struct registers *frame = (struct registers *)(top - register_count);
+    memcpy(frame, &t->context, register_count * 4);
+
+#endif
     frame->int_no      = 0;
     frame->err_code    = 0;
 
-    t->interrupt_frame = (uint64_t)frame;
+    t->interrupt_frame = (uintptr_t)frame;
 }
 
 // The core switching logic, shared by both
-static uint64_t scheduler_switch(struct registers *r) {
+static uintptr_t scheduler_switch(struct registers *r) {
 
     task_t *prev = task_get(this_core()->sched.prev_pid);
     if (prev != NULL) {
@@ -164,7 +172,7 @@ static uint64_t scheduler_switch(struct registers *r) {
 
     task_t *current = task_get(this_core()->sched.current_pid);
     if (current != NULL && current->started && current->state != TASK_DEAD && current->state != TASK_SLEEPING) {
-        current->interrupt_frame = (uint64_t)r;
+        current->interrupt_frame = (uintptr_t)r;
     }
 
     int next_pid = scheduler_find_next_task();
@@ -207,17 +215,17 @@ void scheduler_yield(struct registers *r) {
     __asm__ __volatile__("int $0x81");
 }
 
-uint64_t __scheduler_tick(struct registers *r) {
+uintptr_t __scheduler_tick(struct registers *r) {
     if (this_core()->sched.current_pid == -1 || this_core()->sched.scheduler_on == 0) {
-        return (uint64_t)r;
+        return (uintptr_t)r;
     }
     return scheduler_switch(r);
 }
 
-uint64_t scheduler_tick(struct registers *r) {
+uintptr_t scheduler_tick(struct registers *r) {
     scheduler_check_clerks();
-    uint64_t flags = spin_lock_disable_all_intr(&sched_lock);
-    uint64_t frame = __scheduler_tick(r);
+    uintptr_t flags = spin_lock_disable_all_intr(&sched_lock);
+    uintptr_t frame = __scheduler_tick(r);
     spin_unlock_restore_all_intr(&sched_lock, flags);
     return frame;
 }
@@ -233,9 +241,9 @@ int scheduler_remove_task(uint32_t target_pid) {
         DEBUG_SCHED("[SCHEDULER][REMOVE]: Invalid target pid.\n");
         return STATUS_ERROR;
     }
-    uint64_t flags = spin_lock_disable_all_intr(&sched_lock);
+    uintptr_t flags = spin_lock_disable_all_intr(&sched_lock);
 
-    task_t *target = task_get(target_pid);
+    task_t *target  = task_get(target_pid);
 
     if (target == NULL) {
         ERROR("[SCHEDULER][REMOVE]: Target pid provided invalid task structure\n");
@@ -249,7 +257,7 @@ int scheduler_remove_task(uint32_t target_pid) {
         return STATUS_ERROR;
     }
 
-    for (uint64_t i = 0; i < cpu_count; i++) {
+    for (uintptr_t i = 0; i < cpu_count; i++) {
 
         if (cores[i].processor_id == this_core()->processor_id) {
             continue;
@@ -342,7 +350,7 @@ void __scheduler_set_task_state(task_state_t state) {
 }
 
 void scheduler_set_task_state(task_state_t state) {
-    uint64_t flags = spin_lock_disable_all_intr(&sched_lock);
+    uintptr_t flags = spin_lock_disable_all_intr(&sched_lock);
     __scheduler_set_task_state(state);
     spin_unlock_restore_all_intr(&sched_lock, flags);
 }
@@ -353,7 +361,7 @@ void scheduler_wake_task(uint32_t pid) {
         return;
     }
 
-    uint64_t flags      = spin_lock_disable_all_intr(&sched_lock);
+    uintptr_t flags     = spin_lock_disable_all_intr(&sched_lock);
 
     task_t *waking_task = task_table[pid];
     if (waking_task != NULL && waking_task->state != TASK_DEAD && waking_task->state != TASK_RUNNING) {
@@ -373,7 +381,7 @@ int scheduler_add(task_t *task) {
         return STATUS_ERROR;
     }
 
-    uint64_t flags = spin_lock_disable_all_intr(&sched_lock);
+    uintptr_t flags = spin_lock_disable_all_intr(&sched_lock);
 
     if (task->task_mode == USER_TASK) {
         task->state = TASK_READY;

@@ -1,11 +1,10 @@
 #ifndef SCHED_H
 #define SCHED_H
 
-#include "idt.h"
 #include "task.h"
 #include <stdint.h>
 
-uint32_t scheduler_tick(struct registers *r);
+uintptr_t scheduler_tick(struct registers *r);
 void scheduler_init(void);
 int scheduler_add(task_t *task);
 int scheduler_remove_task(uint32_t target_pid);

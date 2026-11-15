@@ -14,6 +14,7 @@ USER_BIN := userspace/build/$(ARCH)/bin
 
 INCLUDES := -I$(KERNEL_ARCH_DIR)/include \
             -I$(ARCH_INC) \
+            -I$(KERNEL_DIR)/include/common \
             -I$(KERNEL_DIR)/include/drivers \
             -I$(KERNEL_DIR)/include/loader \
             -I$(KERNEL_DIR)/include/kernel_clerks \

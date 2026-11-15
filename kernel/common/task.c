@@ -17,6 +17,28 @@ static spinlock_t task_lock = SPINLOCK_INIT("task");
 task_t *task_table[MAX_TASKS];
 blueprint_t *program_windows[MAX_TASKS];
 
+static void task_fill_context(task_t *task, uintptr_t entry) {
+#if defined(__x86_64__)
+    task->context.rip = entry; // Begining of the task like the main function
+    task->context.rsp = task->task_mode == USER_TASK
+                            ? USER_STACK_TOP + USER_STACK_SIZE
+                            : task->kernel_stack; // stack pointer?
+    task->context.rbp = 0;                        // stack bottom. Same as top in the begining. No
+#else
+    task->context.eip     = entry; // Begining of the task like the main function
+    task->context.useresp = task->task_mode == USER_TASK
+                                ? USER_STACK_TOP + USER_STACK_SIZE
+                                : task->kernel_stack; // stack pointer?
+    task->context.ebp     = task->context.useresp;    // stack bottom. Same as top in the begining. No
+    task->context.esp     = task->context.useresp;
+
+#endif
+
+    task->context.cs     = task->task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
+    task->context.ss     = task->task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
+    task->context.eflags = EFLAGS_DEFAULT;
+}
+
 task_t *__task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const char *name,
                       page_directory_t *page_dir, uint8_t task_mode) {
 
@@ -52,7 +74,7 @@ task_t *__task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, con
         }
     }
 
-    uint64_t kernel_stack = 0;
+    uintptr_t kernel_stack = 0;
     if (vmm_alloc_kstack(&kernel_stack) == STATUS_ERROR) {
         kfree(task);
         return NULL;
@@ -74,27 +96,23 @@ task_t *__task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, con
     strncpy(task->name, name, sizeof(task->name));
     task->name[TASK_NAME_LENGTH - 1] = '\0';
     task->kernel_stack               = kernel_stack;
-    task->context.rip                = entry; // Begining of the task like the main function
-    task->context.rsp                = task_mode == USER_TASK
-                                           ? USER_STACK_TOP + USER_STACK_SIZE
-                                           : task->kernel_stack; // stack pointer?
     task->priority                   = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
     task->heap_start                 = heap_start;
     task->heap_end                   = heap_start;
-    task->context.cs                 = task_mode == USER_TASK ? SEG_USER_CODE : SEG_KERNEL_CODE;
-    task->context.ss                 = task_mode == USER_TASK ? SEG_USER_DATA : SEG_KERNEL_DATA;
-    task->context.rbp                = 0; // stack bottom. Same as top in the begining. No
     task->context.eflags             = EFLAGS_DEFAULT;
     task->task_mode                  = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
-    task_table[slot]                 = task;
+
+    task_fill_context(task, entry);
+
+    task_table[slot] = task;
 
     return task;
 }
 
-task_t *task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, const char *name,
+task_t *task_create(int reserved_pid, uintptr_t entry, uintptr_t heap_start, const char *name,
                     page_directory_t *page_dir, uint8_t task_mode) {
-    uint64_t flags = spin_lock_disable_all_intr(&task_lock);
-    task_t *task   = __task_create(reserved_pid, entry, heap_start, name, page_dir, task_mode);
+    uintptr_t flags = spin_lock_disable_all_intr(&task_lock);
+    task_t *task    = __task_create(reserved_pid, entry, heap_start, name, page_dir, task_mode);
     spin_unlock_restore_all_intr(&task_lock, flags);
     return task;
 }
@@ -137,3 +155,39 @@ int task_has_dirty_buffer() {
     }
     return 0;
 }
+
+#if defined(__i686__)
+/**
+ * task_sync_kernel_entries_to_all_tasks - when you edit kernel page directory.
+ *
+ * Description:
+ * This function copies kernel directory to every tasks directory.
+ * It loops over the MAX_TASKS count to get a tasks with the given index.
+ * then it checks if the task is eligible for a sync. After that it memcpies
+ * the kernel directory upper indexes to tasks page directory,
+ *
+ * Context: This was made because I wanted a growable heap and not start with max ram size.
+ * And because altering kernel directory is not automatically visible to tasks you have to
+ * sync the changes to tasks.
+ *
+ */
+void task_sync_kernel_entries_to_all_tasks() {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_t *task = task_get(i);
+
+        if (task == NULL)
+            continue;
+        if (task->state == TASK_DEAD)
+            continue;
+        if (task->page_dir == NULL)
+            continue;
+        if (task->page_dir == &kernel_page_dir)
+            continue;
+
+        memcpy(&(*task->page_dir)[KERNEL_PD_INDEX_START],
+               &kernel_page_dir[KERNEL_PD_INDEX_START],
+               KERNEL_PD_ENTRIES * sizeof(uint32_t));
+    }
+}
+
+#endif

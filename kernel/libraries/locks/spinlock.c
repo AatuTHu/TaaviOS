@@ -1,10 +1,8 @@
 #include "spinlock.h"
-#include <stdint.h>
-#if defined(__x86_64__)
 #include "cpu.h"
-#endif
 #include "kstring.h"
 #include "serial.h"
+#include <stdint.h>
 
 static spinlock_t serial_lock = SPINLOCK_INIT("serial_lock");
 
@@ -55,11 +53,7 @@ void spin_light_lock(spinlock_t *l) {
         while (__atomic_load_n(&l->locked, __ATOMIC_RELAXED) != 0) {
             if (++spin_laps > SPIN_LIMIT) {
                 char cpuid[10];
-#if defined(__x86_64__)
                 itoa(this_core()->lapic_id, cpuid);
-#else
-                itoa(0, cpuid);
-#endif
                 serial_write("[SPIN_LOCK]: ");
                 serial_write(cpuid);
                 serial_write(" tried to lock ");
@@ -74,11 +68,7 @@ void spin_light_lock(spinlock_t *l) {
             __builtin_ia32_pause();
         }
     }
-#if defined(__x86_64__)
-    l->owner = this_core()->lapic_id;
-#else
     l->owner = 0;
-#endif
 }
 
 void spin_light_unlock(spinlock_t *l) {

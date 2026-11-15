@@ -119,7 +119,7 @@ uint64_t vmm_get_phys(page_directory_t *dir, uint64_t virt) {
     return paging_get_phys(dir, virt);
 }
 
-page_directory_t *vmm_create_dir(void) {
+page_directory_t *vmm_create_directory(void) {
     return paging_create_directory();
 }
 

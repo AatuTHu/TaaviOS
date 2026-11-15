@@ -219,7 +219,7 @@ void load_modules() {
 
         struct boot_modules entry = b_info.modules[i];
 
-        page_directory_t *init_pd = vmm_create_dir();
+        page_directory_t *init_pd = vmm_create_directory();
 
         if (init_pd == NULL) {
             ERROR("Failed to create directory for the module. Aborting\n");

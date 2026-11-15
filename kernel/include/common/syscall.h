@@ -3,8 +3,8 @@
 #include "idt.h"
 #include <stdint.h>
 
-typedef int64_t (*syscall_fn_t)(struct registers *r);
-int64_t sys_window(struct registers *r);
+typedef intptr_t (*syscall_fn_t)(struct registers *r);
+intptr_t sys_window(struct registers *r);
 void syscall_init();
 void syscall_dispatch(struct registers *r);
 

@@ -1,5 +1,6 @@
 #include "ata.h"
 #include "config.h"
+#include "cpu.h"
 #include "doc_clerk.h"
 #include "elf.h"
 #include "fat32.h"
@@ -44,6 +45,7 @@ static void init_serial_and_vga() {
 
 static void init_arch() {
     DEBUG_KERNEL("[KERNEL]: --INIT ARCH--\n");
+    init_cores();
     gdt_init();
     tss_init();
     idt_init();
@@ -112,6 +114,10 @@ static void init_microlithic() {
 
     if (kernel_task != NULL) {
         scheduler_add(kernel_task);
+        kernel_task->is_idle        = 1;
+        kernel_task->on_core        = 1;
+        kernel_task->state          = TASK_READY;
+        this_core()->sched.idle_pid = kernel_task->pid;
     }
 
     DEBUG_KERNEL("[KERNEL]: Creating an filesystem kernel task\n");

@@ -151,9 +151,13 @@ static int draw_sprite(const gui_params_pack *params, uint32_t caller_pid) {
  *
  * Return: STATUS_OK || STATUS_ERROR.
  */
-int32_t sys_window(struct registers *r) {
+intptr_t sys_window(struct registers *r) {
     // DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
+    #if defined(__x86_64__)
+    gui_params_pack *params = (gui_params_pack *)r->rbx;
+    #else 
     gui_params_pack *params = (gui_params_pack *)r->ebx;
+    #endif
     task_t *current         = scheduler_get_current_task();
 
     if (current == NULL || params == NULL) {
