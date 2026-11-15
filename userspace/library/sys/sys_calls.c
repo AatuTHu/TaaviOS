@@ -57,7 +57,7 @@ int sys_ioctl(int operation, int p1, int p2) {
 }
 
 uintptr_t sys_sbrk(uintptr_t size) {
-    int result = -1;
+    int result = 0;
     __asm__ __volatile__("int $0x80" : "=a"(result) : "a"(SYS_SBRK), "b"(size));
     return result;
 }

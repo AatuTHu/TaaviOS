@@ -51,9 +51,9 @@ int release_window() {
 }
 
 int __init_task() {
-    int heap_start = sys_sbrk(INIT_HEAP_SIZE);
+    uintptr_t heap_start = sys_sbrk(INIT_HEAP_SIZE);
 
-    if (heap_start == -1) {
+    if (heap_start == 0) {
         LOG("Failed to initialize heap\n");
         return STATUS_ERROR;
     }

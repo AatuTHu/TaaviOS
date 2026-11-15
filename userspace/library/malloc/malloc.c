@@ -60,7 +60,7 @@ void *malloc(uintptr_t size) {
 
         LOG("[MALLOC]: Requesting for more memory\n");
         int addition_size = (ADDITIONAL_HEAP_PAGE_SIZE * PAGE_SIZE);
-        if (sys_sbrk(addition_size) == -1) {
+        if (sys_sbrk(addition_size) == 0) {
             return NULL;
         }
 
