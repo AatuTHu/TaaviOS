@@ -53,8 +53,8 @@
 - [X] SYSCALLS
 - [X] SCHED (bsp only)
 - [X] MICROLITHIC ARCH
-- [ ] Spinlock everything
-- [ ] Schedule with smp
+- [Maybe done] Spinlock everything
+- [X] Schedule with smp
 
 BOTH
 - [X] Port as much as possible from 32bit so that both can use the same code

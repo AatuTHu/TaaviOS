@@ -12,9 +12,8 @@ uint8_t cpu_count;
 
 void fill_cpu_struct(struct limine_mp_response *info) {
 
-    bsp_lapic_id = info->bsp_lapic_id;
-    cpu_count    = info->cpu_count;
-    DEBUG_KERNEL("[CPU][CONSTR]: Bsp core id: %d\n", bsp_lapic_id);
+    bsp_lapic_id          = info->bsp_lapic_id;
+    cpu_count             = info->cpu_count;
     cores[0].processor_id = 0;
     cores[0].lapic_id     = bsp_lapic_id;
     cores[0].online       = 1;
@@ -36,27 +35,8 @@ void fill_cpu_struct(struct limine_mp_response *info) {
     use_false_id = true;
 }
 
-struct core_t *cpu_current(void) {
+struct core_t *this_core() {
     uint64_t p = 0;
     __asm__("mov %%gs:0, %0" : "=r"(p));
     return (struct core_t *)p;
-}
-
-// use_false_id. Spinlock tech. Cause pmm/vmm/paging/kmalloc uses spinlocks before lapic is
-// initialized we cannot read the real id since lapic is not mapped. Instead just return 0.
-// lapic init sets use_false_id to false and then we read the real id as it would be no onse
-// bussiness
-uint32_t cpu_get_lapic_id(void) {
-    if (use_false_id) {
-        return 0;
-    }
-    return cpu_current()->lapic_id;
-}
-
-void cpu_tick_ticks() {
-    cpu_current()->ticks++;
-}
-
-uint64_t cpu_get_ticks() {
-    return cpu_current()->ticks;
 }

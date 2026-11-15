@@ -13,5 +13,5 @@ void tss_create(struct gdt_tss_entry *e, uint64_t base, uint32_t limit) {
 }
 
 void tss_set_kernel_stack(uint64_t stack_top) {
-    cpu_current()->tss.rsp[0] = stack_top;
+    this_core()->tss.rsp[0] = stack_top;
 }

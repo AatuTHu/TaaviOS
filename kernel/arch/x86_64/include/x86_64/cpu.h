@@ -32,10 +32,7 @@ extern uint8_t bsp_lapic_id;
 extern uint8_t cpu_count;
 extern struct core_t cores[ACPI_MAX_CPUS];
 
-uint32_t cpu_get_lapic_id();
-void cpu_tick_ticks();
-uint64_t cpu_get_ticks();
 void fill_cpu_struct(struct limine_mp_response *info);
-struct core_t *cpu_current(void);
+struct core_t *this_core(void);
 
 #endif

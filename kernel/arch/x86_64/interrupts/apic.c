@@ -318,7 +318,7 @@ void lapic_enable_local() {
 
     uint32_t ver_reg = lapic_read(LAPIC_REG_VERSION);
     DEBUG_KERNEL("[LAPIC][ENABLE]: Lapic id: %d, version: 0x%x (ver: %d, max lvt: %d). LAPIC ENABLED\n",
-                 cpu_get_lapic_id(), ver_reg, ver_reg & 0xFF, (ver_reg >> 16) & 0xFF);
+                 this_core()->lapic_id, ver_reg, ver_reg & 0xFF, (ver_reg >> 16) & 0xFF);
 }
 
 /**

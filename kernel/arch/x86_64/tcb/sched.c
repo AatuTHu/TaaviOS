@@ -84,7 +84,7 @@ static void scheduler_check_clerks() {
 
 static int __scheduler_search_by_priority(uint8_t priority, int *out_pid, uint32_t starting_pos) {
     for (int i = starting_pos; i <= MAX_TASKS; i++) {
-        int next_idx = (cpu_current()->sched.current_pid + i) % MAX_TASKS;
+        int next_idx = (this_core()->sched.current_pid + i) % MAX_TASKS;
         if (task_table[next_idx] != NULL && task_table[next_idx]->on_core == 0 && task_table[next_idx]->is_idle != 1 &&
             task_table[next_idx]->priority == priority && task_table[next_idx]->state == TASK_READY) {
             *out_pid = next_idx;
@@ -97,29 +97,29 @@ static int __scheduler_search_by_priority(uint8_t priority, int *out_pid, uint32
 static int scheduler_find_next_task() {
 
     int next_idx = -1;
-    if (cpu_current()->sched.high_prio_pick_count < HIGH_PRIORITY_PICK_LIMIT &&
+    if (this_core()->sched.high_prio_pick_count < HIGH_PRIORITY_PICK_LIMIT &&
         __scheduler_search_by_priority(PRIORITY_HIGH, &next_idx, 1) == STATUS_OK) {
-        cpu_current()->sched.high_prio_pick_count++;
+        this_core()->sched.high_prio_pick_count++;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_NORMAL, &next_idx, 1) == STATUS_OK) {
-        cpu_current()->sched.high_prio_pick_count = 0;
+        this_core()->sched.high_prio_pick_count = 0;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_HIGH, &next_idx, 0) == STATUS_OK) {
-        cpu_current()->sched.high_prio_pick_count = 1;
+        this_core()->sched.high_prio_pick_count = 1;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_NORMAL, &next_idx, 0) == STATUS_OK) {
-        cpu_current()->sched.high_prio_pick_count = 0;
+        this_core()->sched.high_prio_pick_count = 0;
         return next_idx;
     }
 
     if (__scheduler_search_by_priority(PRIORITY_LOW, &next_idx, 1) == STATUS_OK) {
-        cpu_current()->sched.high_prio_pick_count = 0;
+        this_core()->sched.high_prio_pick_count = 0;
         return next_idx;
     }
 
@@ -152,17 +152,17 @@ static void scheduler_init_frame(task_t *t) {
 // The core switching logic, shared by both
 static uint64_t scheduler_switch(struct registers *r) {
 
-    task_t *prev = task_get(cpu_current()->sched.prev_pid);
+    task_t *prev = task_get(this_core()->sched.prev_pid);
     if (prev != NULL) {
-        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d Saving prev task %s - pid: %d\n", cpu_current()->sched.processor_id, prev->name, prev->pid);
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d Saving prev task %s - pid: %d\n", this_core()->sched.processor_id, prev->name, prev->pid);
         prev->on_core = 0;
         if (prev->state == TASK_RUNNING && !prev->is_idle) {
             prev->state = TASK_READY;
         }
-        cpu_current()->sched.prev_pid = -1;
+        this_core()->sched.prev_pid = -1;
     }
 
-    task_t *current = task_get(cpu_current()->sched.current_pid);
+    task_t *current = task_get(this_core()->sched.current_pid);
     if (current != NULL && current->started && current->state != TASK_DEAD && current->state != TASK_SLEEPING) {
         current->interrupt_frame = (uint64_t)r;
     }
@@ -170,7 +170,7 @@ static uint64_t scheduler_switch(struct registers *r) {
     int next_pid = scheduler_find_next_task();
 
     if (next_pid == -1 || next_pid >= MAX_TASKS) {
-        next_pid = cpu_current()->sched.idle_pid;
+        next_pid = this_core()->sched.idle_pid;
     }
     task_t *next = task_table[next_pid];
 
@@ -186,14 +186,14 @@ static uint64_t scheduler_switch(struct registers *r) {
 
     next->started = 1;
 
-    if (next_pid != cpu_current()->sched.current_pid) {
-        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d running next task %s - pid: %d\n", cpu_current()->sched.processor_id, next->name, next->pid);
-        cpu_current()->sched.prev_pid    = cpu_current()->sched.current_pid;
-        cpu_current()->sched.current_pid = next_pid;
+    if (next_pid != this_core()->sched.current_pid) {
+        // DEBUG_SCHED("[SCHEDULER][SWITCH]: Cpu %d running next task %s - pid: %d\n", this_core()->sched.processor_id, next->name, next->pid);
+        this_core()->sched.prev_pid    = this_core()->sched.current_pid;
+        this_core()->sched.current_pid = next_pid;
 
         if (next->task_mode == USER_TASK) {
             vmm_switch(next->page_dir);
-            cpu_current()->sched.current_dir = next->page_dir;
+            this_core()->sched.current_dir = next->page_dir;
         }
         tss_set_kernel_stack(next->kernel_stack);
     }
@@ -203,12 +203,12 @@ static uint64_t scheduler_switch(struct registers *r) {
 
 void scheduler_yield(struct registers *r) {
     (void)r;
-    // DEBUG_SCHED("[SCHEDULER][YIELD]: Core: %d is yielding %s\n", cpu_current()->sched.processor_id, scheduler_get_current_task()->sched.name);
+    // DEBUG_SCHED("[SCHEDULER][YIELD]: Core: %d is yielding %s\n", this_core()->sched.processor_id, scheduler_get_current_task()->sched.name);
     __asm__ __volatile__("int $0x81");
 }
 
 uint64_t __scheduler_tick(struct registers *r) {
-    if (cpu_current()->sched.current_pid == -1 || cpu_current()->sched.scheduler_on == 0) {
+    if (this_core()->sched.current_pid == -1 || this_core()->sched.scheduler_on == 0) {
         return (uint64_t)r;
     }
     return scheduler_switch(r);
@@ -251,7 +251,7 @@ int scheduler_remove_task(uint32_t target_pid) {
 
     for (uint64_t i = 0; i < cpu_count; i++) {
 
-        if (cores[i].processor_id == cpu_current()->processor_id) {
+        if (cores[i].processor_id == this_core()->processor_id) {
             continue;
         }
 
@@ -283,26 +283,26 @@ int scheduler_set_current_task(uint32_t pid) {
         return STATUS_ERROR;
     }
 
-    cpu_current()->sched.current_pid = pid;
+    this_core()->sched.current_pid = pid;
     return STATUS_OK;
 }
 
 task_t *scheduler_get_current_task() {
-    if (cpu_current()->sched.current_pid == -1) {
+    if (this_core()->sched.current_pid == -1) {
         ERROR("[SCHEDULER]: no task_table added to scheduler yet\n");
         return NULL;
     }
-    return task_table[cpu_current()->sched.current_pid];
+    return task_table[this_core()->sched.current_pid];
 }
 
 void __scheduler_set_task_state(task_state_t state) {
 
-    if (cpu_current()->sched.current_pid == -1) {
+    if (this_core()->sched.current_pid == -1) {
         ERROR("[SCHEDULER]: Current pid was invalid\n");
         return;
     }
 
-    task_t *current = task_table[cpu_current()->sched.current_pid];
+    task_t *current = task_table[this_core()->sched.current_pid];
 
     if (current == NULL) {
         ERROR("[SCHEDULER][STATE_SETTER]: Could not set state as current task was invalid\n");
@@ -385,14 +385,14 @@ int scheduler_add(task_t *task) {
 }
 
 void _set_scheduler_on() {
-    cpu_current()->sched.scheduler_on = 1;
+    this_core()->sched.scheduler_on = 1;
 }
 
 void scheduler_init() {
     doc_maintenaince_counter = 0;
     DEBUG_SCHED("[SCHEDULER] SCHEDULER INITIALIZED\n");
-    cpu_current()->sched.scheduler_on         = 0;
-    cpu_current()->sched.current_pid          = -1;
-    cpu_current()->sched.prev_pid             = -1;
-    cpu_current()->sched.high_prio_pick_count = 0;
+    this_core()->sched.scheduler_on         = 0;
+    this_core()->sched.current_pid          = -1;
+    this_core()->sched.prev_pid             = -1;
+    this_core()->sched.high_prio_pick_count = 0;
 }

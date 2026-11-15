@@ -165,10 +165,10 @@ static void init_microlithic() {
 
     if (kernel_task != NULL) {
         scheduler_add(kernel_task);
-        kernel_task->is_idle          = 1;
-        kernel_task->on_core          = 1;
-        kernel_task->state            = TASK_READY;
-        cpu_current()->sched.idle_pid = kernel_task->pid;
+        kernel_task->is_idle        = 1;
+        kernel_task->on_core        = 1;
+        kernel_task->state          = TASK_READY;
+        this_core()->sched.idle_pid = kernel_task->pid;
     } else {
         ERROR("[SMP][AP_MAIN] coud not create idle task for the core\n");
         panic();
@@ -297,7 +297,7 @@ void kmain() {
 
     lapic_timer_start_periodic(10);
     _set_scheduler_on();
-    scheduler_set_current_task(cpu_current()->sched.idle_pid);
+    scheduler_set_current_task(this_core()->sched.idle_pid);
     scheduler_yield(NULL);
 
     while (1) __asm__ __volatile__("sti;hlt");

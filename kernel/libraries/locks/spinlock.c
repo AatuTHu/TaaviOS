@@ -11,7 +11,7 @@ static spinlock_t serial_lock = SPINLOCK_INIT("serial_lock");
 static void print_lock_info(spinlock_t *l) {
     spin_light_lock(&serial_lock);
     char cpuid[10];
-    itoa(cpu_get_lapic_id(), cpuid);
+    itoa(this_core()->lapic_id, cpuid);
     serial_write(cpuid);
     serial_write(" trying to lock ");
     serial_write(l->name);
@@ -23,7 +23,7 @@ static void print_unlock_info(spinlock_t *l) {
     spin_light_lock(&serial_lock);
 
     char cpuid[10];
-    itoa(cpu_get_lapic_id(), cpuid);
+    itoa(this_core()->lapic_id, cpuid);
 
     serial_write(cpuid);
     serial_write(" trying to unlock ");
@@ -56,7 +56,7 @@ void spin_light_lock(spinlock_t *l) {
             if (++spin_laps > SPIN_LIMIT) {
                 char cpuid[10];
 #if defined(__x86_64__)
-                itoa(cpu_get_lapic_id(), cpuid);
+                itoa(this_core()->lapic_id, cpuid);
 #else
                 itoa(0, cpuid);
 #endif
@@ -68,14 +68,14 @@ void spin_light_lock(spinlock_t *l) {
                 itoa(l->owner, cpuid);
                 serial_write(cpuid);
                 serial_write("\n");
-                cpu_current()->online = 0;
+                this_core()->online = 0;
                 while (1) __asm__ __volatile__("cli; hlt");
             }
             __builtin_ia32_pause();
         }
     }
 #if defined(__x86_64__)
-    l->owner = cpu_get_lapic_id();
+    l->owner = this_core()->lapic_id;
 #else
     l->owner = 0;
 #endif

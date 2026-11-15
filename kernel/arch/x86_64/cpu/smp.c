@@ -26,7 +26,7 @@ static volatile uint32_t cpu_active_count = 0;
 //
 static void ap_main() {
 
-    struct core_t *c = cpu_current();
+    struct core_t *c = this_core();
 
     gdt_flush_core(c);
     idt_load();
@@ -45,10 +45,10 @@ static void ap_main() {
         while (1) __asm__ __volatile__("sti; hlt");
     }
 
-    kernel_task->is_idle          = 1;
-    kernel_task->on_core          = 1;
-    kernel_task->state            = TASK_READY;
-    cpu_current()->sched.idle_pid = kernel_task->pid;
+    kernel_task->is_idle        = 1;
+    kernel_task->on_core        = 1;
+    kernel_task->state          = TASK_READY;
+    this_core()->sched.idle_pid = kernel_task->pid;
     scheduler_add(kernel_task);
     scheduler_set_current_task(kernel_task->pid);
     _set_scheduler_on();
