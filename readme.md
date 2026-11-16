@@ -1,40 +1,58 @@
 # TaaviOS
-A 32 & 64-bit x86 hobby OS exploring combination of micro and monolith kernel architectures called 'microlithic'.
+
+A 32 & 64-bit x86 hobby OS that explores mixing microkernel and monolithic ideas. I call this approach "microlithic". All because I didn't want to put the FD number in the task structure.
 
 ## Architecture
 
-TaaviOS uses a microlithic kernel architecture. Service tasks, referred to as clerks to distinguish them from standard Ring 3 tasks, execute in Ring 0. Clerks reuse the standard task_t structure but do not allocate their own dedicated page directories or user stack. Instead, they map directly into the shared kernel directory located in the upper address space of every regular task.
+TaaviOS runs its services as tasks called clerks. Clerks use the standard `task_t` structure but execute in Ring 0, and they have no page directory or user stack of their own. Instead they live in the kernel half of the address space, which is mapped into every regular task's page directory.
 
-This design enables seamless, low-overhead system call handling via an asynchronous ledger. When a user task posts a request, the target clerk wakes from sleep and becomes eligible for scheduling. Because the clerk resides within the upper memory region of the active task's page directory, context switching to the clerk requires zero page table swaps and no TLB flushes. Furthermore, because requests are processed asynchronously through the ledger, the CPU remains free to schedule and execute other ready tasks while the clerk fulfills the request in the background.
+User tasks talk to clerks through an asynchronous request queue called the ledger. When a task posts a request, the clerk wakes up and becomes eligible for scheduling. Because the clerk is already mapped in the active task's address space, switching to it needs no CR3 switch and no TLB flush. Requests are processed asynchronously, so the CPU can keep running other ready tasks while the clerk works. This is more of a win on the 32-bit arch, as it is a single core system and a TLB flush hurts the most there.
 
-Clerks leverage three custom protocols during servicing:
-* **Ledger Protocol (Asynchronous IPC):** When a user task makes a request, it makes a request via ledger, then the task is marked blocked, and it yields the CPU. Unlike synchronous syscalls, the clerk does not execute inside the caller's immediate context. Instead, the scheduler picks the clerk as an independent task. Because clerks are subject to PIT preemption, a clerk can process requests across multiple ticks with other user tasks until it signals completion and wakes the caller back up.
-* **Blankie Protocol:** After all requests are completed, the clerk uses the blankie protocol to reset its context (EIP, ESP, EBP, (or the 64b equivalents)). This resets it to its entry point with a clean stack, after which it sleeps until the next request arrives. The reason for this reset is to prevent stack overflows should the clerk run continuously, while also providing a predictable starting point.
-* **Hail Mary Protocol:** If a kernel clerk triggers an exception, the `isr_handler` intercepts the fault before it can panic and shutdown the system. The exception vector routes to `activate_hail_mary`, which invokes the clerk's registered recovery fallback. This purges the exact ledger request that caused the crash, marks it `TERMINATED` to release the blocked user process with an error, and triggers a blankie reset for the clerk.
+Clerks use three protocols during their work loop:
+
+* **Ledger Protocol (async IPC):** This is the only protocol that user tasks also use. The other two are clerk-internal. A task posts a request to a clerk and the clerk picks the request up and performs it to the best of its abilities (or to the best of my programming skills?). After the request has failed or completed, the clerk signals the scheduler to switch the task to the runnable state again. The task then collects the results and the request is set to the terminated state. After a while the reaper deletes the request and frees the memory it was using.
+
+Some examples of requests are window buffer creation, resizing, killing another task, moving a window, opening a file, creating a directory or requesting the doc to do doc stuff.
+
+* **Blankie Protocol:** Once a clerk has finished its requests, it resets its context (EIP, ESP, EBP, or the 64-bit equivalents) to the entry point with a clean stack, then sleeps until the next time servicing is needed.
+
+* **Hail Mary Protocol:** If a clerk triggers an exception, `isr_handler` catches it before it becomes a system wide panic and routes it to `activate_hail_mary`. That calls the clerk's registered recovery function, which marks the offending ledger request `TERMINATED` (releasing the blocked task with an error) and forces an early blankie reset.
 
 ### Clerks
 
-* **GUI:** Responsible for screen operations, whether drawing to a program window, deleting a window, or hiding it. It also orchestrates all windows on the screen, acting as a window manager.
-* **FS:** Responsible for filesystem operations. It reads, writes, opens, and closes files for user programs. It also holds directory traversal data for every task that changes its working directory, alongside creating a virtual directory with system information (memory usage, tasks, CPU time).
+When not servicing requests the clerks can do other work, like maintaining the virtual directory, refreshing buffers to the framebuffer and printing system info to the shell.
+
+* **GUI:** Responsible for framebuffer operations. Creates, resizes, moves, deletes all the while keeping track of pixel buffers and dimensions for each task.
+Also responsible for blitting dirty buffer to video memory.
+
+* **FS:** Responsible for filesystem operations. It reads, writes, opens, and closes files for user programs. It also holds directory traversal data for every task that changes its working directory, alongside creating a virtual directory of tasks.
+
 * **Reaper:** Handles the cleanup of dead tasks. When a task is killed, all clerks are sent a request to free the memory they reserved for that task. The reaper then tears down the task's page directory and deletes all related resources.
+
+* **Doc:** Tests system functions. For example, it tests the FS clerk's functionality (once went a month without noticing some functions were not working anymore). Occasionally prints ledger statistics and core statistics to screen.
+
 * **Idle:** Runs when there is literally nothing else to do. It simply halts the CPU until the next interrupt.
 
 ## Status
 
-Kernel requests basics like fb, mp, memmap, rsdp, modules from limine. Should responses be satisfactory the kernel moves on to initialize GDT, IDT, ISR, TSS, PAGING, PMM, HEAP, DRIVERS, MICROLITHIC ARCH, ACPI, IOAPIC/LAPIC, AP CORES, SCHEDULER, SYSCALLS. After these it frees memory that has been marked to be reclaimable, loads init module. As first task it picks idle and yields immediately. This puts the kernel in to scheduling cycle that at some point picks init task resulting in jump to Ring 3.
+Depending on which arch you build, the kernel boots via GRUB (x86) or Limine (x86_64). On x86, system information arrives in multiboot 1 format, collected in real mode between GRUB and the kernel, and the kernel fakes a paging-enabled state before switching to its own stack. On x86_64, Limine already puts the CPU in long mode, so the kernel requests system information from Limine and only has to switch to its own stack. Both then make a far jump to their kernel entry.
 
-After GRUB successfully hands control over, the kernel initializes the GDT, IDT, ISR, TSS, PAGING, PMM, and transitions to protected mode. Following that, it creates the clerks, initializes the file system, programmable interrupt timer, and heap memory manager, and finally creates the init task and jumps to Ring 3 to execute.
+After the jump both initialize the physical memory manager, paging, virtual memory manager, heap, GDT, IDT, framebuffer, syscalls, scheduler, FAT32 and the clerks. The 32-bit version uses the PIT and runs on a single core. The 64-bit version uses SMP, so it also sets up the IOAPIC, LAPIC and the other cores.
 
-## Tradeoffs of Microlithic Kernel Model
+Both arches then create `init` from the one kernel module provided. On 32-bit the kernel jumps straight into it. On 64-bit the boot core does the same, while the other cores start in idle and simply yield, which gets them scheduling tasks.
 
-In essence, a microlithic kernel combines the high performance of a monolithic kernel with the modular organization of a microkernel. Consequently, it inherits aspects of both designs maximizing speed while requiring specific safeguards for fault tolerance.
+## Tradeoffs
 
-### Highlights
-* **Simple IPC:** Because clerks execute within the active user task's page directory, requests via the Ledger Protocol require absolutely no physical or virtual memory copying (CR3 switches are completely bypassed). This provides the performance speed of a standard monolithic system call with the modular structural isolation of a microkernel.
-* **Predictable Lifecycle:** The Blankie Protocol ensures clerks maintain a clean stack baseline, mitigating long-term state degradation or deep call stack overflows.
+### My favourites
+* The scheduler has three priorities (high, normal, low), but at most three high-priority picks in a row.
+* Requests to a clerk need no CR3 switch, which should make them cheaper than switching to a user-space server.
+* Clerks can also be programmed to run as plain kernel threads.
+* The Blankie Protocol keeps clerk stacks from growing unbounded.
+* The Hail Mary Protocol has saved the kernel a few times and kept user-space responsive.
+* Symmetric multiwinning (SMP).
 
-### Risks & Mitigations
-* **Shared Fault Domain:** Running more service code in Ring 0 inherently increases the risk of system-wide failures or deadlocks compared to pure microkernels.
-* **The Hail Mary Safeguard:** To combat Ring 0 panic risks, the Hail Mary Protocol acts as a safety net intercepting Ring 0 exceptions, safely releasing the blocked user process with an error, and resetting the faulting clerk without bringing down the entire kernel.
+### Risks
+* **Shared fault domain:** More service code in Ring 0 raises the chance of system-wide failures or deadlocks compared to a pure microkernel.
+* **Hail Mary:** It catches Ring 0 exceptions in clerks, releases the blocked process with an error and resets the clerk. It can't help if a clerk corrupts shared kernel state or deadlocks while holding a lock.
 
 // A.H - 2026
