@@ -11,32 +11,12 @@
  * Design & Implementation: A.H, 2026
  */
 
-static int reaper_kill_task(uint32_t target_pid) {
-
-    if (target_pid >= MAX_TASKS) {
-        return STATUS_ERROR;
-    }
-
-    if (scheduler_remove_task(target_pid) == STATUS_ERROR) {
-        ERROR("[REAPER][HANDLE_REQUEST]: Failed to remove task\n");
-        return STATUS_ERROR;
-    }
-
-    return STATUS_OK;
-}
-
 void reaper_task_loop() {
     while (1) {
         request_table *req = ledger_fetch_next_req(reaper_clerk_pid);
-        if (req != NULL) {
-            if (req->status == PENDING || req->status == IN_PROGRESS) {
-                req->status = (reaper_kill_task(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
-
-                if (req->caller_pid == req->target_pid) {
-                    req->status = TERMINATED;
-                    continue;
-                }
-                scheduler_wake_task(req->caller_pid);
+        if (req != NULL && (req->status == PENDING || req->status == IN_PROGRESS)) {
+            if (scheduler_remove_task(req->target_pid) != STATUS_TAL) {
+                req->status = TERMINATED;
             }
         }
 

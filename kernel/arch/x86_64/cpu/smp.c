@@ -50,7 +50,7 @@ static void ap_main() {
     kernel_task->state          = TASK_READY;
     this_core()->sched.idle_pid = kernel_task->pid;
     scheduler_add(kernel_task);
-    scheduler_set_current_task(kernel_task->pid);
+    this_core()->sched.current_pid = this_core()->sched.idle_pid;
     _set_scheduler_on();
     lapic_timer_start_periodic(10);
     scheduler_yield(NULL);
@@ -121,6 +121,8 @@ int smp_init() {
     cpu_active_count = 1;
     ap_setup();
 
+    // should one of the cores fail to start then try and
+    // run the setup again
     if (cpu_active_count < cpu_count) {
         ap_setup();
     }

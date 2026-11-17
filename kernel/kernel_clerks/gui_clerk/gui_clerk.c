@@ -261,23 +261,23 @@ static void gui_handle_request(request_table *req) {
     case CREATE:
         req->status = (gui_create_window_entry(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
-    case FREE:
-        req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
     case RESIZE:
         req->status = (gui_resize_window(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
     case MOVE:
         req->status = (gui_move_window(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
-
+    case FREE:
+        gui_delete_window(req->target_pid);
+        gui_task->priority = PRIORITY_NORMAL;
+        req->status        = TERMINATED;
+        return;
     default:
         req->status = FAILED;
         break;
     }
     gui_task->priority = PRIORITY_NORMAL;
     scheduler_wake_task(req->caller_pid);
-    return;
 }
 
 void gui_task_loop() {
@@ -291,6 +291,10 @@ void gui_task_loop() {
             if (req->status == PENDING || req->status == IN_PROGRESS) {
                 gui_handle_request(req);
             }
+        }
+
+        if (task_has_dirty_buffer() > 0) {
+            gui_flush_pixels();
         }
 
         blankie_activate(gui_clerk_pid);

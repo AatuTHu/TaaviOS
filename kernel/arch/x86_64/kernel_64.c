@@ -297,7 +297,7 @@ void kmain() {
 
     lapic_timer_start_periodic(10);
     _set_scheduler_on();
-    scheduler_set_current_task(this_core()->sched.idle_pid);
+    this_core()->sched.current_pid = this_core()->sched.idle_pid;
     scheduler_yield(NULL);
 
     while (1) __asm__ __volatile__("sti;hlt");

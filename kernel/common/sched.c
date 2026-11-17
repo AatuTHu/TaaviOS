@@ -5,6 +5,7 @@
 #include "klog.h"
 #include "kstring.h"
 #include "ledger.h"
+#include "paging.h"
 #include "spinlock.h"
 #include "task.h"
 #include "tss.h"
@@ -84,10 +85,13 @@ static void scheduler_check_clerks() {
 
 static int __scheduler_search_by_priority(uint8_t priority, int *out_pid, uint32_t starting_pos) {
     for (int i = starting_pos; i <= MAX_TASKS; i++) {
-        int next_idx = (this_core()->sched.current_pid + i) % MAX_TASKS;
-        if (task_table[next_idx] != NULL && task_table[next_idx]->on_core == 0 && task_table[next_idx]->is_idle != 1 &&
-            task_table[next_idx]->priority == priority && task_table[next_idx]->state == TASK_READY) {
-            *out_pid = next_idx;
+        int next_idx           = (this_core()->sched.current_pid + i) % MAX_TASKS;
+        task_t *candidate_task = task_get(next_idx);
+        if (candidate_task != NULL && candidate_task->on_core == 0 && candidate_task->is_idle != 1 &&
+            candidate_task->priority == priority && candidate_task->state == TASK_READY) {
+
+            candidate_task->state = TASK_RUNNING;
+            *out_pid              = next_idx;
             return STATUS_OK;
         }
     }
@@ -175,16 +179,16 @@ static uintptr_t scheduler_switch(struct registers *r) {
         current->interrupt_frame = (uintptr_t)r;
     }
 
-    int next_pid = scheduler_find_next_task();
+    scheduler_check_clerks();
+    uintptr_t flags = spin_lock_disable_all_intr(&sched_lock);
+    int next_pid    = scheduler_find_next_task();
+    spin_unlock_restore_all_intr(&sched_lock, flags);
 
     if (next_pid == -1 || next_pid >= MAX_TASKS) {
         next_pid = this_core()->sched.idle_pid;
     }
-    task_t *next = task_table[next_pid];
 
-    if (next->state == TASK_READY) {
-        next->state = TASK_RUNNING;
-    }
+    task_t *next  = task_table[next_pid];
 
     next->on_core = 1;
 
@@ -203,6 +207,15 @@ static uintptr_t scheduler_switch(struct registers *r) {
             vmm_switch(next->page_dir);
             this_core()->sched.current_dir = next->page_dir;
         }
+
+        // Change to kernel dir for idle as the core might loop it for a long time.
+        // if the core was holding directory of a task that needs to be killed the reaper cannot
+        // kill the task because some of the cores has the directory up.
+        if (next->is_idle) {
+            vmm_switch(&kernel_page_dir);
+            this_core()->sched.current_dir = &kernel_page_dir;
+        }
+
         tss_set_kernel_stack(next->kernel_stack);
     }
 
@@ -215,13 +228,14 @@ void scheduler_yield(struct registers *r) {
     __asm__ __volatile__("int $0x81");
 }
 
-uintptr_t __scheduler_tick(struct registers *r) {
+uintptr_t scheduler_tick(struct registers *r) {
     if (this_core()->sched.current_pid == -1 || this_core()->sched.scheduler_on == 0) {
         return (uintptr_t)r;
     }
     return scheduler_switch(r);
 }
 
+/*
 uintptr_t scheduler_tick(struct registers *r) {
     scheduler_check_clerks();
     uintptr_t flags = spin_lock_disable_all_intr(&sched_lock);
@@ -229,6 +243,7 @@ uintptr_t scheduler_tick(struct registers *r) {
     spin_unlock_restore_all_intr(&sched_lock, flags);
     return frame;
 }
+*/
 
 /*
  * HELPER FUNCTIONS
@@ -237,7 +252,7 @@ uintptr_t scheduler_tick(struct registers *r) {
 int scheduler_remove_task(uint32_t target_pid) {
     //  DEBUG_SCHED("[SCHEDULER][REMOVE]: Searching for a dead task\n");
 
-    if (target_pid >= MAX_TASKS) {
+    if (target_pid >= MAX_TASKS || target_pid < CLERK_COUNT) {
         DEBUG_SCHED("[SCHEDULER][REMOVE]: Invalid target pid.\n");
         return STATUS_ERROR;
     }
@@ -252,9 +267,9 @@ int scheduler_remove_task(uint32_t target_pid) {
     }
 
     if (target->on_core == 1) {
-        ERROR("[SCHEDULER][REMOVE]: Cannot delete a task that is running on a core\n");
+        DEBUG_SCHED("[SCHEDULER][REMOVE]: Cannot delete a task that is running on a core\n");
         spin_unlock_restore_all_intr(&sched_lock, flags);
-        return STATUS_ERROR;
+        return STATUS_TAL;
     }
 
     for (uintptr_t i = 0; i < cpu_count; i++) {
@@ -266,7 +281,7 @@ int scheduler_remove_task(uint32_t target_pid) {
         if (cores[i].sched.current_dir == target->page_dir) {
             ERROR("[SCHEDULER][REMOVE]: Cannot delete task yet, someone is holding its directory\n");
             spin_unlock_restore_all_intr(&sched_lock, flags);
-            return STATUS_ERROR;
+            return STATUS_TAL;
         }
     }
 
@@ -281,17 +296,7 @@ int scheduler_remove_task(uint32_t target_pid) {
         return STATUS_ERROR;
     }
 
-    DEBUG_SCHED("[SCHEDULER][REMOVE]: Remove complite\n");
-    return STATUS_OK;
-}
-
-int scheduler_set_current_task(uint32_t pid) {
-
-    if (pid >= MAX_TASKS) {
-        return STATUS_ERROR;
-    }
-
-    this_core()->sched.current_pid = pid;
+    DEBUG_SCHED("[SCHEDULER][REMOVE]: Task removed\n");
     return STATUS_OK;
 }
 
@@ -300,7 +305,7 @@ task_t *scheduler_get_current_task() {
         ERROR("[SCHEDULER]: no task_table added to scheduler yet\n");
         return NULL;
     }
-    return task_table[this_core()->sched.current_pid];
+    return task_get(this_core()->sched.current_pid);
 }
 
 void __scheduler_set_task_state(task_state_t state) {
@@ -310,7 +315,7 @@ void __scheduler_set_task_state(task_state_t state) {
         return;
     }
 
-    task_t *current = task_table[this_core()->sched.current_pid];
+    task_t *current = task_get(this_core()->sched.current_pid);
 
     if (current == NULL) {
         ERROR("[SCHEDULER][STATE_SETTER]: Could not set state as current task was invalid\n");
@@ -318,7 +323,7 @@ void __scheduler_set_task_state(task_state_t state) {
     }
 
     if (current->state == state) {
-        DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: No need to set task_table state as it already is the state\n");
+        // DEBUG_SCHED("[SCHEDULER][STATE_SETTER]: No need to set state as it already is the state\n");
         return;
     }
 

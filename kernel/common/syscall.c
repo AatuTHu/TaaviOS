@@ -37,31 +37,15 @@ static inline void collect_params(struct registers *r, uintptr_t *p1, uintptr_t 
 #endif
 }
 
-static int signal_clerks_to_release_memory(struct registers *r, uint16_t caller_pid, uint16_t target_pid) {
+static int signal_clerks_to_release_memory(uint16_t caller_pid, uint16_t target_pid) {
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting fs_task release allocated memory\n");
-    scheduler_set_task_state(TASK_BLOCKED);
     ledger_queue_free_req(caller_pid, fs_clerk_pid, target_pid);
-    scheduler_yield(r);
-
-    if (ledger_collect(caller_pid, fs_clerk_pid, NULL) == STATUS_ERROR) {
-        ERROR("[SIG_RELEASE_MEMORY]: FS_TASK failed to release memory \n");
-    }
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting gui_task to release allocated memory\n");
-    scheduler_set_task_state(TASK_BLOCKED);
     ledger_queue_free_req(caller_pid, gui_clerk_pid, target_pid);
-    scheduler_yield(r);
-    if (ledger_collect(caller_pid, gui_clerk_pid, NULL) == STATUS_ERROR) {
-        ERROR("[SIG_RELEASE_MEMORY]: GUI_TASK failed to release memory \n");
-    }
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting reaper to kill the task\n");
-    scheduler_set_task_state(TASK_BLOCKED);
     ledger_queue_free_req(caller_pid, reaper_clerk_pid, target_pid);
-    scheduler_yield(r);
-    if (ledger_collect(caller_pid, reaper_clerk_pid, NULL) == STATUS_ERROR) {
-        ERROR("[SIG_RELEASE_MEMORY]: REAPER_TASK failed to release memory \n");
-    }
 
     return STATUS_OK;
 }
@@ -92,9 +76,9 @@ static intptr_t sys_exit(struct registers *r) {
         keyboard_set_foreground_pid(-1);
     }
 
-    signal_clerks_to_release_memory(r, current->pid, current->pid);
+    signal_clerks_to_release_memory(current->pid, current->pid);
     scheduler_set_task_state(TASK_DEAD);
-
+    scheduler_yield(r);
     return STATUS_OK;
 }
 
@@ -129,14 +113,12 @@ static intptr_t sys_read(struct registers *r) {
         return nread;
     }
 
-    scheduler_set_task_state(TASK_BLOCKED);
-    ledger_add_fs_req(current->pid, READ, fd, (char *)buf, buffer_length, O_RDONLY);
-    scheduler_yield(r);
-
-    if (ledger_collect(current->pid, fs_clerk_pid, (char *)buf) == STATUS_ERROR)
+    if (ledger_add_fs_req(current->pid, READ, fd, (char *)buf, buffer_length, O_RDONLY) == STATUS_ERROR) {
         return STATUS_ERROR;
+    }
 
-    return STATUS_OK;
+    scheduler_yield(r);
+    return ledger_collect(current->pid, fs_clerk_pid, (char *)buf);
 }
 
 /**
@@ -166,10 +148,12 @@ static intptr_t sys_write(struct registers *r) {
         vga_write((char *)buf);
         break;
     case 2:
+        DEBUG((char *)buf);
         break;
     default:
-        ledger_add_fs_req(current->pid, WRITE, fd, (char *)buf, buffer_length, O_WRONLY);
-        scheduler_set_task_state(TASK_BLOCKED);
+        if (ledger_add_fs_req(current->pid, WRITE, fd, (char *)buf, buffer_length, O_WRONLY) == STATUS_ERROR) {
+            return STATUS_ERROR;
+        }
         scheduler_yield(r);
         return ledger_collect(current->pid, fs_clerk_pid, NULL);
     }
@@ -194,10 +178,11 @@ static intptr_t sys_open(struct registers *r) {
     if (current == NULL)
         return STATUS_ERROR;
 
-    ledger_add_fs_req(current->pid, OPEN, 0, (char *)path, path_length, flags);
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
+    if (ledger_add_fs_req(current->pid, OPEN, 0, (char *)path, path_length, flags) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
+    scheduler_yield(r);
     return ledger_collect(current->pid, fs_clerk_pid, NULL);
 }
 
@@ -219,10 +204,11 @@ static intptr_t sys_close(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    ledger_add_fs_req(this_core()->sched.current_pid, CLOSE, fd, NULL, 0, 0);
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
+    if (ledger_add_fs_req(this_core()->sched.current_pid, CLOSE, fd, NULL, 0, 0) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
+    scheduler_yield(r);
     return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
 }
 
@@ -231,17 +217,17 @@ static intptr_t sys_unlink(struct registers *r) {
     uintptr_t path = 0;
     collect_params(r, &path, NULL, NULL);
 
-    ledger_add_fs_req(this_core()->sched.current_pid, DELETE, 0, (char *)path, strlen((char *)path), 0);
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
+    if (ledger_add_fs_req(this_core()->sched.current_pid, DELETE, 0, (char *)path, strlen((char *)path), 0) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
+    scheduler_yield(r);
     return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
 }
 
 static intptr_t sys_getpid(struct registers *r) {
     (void)r;
-    const task_t *task = scheduler_get_current_task();
-    return (task) ? (intptr_t)task->pid : -1;
+    return this_core()->sched.current_pid;
 }
 
 /**
@@ -260,10 +246,11 @@ static intptr_t sys_chdir(struct registers *r) {
         path_length = strlen((char *)path);
     }
 
-    ledger_add_fs_req(this_core()->sched.current_pid, FIND, 0, (char *)path, path_length, 0);
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
+    if (ledger_add_fs_req(this_core()->sched.current_pid, FIND, 0, (char *)path, path_length, 0) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
+    scheduler_yield(r);
     return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
 }
 
@@ -372,10 +359,11 @@ static intptr_t sys_mkdir(struct registers *r) {
         path_length = strlen((char *)path);
     }
 
-    ledger_add_fs_req(this_core()->sched.current_pid, CREATE, 0, (char *)path, path_length, O_CREAT);
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
+    if (ledger_add_fs_req(this_core()->sched.current_pid, CREATE, 0, (char *)path, path_length, O_CREAT) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
+    scheduler_yield(r);
     return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
 }
 
@@ -387,11 +375,12 @@ static intptr_t sys_getdents(struct registers *r) {
         buffer_length = strlen((char *)buffer);
     }
 
-    ledger_add_fs_req(this_core()->sched.current_pid, LIST, 0,
-                      (char *)buffer, buffer_length, O_RDONLY);
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_yield(r);
+    if (ledger_add_fs_req(this_core()->sched.current_pid, LIST, 0,
+                          (char *)buffer, buffer_length, O_RDONLY) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
+    scheduler_yield(r);
     return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, (char *)buffer);
 }
 
@@ -415,18 +404,19 @@ static intptr_t sys_kill(struct registers *r) {
         return STATUS_ERROR;
     }
 
+    if (this_core()->sched.current_pid == (uint16_t)target_pid) {
+        sys_exit(r);
+        return STATUS_OK;
+    }
+
     task_t *target_task = task_get(target_pid);
 
     if (target_task == NULL || target_task->pid < CLERK_COUNT) {
         return STATUS_ERROR;
     }
 
-    if (this_core()->sched.current_pid == (uint16_t)target_task->pid) {
-        sys_exit(r);
-    }
-
     target_task->state = TASK_DEAD;
-    return signal_clerks_to_release_memory(r, this_core()->sched.current_pid, target_task->pid);
+    return signal_clerks_to_release_memory(this_core()->sched.current_pid, target_task->pid);
 }
 
 /**

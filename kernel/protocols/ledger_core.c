@@ -141,12 +141,13 @@ static inline int queue_req(request_table *new_request) {
         if (q->table[i] == NULL) {
             q->table[i] = new_request;
             spin_unlock_restore_all_intr(&ledger_lock, flags);
-            wake_clerk(new_request->clerk_pid);
+            scheduler_set_task_state(TASK_BLOCKED); // caller blocked;
+            wake_clerk(new_request->clerk_pid);     // clerk awoken;
             return STATUS_OK;
         }
     }
-
     spin_unlock_restore_all_intr(&ledger_lock, flags);
+
     scheduler_wake_task(new_request->caller_pid);
     kfree(new_request);
     return STATUS_ERROR;

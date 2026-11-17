@@ -66,17 +66,17 @@
 
 #define HEAP_MAGIC 0xDEADBEEF
 
-#define STATUS_OK 0
-#define STATUS_ERROR -1
+enum ret_values {
+    STATUS_OK    = 0,
+    STATUS_ERROR = -1,
+    STATUS_TAL   = 1, // try again later
+};
 
 #define INVALID_CLUSTER 0
 #define INVALID_LBA 0
 
 #define INVALID_PHYSICAL_PAGE 0xFFFFFFFF
 #define INVALID_BUFFER 0
-
-#define DEFAULT_HORIZONTAL_PADDING 5
-#define DEFAULT_VERTICAL_PADDING 5
 
 #define MAX_FD_ENTRIES 256
 #define MAX_FS_REQ_ENTRIES 50

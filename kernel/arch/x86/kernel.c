@@ -215,8 +215,8 @@ void kernel_main(const uint32_t *mboot_info) {
     // pit_sleep_ms(500);
     if (first_task != NULL) {
         DEBUG_KERNEL("[KERNEL]: ENTERING USERMODE HOLD ON TO YOUR HATS\n");
-        scheduler_set_current_task(first_task->pid);
-        first_task->started = 1;
+        this_core()->sched.current_pid = first_task->pid;
+        first_task->started            = 1;
         _set_scheduler_on();
         vmm_switch(first_task->page_dir);
 
