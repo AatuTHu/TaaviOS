@@ -208,8 +208,7 @@ static intptr_t sys_close(struct registers *r) {
         return STATUS_ERROR;
     }
 
-    scheduler_yield(r);
-    return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
+    return STATUS_OK;
 }
 
 static intptr_t sys_unlink(struct registers *r) {

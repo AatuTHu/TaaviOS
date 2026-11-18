@@ -27,6 +27,10 @@ static int copy_pixels_to_screen(blueprint_t *entry) {
         return STATUS_ERROR;
     }
 
+    if (entry->owner_pid == doc_clerk_pid) {
+        return STATUS_OK;
+    }
+
     for (uint32_t row = 0; row < entry->height; row++) {
         memcpy(
             (uint32_t *)fb.virt_addr + (entry->screen_y + row) * (fb.pitch / 4) + entry->screen_x, // dst
@@ -68,7 +72,7 @@ static int gui_delete_window(uint32_t target_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
             blueprint_t *entry = program_windows[i];
 
-            if (fb_clear(entry->pixels, entry->width, entry->height, bg_color) == STATUS_ERROR) {
+            if (entry->owner_pid != doc_clerk_pid && fb_clear(entry->pixels, entry->width, entry->height, bg_color) == STATUS_ERROR) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
                 return STATUS_ERROR;
             }
@@ -196,8 +200,8 @@ static int gui_resize_window(request_table *req) {
     }
     memset(new_pixel_buffer, 0, pixels_size);
 
-    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
+    if (entry->owner_pid != doc_clerk_pid && fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                                                          entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
@@ -239,8 +243,8 @@ static int gui_move_window(const request_table *req) {
         return STATUS_ERROR;
     }
 
-    if (fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
-                     entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
+    if (entry->owner_pid != doc_clerk_pid && fb_fill_rect((uint32_t *)fb.virt_addr, entry->screen_x, entry->screen_y, entry->width,
+                                                          entry->height, fb.width, fb.height, bg_color) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 

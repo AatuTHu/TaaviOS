@@ -16,11 +16,15 @@
 
 static int make_request_fetch_results(task_t *doc_clerk, uint8_t opcode, int fd, char *buf, uint32_t buf_len, uint32_t flags) {
 
-    ledger_add_fs_req(doc_clerk_pid, opcode, fd, buf, buf_len, flags);
+    if (ledger_add_fs_req(doc_clerk_pid, opcode, fd, buf, buf_len, flags) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
-    doc_clerk->state = TASK_BLOCKED;
+    if (opcode == CLOSE) {
+        return STATUS_OK;
+    }
+
     scheduler_yield(&doc_clerk->context);
-
     return ledger_collect(doc_clerk_pid, fs_clerk_pid, buf);
 }
 
@@ -31,7 +35,7 @@ int doc_test_filesystem(task_t *doc_clerk) {
         return STATUS_ERROR;
     }
 
-    DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in creating the directory\n");
+    DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in creating a directory called 'DOC'\n");
 
     if (make_request_fetch_results(doc_clerk, FIND, 0, "/DOC", strlen("/DOC"), 0) == STATUS_ERROR) {
         ERROR("[DOC][TEST_FILE_SYSTEM]: Failed to move to the directory\n");
@@ -52,7 +56,7 @@ int doc_test_filesystem(task_t *doc_clerk) {
         return STATUS_ERROR;
     }
 
-    DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in creating a file\n");
+    DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in creating a file 'DOC.TXT'\n");
 
     if (make_request_fetch_results(doc_clerk, WRITE, fd, "DOC\0", strlen("DOC\0"), 0) == STATUS_ERROR) {
         ERROR("[DOC][TEST_FILE_SYSTEM]: Failed to write to the file\n");
@@ -94,6 +98,8 @@ int doc_test_filesystem(task_t *doc_clerk) {
         ERROR("[DOC][TEST_FILE_SYSTEM]: Failed to delete the directory\n");
         return STATUS_ERROR;
     }
+
+    ledger_queue_free_req(doc_clerk_pid, fs_clerk_pid, 0);
 
     DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in deleting the doc directory\n");
     return STATUS_OK;

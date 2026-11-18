@@ -14,7 +14,6 @@ typedef struct {
 void doc_clerk_loop();
 void doc_init(const task_t *doc_clerk);
 int doc_test_core_sys();
-int doc_test_create_window(task_t *doc_clerk);
-int doc_test_resize_window(task_t *doc_clerk);
+int doc_test_gui(task_t *dock_clerk);
 int doc_test_filesystem(task_t *doc_clerk);
 #endif

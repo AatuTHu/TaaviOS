@@ -32,6 +32,11 @@ static void print_system_status() {
         DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: - current pid: %d \n", core.sched.current_pid);
         DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: - prev pid: %d\n", core.sched.prev_pid);
     }
+
+    int mem = pmm_get_free_pages();
+    DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: There are %d pysical pages free\n", mem);
+    mem = pmm_get_used_pages();
+    DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: There are %d pysical pages in use\n", mem);
 }
 
 static void print_ledger_status() {
@@ -48,11 +53,6 @@ static void print_ledger_status() {
     if (ledger_has_killable_reqs() > 0) {
         DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: Ledger has killable requests %d\n", request_count);
     }
-
-    int mem = pmm_get_free_pages();
-    DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: There are %d pysical pages free\n", mem);
-    mem = pmm_get_used_pages();
-    DEBUG_DOC("[DOC][PRINT_LEDGER_STATUS]: There are %d pysical pages in use\n", mem);
 }
 
 int doc_test_core_sys() {
@@ -111,14 +111,13 @@ static int doc_handle_req(request_table *req) {
     }
 
     switch (req->request_type) {
-    case GUI_CLERK:
-        doc_test_create_window(doc_clerk);
-        doc_test_resize_window(doc_clerk);
+    case GUI:
+        doc_test_gui(doc_clerk);
         req->status         = COMPLETE;
         doc_clerk->priority = PRIORITY_NORMAL;
         scheduler_wake_task(req->caller_pid);
         break;
-    case FS_CLERK:
+    case FS:
         doc_test_filesystem(doc_clerk);
         req->status         = COMPLETE;
         doc_clerk->priority = PRIORITY_NORMAL;

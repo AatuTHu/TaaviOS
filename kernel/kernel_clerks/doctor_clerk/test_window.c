@@ -31,7 +31,6 @@ static int __resize_window(task_t *doc_clerk, int width, int height) {
         ERROR("[DOC][RESIZE_WINDOW]: Setting up the test failed\n");
         return STATUS_ERROR;
     }
-    doc_clerk->state = TASK_BLOCKED;
     scheduler_yield(&doc_clerk->context);
 
     return ledger_collect(doc_clerk_pid, gui_clerk_pid, NULL);
@@ -53,7 +52,6 @@ static int __create_window(task_t *doc_clerk, int width, int height, int x, int 
         ERROR("[DOC][CREATE_WINDOW]: Setting up the test failed\n");
         return STATUS_ERROR;
     }
-    doc_clerk->state = TASK_BLOCKED;
     scheduler_yield(&doc_clerk->context);
 
     window_key = ledger_collect(doc_clerk_pid, gui_clerk_pid, NULL);
@@ -62,20 +60,16 @@ static int __create_window(task_t *doc_clerk, int width, int height, int x, int 
 }
 
 static int __delete_window(task_t *doc_clerk) {
-
     doc_clerk->state = TASK_BLOCKED;
     if (ledger_queue_free_req(doc_clerk_pid, gui_clerk_pid, doc_clerk_pid) == STATUS_ERROR) {
         ERROR("[DOC][DELETE_WINDOW]: queue failed\n");
         return STATUS_ERROR;
     }
-    scheduler_yield(&doc_clerk->context);
 
-    int delete_result = ledger_collect(doc_clerk_pid, gui_clerk_pid, NULL);
-
-    return delete_result == STATUS_ERROR ? STATUS_ERROR : STATUS_OK;
+    return STATUS_OK;
 }
 
-int doc_test_create_window(task_t *doc_clerk) {
+static int doc_test_create_window(task_t *doc_clerk) {
 
     window_test_case_t tests[] = {
         {200, 200, 200, 200, STATUS_OK},
@@ -108,12 +102,12 @@ int doc_test_create_window(task_t *doc_clerk) {
     return STATUS_OK;
 }
 
-int doc_test_resize_window(task_t *doc_clerk) {
+static int doc_test_resize_window(task_t *doc_clerk) {
     window_test_case_t tests[] = {
         {10, 10, 100, 100, STATUS_OK},
         {10, 10, 600, 1000, STATUS_OK},
         {10, 10, -200, 800, STATUS_ERROR},
-        {10, 10, 1324, 500, STATUS_ERROR},
+        {10, 10, 1911, 500, STATUS_ERROR},
         {10, 10, 10, 10, STATUS_OK},
     };
 
@@ -123,7 +117,6 @@ int doc_test_resize_window(task_t *doc_clerk) {
         ERROR("[DOC][RESIZE_WINDOW]: Setting up window failed\n");
         return STATUS_ERROR;
     }
-
     for (int i = 0; i < num_tests; i++) {
         window_test_case_t *t = &tests[i];
         if (__resize_window(doc_clerk, t->width, t->height) != t->expected_status) {
@@ -138,6 +131,21 @@ int doc_test_resize_window(task_t *doc_clerk) {
         return STATUS_ERROR;
     }
     window_key = -1;
+
+    return STATUS_OK;
+}
+
+int doc_test_gui(task_t *dock_clerk) {
+
+    if (doc_test_create_window(dock_clerk) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    DEBUG_DOC("\n");
+
+    if (doc_test_resize_window(dock_clerk) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
 
     return STATUS_OK;
 }

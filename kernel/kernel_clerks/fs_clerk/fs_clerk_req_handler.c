@@ -637,9 +637,6 @@ void fs_handle_request(request_table *req) {
     case WRITE:
         req->status = (write(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
-    case CLOSE:
-        req->status = (close(req) == STATUS_OK) ? COMPLETE : FAILED;
-        break;
     case CREATE:
         req->status = (create(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
@@ -652,6 +649,11 @@ void fs_handle_request(request_table *req) {
     case DELETE:
         req->status = (delete(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
+    case CLOSE:
+        close(req);
+        fs_task->priority = PRIORITY_NORMAL;
+        req->status       = TERMINATED;
+        return;
     case FREE:
         free(req);
         fs_task->priority = PRIORITY_NORMAL;
