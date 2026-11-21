@@ -126,7 +126,7 @@ static void read_file(const char *args) {
     }
 
     char buf[512] = {0};
-    int nread     = read(fd, buf, sizeof(buf) - 1);
+    int nread     = fread(fd, buf, sizeof(buf) - 1);
 
     if (nread != -1) {
         print_to_region(main_id, buf);
@@ -140,7 +140,7 @@ static void write_to_file(const char *buffer) {
         print_at(info_id, PADDING, INFO_LINE_Y, "No file currently open");
         return;
     }
-    write(fd, buffer);
+    fwrite(fd, buffer, true);
     print_at(info_id, PADDING, INFO_LINE_Y, "Wrote to the file, now reading it");
     read_file(0);
 }

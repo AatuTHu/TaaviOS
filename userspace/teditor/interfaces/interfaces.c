@@ -26,7 +26,7 @@ void display_file(int fd) {
         return;
     }
 
-    int bytes_read = read(fd, file, FILE_BUFFER_SIZE);
+    int bytes_read = fread(fd, file, FILE_BUFFER_SIZE);
 
     if (bytes_read == STATUS_ERROR) {
         return;

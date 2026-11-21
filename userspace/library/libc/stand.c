@@ -2,6 +2,7 @@
 #include "log.h"
 #include "malloc.h"
 #include "render.h"
+#include "shared.h"
 #include "string.h"
 #include "sys_calls.h"
 #include <stdbool.h>
@@ -68,10 +69,10 @@ static int format_dirents(char *dirents, int dirents_size) {
     return strlen(dirents);
 }
 
-static int parse_segment_from_path(const char *path, char *dir_name, int max_dir_len) {
+static void parse_segment_from_path(const char *path, char *dir_name, int max_dir_len) {
 
     if (dir_name == NULL) {
-        return 0;
+        return;
     }
 
     int len = strlen(path);
@@ -84,7 +85,7 @@ static int parse_segment_from_path(const char *path, char *dir_name, int max_dir
             i++;
         }
         dir_name[i] = '\0';
-        return 0;
+        return;
     }
 
     int end = len - 1;
@@ -102,17 +103,35 @@ static int parse_segment_from_path(const char *path, char *dir_name, int max_dir
         dir_name[count++] = path[i];
     }
     dir_name[count] = '\0';
+}
 
-    return 0;
+static fs_params_pack *fill_fs_pack(int fd, uint8_t opcode, const char *buf, uint32_t buffer_size, uint32_t flags, bool wfr) {
+    fs_params_pack *params = (fs_params_pack *)malloc(sizeof(fs_params_pack));
+
+    if (params == NULL) {
+        LOG("Failed to allocate memory for params pack\n");
+        return NULL;
+    }
+
+    params->fd          = fd;
+    params->buf         = (char *)buf;
+    params->opcode      = opcode;
+    params->buffer_size = buffer_size;
+    params->flags       = flags;
+    params->wfr         = wfr;
+
+    return params;
 }
 
 int change_directory(const char *path, char *directory_name) {
-    int len = strlen(path);
-    if (sys_chdir(path, len) == STATUS_ERROR) {
+
+    fs_params_pack *params = fill_fs_pack(0, FIND, path, strlen(path), 0, true);
+
+    if (params == NULL || sys_fs(params) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
 
-    if (strcmp(path, "../") == 0 || strcmp(path, "..") == 0) {
+    if (strcmp(params->buf, "../") == 0 || strcmp(params->buf, "..") == 0) {
 
         int len = strlen(save_path);
         if (len > 0) {
@@ -131,37 +150,47 @@ int change_directory(const char *path, char *directory_name) {
             }
         }
     } else {
-        strcat(save_path, path, MAX_PATH_LEN);
+        strcat(save_path, params->buf, MAX_PATH_LEN);
     }
 
-    return parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN);
+    parse_segment_from_path(save_path, directory_name, MAX_PATH_LEN);
+    free(params);
+    return STATUS_OK;
 }
 
 int list_dirents(dirent_info_t *out_dirents, uint32_t max_dirents) {
-    char buf[512]   = {0};
-    uint32_t slot   = 0;
-    int buffer_size = sys_getdirents(buf, sizeof(buf) - 1);
 
-    if (buffer_size <= 0) {
-        LOG("Failed to read directory entries\n");
+    char *buf[512]         = {0};
+    fs_params_pack *params = fill_fs_pack(0, LIST, (const char *)buf, 512, O_RDONLY, true);
+
+    if (params == NULL) {
         return STATUS_ERROR;
     }
 
-    buf[buffer_size] = '\0';
-    int line_start   = 0;
+    int buffer_size = sys_fs(params);
+    uint32_t slot   = 0;
+
+    if (buffer_size <= 0) {
+        LOG("Failed to read directory entries\n");
+        free(params);
+        return STATUS_ERROR;
+    }
+
+    params->buf[buffer_size] = '\0';
+    int line_start           = 0;
 
     for (int i = 0; i <= buffer_size && slot < max_dirents; i++) {
-        if (buf[i] == '\n' || buf[i] == '\0') {
+        if (params->buf[i] == '\n' || params->buf[i] == '\0') {
             if (i > line_start) {
-                buf[i] = '\0';
+                params->buf[i] = '\0';
 
                 memset(&out_dirents[slot], 0, sizeof(dirent_info_t));
 
-                char *segment_start = &buf[line_start];
+                char *segment_start = &params->buf[line_start];
 
                 for (int j = line_start; j <= i; j++) {
-                    if (buf[j] == '/' || buf[j] == '\0') {
-                        buf[j] = '\0';
+                    if (params->buf[j] == '/' || params->buf[j] == '\0') {
+                        params->buf[j] = '\0';
 
                         while (*segment_start == ' ' || *segment_start == '\t') {
                             segment_start++;
@@ -194,7 +223,7 @@ int list_dirents(dirent_info_t *out_dirents, uint32_t max_dirents) {
                             }
                         }
 
-                        segment_start = &buf[j + 1];
+                        segment_start = &params->buf[j + 1];
                     }
                 }
 
@@ -203,9 +232,10 @@ int list_dirents(dirent_info_t *out_dirents, uint32_t max_dirents) {
             line_start = i + 1;
         }
     }
-
+    free(params);
     return slot;
 }
+
 void print(const char *msg) {
     gfx_draw_text(PRIMARY_VIEWPORT_ID, msg, strlen(msg));
 }
@@ -223,33 +253,95 @@ void error(const char *msg) {
 }
 
 int scan(char *buf) {
-    return sys_read(0, buf, 1);
+    return sys_ioctl(READ, (uintptr_t)buf, 0);
 }
 
 int open(const char *path, uint32_t flags) {
-    return sys_open(path, strlen(path), flags);
+    fs_params_pack *params = fill_fs_pack(0, OPEN, path, strlen(path), flags, true);
+
+    if (params == NULL) {
+        return STATUS_ERROR;
+    }
+
+    int res = sys_fs(params);
+    free(params);
+
+    return res;
 }
 
 int delete_file(const char *path) {
-    return sys_unlink(path);
+
+    fs_params_pack *params = fill_fs_pack(0, DELETE, path, strlen(path), 0, false);
+
+    if (params == NULL) {
+        return STATUS_ERROR;
+    }
+
+    int res = sys_fs(params);
+    free(params);
+
+    return res;
 }
 
-void close(uint32_t fd) {
-    sys_close(fd);
+int close(uint32_t fd) {
+
+    fs_params_pack *params = fill_fs_pack(fd, CLOSE, NULL, 0, 0, false);
+
+    if (params == NULL) {
+        return STATUS_ERROR;
+    }
+
+    int res = sys_fs(params);
+    free(params);
+
+    return res;
+}
+
+int fwrite(int fd, const char *msg, bool wfr) {
+
+    fs_params_pack *params = fill_fs_pack(fd, WRITE, msg, strlen(msg), 0, wfr);
+
+    if (params == NULL) {
+        return STATUS_ERROR;
+    }
+
+    int res = sys_fs(params);
+    free(params);
+
+    return res;
+}
+
+int fread(int fd, char *buf, int buffer_size) {
+
+    fs_params_pack *params = fill_fs_pack(fd, READ, buf, buffer_size, 0, true);
+
+    if (params == NULL) {
+        return STATUS_ERROR;
+    }
+
+    sys_fs(params);
+    int read_size = (int)params->buffer_size > buffer_size ? buffer_size : params->buffer_size;
+
+    memcpy(buf, params->buf, read_size);
+    free(params);
+    return read_size;
+}
+
+int mkdir(const char *path) {
+    fs_params_pack *params = fill_fs_pack(0, CREATE, path, strlen(path), O_CREAT, true);
+
+    if (params == NULL) {
+        return STATUS_ERROR;
+    }
+
+    int res = sys_fs(params);
+    free(params);
+
+    return res;
 }
 
 void write(int fd, const char *msg) {
     sys_write(fd, msg, strlen(msg));
-}
-
-int read(int fd, char *buf, int buffer_size) {
-    return sys_read(fd, buf, buffer_size);
-}
-
-int mkdir(const char *path) {
-    int len      = strnlen(path, 128);
-    int response = sys_mkdir(path, len);
-    return response;
 }
 
 void idle(void) {

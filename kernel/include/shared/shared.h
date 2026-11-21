@@ -1,6 +1,7 @@
 #ifndef SHARED_H
 #define SHARED_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #define MAX_SYSCALLS 256
@@ -8,21 +9,17 @@
 #define SYS_EXIT 1
 #define SYS_READ 3
 #define SYS_WRITE 4
-#define SYS_OPEN 5
-#define SYS_CLOSE 6
-#define SYS_UNLINK 10
 #define SYS_EXEC 11
-#define SYS_CHDIR 12
 #define SYS_GETPID 20
 #define SYS_KILL 37
-#define SYS_MKDIR 39
 #define SYS_SBRK 45
 #define SYS_IOCTL 54
 #define SYS_IDLE 112
-#define SYS_GETDENTS 141
 #define SYS_YIELD 158
 #define SYS_WI 250
+#define SYS_FS 251
 
+#define FS_T_VIRT_CODE "SYS_INFO/TASKS"
 typedef struct {
     char *buf;
     uint32_t *pixels;
@@ -36,7 +33,17 @@ typedef struct {
     uint32_t scale;
     uint16_t struct_key;
     uint8_t opcode;
+    bool wfr;
 } gui_params_pack;
+
+typedef struct {
+    char *buf;
+    uint32_t buffer_size;
+    uint32_t fd;
+    uint32_t flags;
+    uint8_t opcode;
+    bool wfr;
+} fs_params_pack;
 
 typedef enum {
     WRITE,

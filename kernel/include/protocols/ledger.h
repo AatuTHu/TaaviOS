@@ -1,6 +1,7 @@
 #ifndef LEDGER_H
 #define LEDGER_H
 #include "shared.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 typedef enum {
@@ -15,8 +16,6 @@ typedef struct request_table {
     char *buf;
     uint32_t *pixels;
     uint32_t struct_key;
-    uint32_t fg_color;
-    uint32_t bg_color;
     uint32_t buffer_size;
     uint32_t flags;
     uint16_t caller_pid;
@@ -28,7 +27,7 @@ typedef struct request_table {
     uint8_t status;
     uint8_t request_type;
     uint8_t clerk_pid;
-    uint8_t scale;
+    bool wfr;
 } request_table;
 
 typedef struct {
@@ -39,9 +38,7 @@ typedef struct {
 
 void ledger_check_request(uint32_t clerk_pid);
 int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out);
-int ledger_add_fs_req(uint32_t caller_pid,
-                      operations_t type, uint32_t fd,
-                      const char *buf, uint32_t buffer_size, uint32_t flags);
+int ledger_add_fs_req(uint32_t caller_pid, const fs_params_pack *params);
 int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params);
 int ledger_add_doc_req(uint32_t called_pid, uint32_t opcode);
 

@@ -6,7 +6,7 @@
 
 void main(void) {
 
-    sys_ioctl(TEST, GUI, 0);
+    // sys_ioctl(TEST, GUI, 0);
     sys_ioctl(TEST, FS, 0);
 
     if (exec("/sysbin/shell") != 0)
@@ -14,12 +14,12 @@ void main(void) {
 
     sys_yield();
 
-    if (exec("/sysbin/teditor") != 0)
-        return;
+    // if (exec("/sysbin/teditor") != 0)
+    //     return;
 
     sys_yield();
 
-    // if (exec("/sysbin/fs_int") != 0)
-    //   return;
-    // sys_yield();
+    if (exec("/sysbin/fs_int") != 0)
+        return;
+    sys_yield();
 }

@@ -16,8 +16,23 @@ int get_ac_tasks(char *buf, int len) {
         return STATUS_ERROR;
     }
 
-    memcpy(buf, "SYS_INFO/TASKS", len);
-    return sys_getdirents(buf, len);
+    fs_params_pack params;
+    memset(&params, 0, sizeof(params));
+
+    memcpy(buf, FS_T_VIRT_CODE, strlen(FS_T_VIRT_CODE));
+
+    params.buf          = buf;
+    params.opcode       = LIST;
+    params.flags        = O_RDONLY;
+    params.buffer_size  = strlen(FS_T_VIRT_CODE);
+    params.wfr          = true;
+
+    int read_size       = sys_fs(&params);
+
+    int max_copy_length = read_size > len ? len : read_size;
+
+    memcpy(buf, params.buf, max_copy_length);
+    return max_copy_length;
 }
 
 int set_operator_task() {

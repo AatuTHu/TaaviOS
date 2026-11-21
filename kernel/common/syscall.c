@@ -12,6 +12,7 @@
 #include "task.h"
 #include "vga.h"
 #include "vmm.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 static syscall_fn_t syscall_table[MAX_SYSCALLS];
@@ -51,6 +52,46 @@ static int signal_clerks_to_release_memory(uint16_t caller_pid, uint16_t target_
 }
 
 /**
+ - change_keyboard_focus - when user task wishes to switch to another task.
+ - Description:
+ - This functions routes the keyboard to be directed to window that the user wants to be "active"
+ - creating the illusion of switching active windows. But in reality all windows are active and only the
+ - tasks that gets keyboard access if switched
+ - Context: Function was made so I could change between operator task and other tasks
+ - Return: status_ok || status_error.
+ */
+static int change_keyboard_focus(uint16_t target_pid) {
+
+    if (!(target_pid >= CLERK_COUNT || target_pid >= MAX_TASKS) || task_get(target_pid) == NULL) {
+        return STATUS_ERROR;
+    }
+
+    if (keyboard_replace_cur_foreground_pid(target_pid) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+    scheduler_set_task_state(TASK_BLOCKED);
+    scheduler_wake_task(target_pid);
+
+    return STATUS_OK;
+}
+
+/**
+ * scan_kb_buffer - scans chars from kb buffer to given buffer.
+ *
+ *
+ * Return: STAUS_ERROR || BUFFER.
+ */
+static intptr_t scan_kb_buffer(struct registers *r, char *buf) {
+
+    int nread = 0;
+    while ((nread = keyboard_read_from_buffer((char *)buf, this_core()->sched.current_pid)) == 0) {
+        scheduler_set_task_state(TASK_BLOCKED);
+        scheduler_yield(r);
+    }
+    return nread;
+}
+
+/**
  * sys_exit - marks a task dead.
  *
  * Description:
@@ -82,68 +123,11 @@ static intptr_t sys_exit(struct registers *r) {
     return STATUS_OK;
 }
 
-/**
- * sys_read - read text to buffer.
- *
- * Description:
- * This function reads from keyboard or from a file based on the fd given to it.
- *
- * Return: STAUS_ERROR || STATUS_OK || BUFFER.
- */
-static intptr_t sys_read(struct registers *r) {
-    uintptr_t fd = 0, buf = 0, buffer_length = 0;
-    collect_params(r, &fd, &buf, &buffer_length);
-
-    if (buffer_length <= 0 && (char *)buf != NULL) {
-        buffer_length = strlen((char *)buf);
-    }
-
-    const task_t *current = scheduler_get_current_task();
-
-    if (current == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (fd == 0) {
-        int nread = 0;
-        while ((nread = keyboard_read_from_buffer((char *)buf, current->pid)) == 0) {
-            scheduler_set_task_state(TASK_BLOCKED);
-            scheduler_yield(r);
-        }
-        return nread;
-    }
-
-    if (ledger_add_fs_req(current->pid, READ, fd, (char *)buf, buffer_length, O_RDONLY) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    scheduler_yield(r);
-    return ledger_collect(current->pid, fs_clerk_pid, (char *)buf);
-}
-
-/**
- * sys_write - writes buffer given to it.
- *
- * Description:
- * This function writes contents of the buffer to either vga or to a file based on the fd number
- *
- * Return: STAUS_ERROR || STATUS_OK.
- */
 static intptr_t sys_write(struct registers *r) {
-    uintptr_t fd = 0, buf = 0, buffer_length = 0;
-    collect_params(r, &fd, &buf, &buffer_length);
+    uintptr_t opcode = 0, buf = 0;
+    collect_params(r, &opcode, &buf, NULL);
 
-    if (buffer_length <= 0 && (char *)buf != NULL) {
-        buffer_length = strlen((char *)buf);
-    }
-
-    const task_t *current = scheduler_get_current_task();
-
-    if (current == NULL) {
-        return STATUS_ERROR;
-    }
-
-    switch (fd) {
+    switch (opcode) {
     case 1:
         vga_write((char *)buf);
         break;
@@ -151,106 +135,15 @@ static intptr_t sys_write(struct registers *r) {
         DEBUG((char *)buf);
         break;
     default:
-        if (ledger_add_fs_req(current->pid, WRITE, fd, (char *)buf, buffer_length, O_WRONLY) == STATUS_ERROR) {
-            return STATUS_ERROR;
-        }
-        scheduler_yield(r);
-        return ledger_collect(current->pid, fs_clerk_pid, NULL);
+        break;
     }
 
     return STATUS_OK;
-}
-
-/**
- * sys_open - opens a file.
- *
- * Description:
- *  Opens a file from the filesystem
- *
- * Return: STAUS_ERROR || STATUS_OK.
- */
-static intptr_t sys_open(struct registers *r) {
-    uintptr_t path = 0, path_length = 0, flags = 0;
-    collect_params(r, &path, &path_length, &flags);
-
-    const task_t *current = scheduler_get_current_task();
-
-    if (current == NULL)
-        return STATUS_ERROR;
-
-    if (ledger_add_fs_req(current->pid, OPEN, 0, (char *)path, path_length, flags) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    scheduler_yield(r);
-    return ledger_collect(current->pid, fs_clerk_pid, NULL);
-}
-
-/**
- * sys_close - closes a file.
- *
- * Description:
- * This function closes the opened file
- *
- * Return: STAUS_ERROR || STATUS_OK.
- */
-static intptr_t sys_close(struct registers *r) {
-    DEBUG_SYSCALL("[SYSCALL][SYS_CLOSE]\n");
-    uintptr_t fd = 0;
-    collect_params(r, &fd, NULL, NULL);
-
-    if (fd <= 2 || fd > MAX_FD_ENTRIES) {
-        ERROR("[SYSCALL][SYS_CLOSE]: fd %d provided was invalid\n", fd);
-        return STATUS_ERROR;
-    }
-
-    if (ledger_add_fs_req(this_core()->sched.current_pid, CLOSE, fd, NULL, 0, 0) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    return STATUS_OK;
-}
-
-static intptr_t sys_unlink(struct registers *r) {
-    DEBUG_SYSCALL("[SYSCALL][SYS_UNLINK]\n");
-    uintptr_t path = 0;
-    collect_params(r, &path, NULL, NULL);
-
-    if (ledger_add_fs_req(this_core()->sched.current_pid, DELETE, 0, (char *)path, strlen((char *)path), 0) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    scheduler_yield(r);
-    return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
 }
 
 static intptr_t sys_getpid(struct registers *r) {
     (void)r;
     return this_core()->sched.current_pid;
-}
-
-/**
- * sys_chdir - changes working directory
- *
- * Description:
- * This function closes the opened file
- *
- * Return: STAUS_ERROR || opened directory.
- */
-static intptr_t sys_chdir(struct registers *r) {
-    uintptr_t path = 0, path_length = 0;
-    collect_params(r, &path, &path_length, NULL);
-
-    if (path_length <= 0 && (char *)path != NULL) {
-        path_length = strlen((char *)path);
-    }
-
-    if (ledger_add_fs_req(this_core()->sched.current_pid, FIND, 0, (char *)path, path_length, 0) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    scheduler_yield(r);
-    return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
 }
 
 static intptr_t sys_sbrk(struct registers *r) {
@@ -342,47 +235,6 @@ static intptr_t sys_exec(struct registers *r) {
     return STATUS_OK;
 }
 
-/**
- * sys_mkdir - create directory.
- *
- * Description:
- * Creates a new folder.
- *
- * Return: STAUS_ERROR || STATUS_OK.
- */
-static intptr_t sys_mkdir(struct registers *r) {
-    uintptr_t path = 0, path_length = 0;
-    collect_params(r, &path, &path_length, NULL);
-
-    if (path_length <= 0 && (char *)path != NULL) {
-        path_length = strlen((char *)path);
-    }
-
-    if (ledger_add_fs_req(this_core()->sched.current_pid, CREATE, 0, (char *)path, path_length, O_CREAT) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    scheduler_yield(r);
-    return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, NULL);
-}
-
-static intptr_t sys_getdents(struct registers *r) {
-    uintptr_t buffer = 0, buffer_length = 0;
-    collect_params(r, &buffer, &buffer_length, NULL);
-
-    if (buffer_length <= 0 && (char *)buffer != NULL) {
-        buffer_length = strlen((char *)buffer);
-    }
-
-    if (ledger_add_fs_req(this_core()->sched.current_pid, LIST, 0,
-                          (char *)buffer, buffer_length, O_RDONLY) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-
-    scheduler_yield(r);
-    return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, (char *)buffer);
-}
-
 static intptr_t sys_idle(struct registers *r) {
     (void)r;
     while (1) __asm__ __volatile__("sti; hlt");
@@ -418,30 +270,6 @@ static intptr_t sys_kill(struct registers *r) {
     return signal_clerks_to_release_memory(this_core()->sched.current_pid, target_task->pid);
 }
 
-/**
- - change_keyboard_focus - when user task wishes to switch to another task.
- - Description:
- - This functions routes the keyboard to be directed to window that the user wants to be "active"
- - creating the illusion of switching active windows. But in reality all windows are active and only the
- - tasks that gets keyboard access if switched
- - Context: Function was made so I could change between operator task and other tasks
- - Return: status_ok || status_error.
- */
-static int change_keyboard_focus(uint16_t target_pid) {
-
-    if (!(target_pid >= CLERK_COUNT || target_pid >= MAX_TASKS) || task_get(target_pid) == NULL) {
-        return STATUS_ERROR;
-    }
-
-    if (keyboard_replace_cur_foreground_pid(target_pid) == STATUS_ERROR) {
-        return STATUS_ERROR;
-    }
-    scheduler_set_task_state(TASK_BLOCKED);
-    scheduler_wake_task(target_pid);
-
-    return STATUS_OK;
-}
-
 static intptr_t sys_ioctl(struct registers *r) {
     uintptr_t opcode = 0, value = 0; // value for could be a sub opcode for ledger or a pid for kbd;
     collect_params(r, &opcode, &value, NULL);
@@ -459,11 +287,32 @@ static intptr_t sys_ioctl(struct registers *r) {
         scheduler_yield(r);
         return ledger_collect(this_core()->sched.current_pid, doc_clerk_pid, NULL);
     }
+    case READ:
+        return scan_kb_buffer(r, (char *)value);
     default:
         break;
     }
 
     return STATUS_ERROR;
+}
+
+static intptr_t sys_filesystem(struct registers *r) {
+#if defined(__x86_64__)
+    fs_params_pack *params = (fs_params_pack *)r->rbx;
+#else
+    fs_params_pack *params = (fs_params_pack *)r->ebx;
+#endif
+
+    if (ledger_add_fs_req(this_core()->sched.current_pid, params) == STATUS_ERROR) {
+        return STATUS_ERROR;
+    }
+
+    if (params->wfr == false) {
+        return STATUS_OK;
+    }
+
+    scheduler_yield(r);
+    return ledger_collect(this_core()->sched.current_pid, fs_clerk_pid, (char *)params->buf);
 }
 
 void syscall_dispatch(struct registers *r) {
@@ -484,21 +333,16 @@ void syscall_dispatch(struct registers *r) {
 
 void syscall_init() {
     for (uint32_t i = 0; i < MAX_SYSCALLS; i++) syscall_table[i] = NULL;
-    syscall_table[SYS_EXIT]     = sys_exit;
-    syscall_table[SYS_WRITE]    = sys_write;
-    syscall_table[SYS_GETPID]   = sys_getpid;
-    syscall_table[SYS_EXEC]     = sys_exec;
-    syscall_table[SYS_READ]     = sys_read;
-    syscall_table[SYS_IDLE]     = sys_idle;
-    syscall_table[SYS_YIELD]    = sys_yield;
-    syscall_table[SYS_OPEN]     = sys_open;
-    syscall_table[SYS_CLOSE]    = sys_close;
-    syscall_table[SYS_KILL]     = sys_kill;
-    syscall_table[SYS_MKDIR]    = sys_mkdir;
-    syscall_table[SYS_CHDIR]    = sys_chdir;
-    syscall_table[SYS_GETDENTS] = sys_getdents;
-    syscall_table[SYS_WI]       = sys_window;
-    syscall_table[SYS_IOCTL]    = sys_ioctl;
-    syscall_table[SYS_SBRK]     = sys_sbrk;
-    syscall_table[SYS_UNLINK]   = sys_unlink;
+    syscall_table[SYS_EXIT]   = sys_exit;
+    syscall_table[SYS_WRITE]  = sys_write;
+    syscall_table[SYS_GETPID] = sys_getpid;
+    syscall_table[SYS_EXEC]   = sys_exec;
+    // syscall_table[SYS_READ]   = sys_read;
+    syscall_table[SYS_IDLE]   = sys_idle;
+    syscall_table[SYS_YIELD]  = sys_yield;
+    syscall_table[SYS_KILL]   = sys_kill;
+    syscall_table[SYS_WI]     = sys_window;
+    syscall_table[SYS_FS]     = sys_filesystem;
+    syscall_table[SYS_IOCTL]  = sys_ioctl;
+    syscall_table[SYS_SBRK]   = sys_sbrk;
 }

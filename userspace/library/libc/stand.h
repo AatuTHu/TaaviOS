@@ -1,6 +1,7 @@
 #ifndef STAND_H
 #define STAND_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -27,14 +28,14 @@ int scan(char *buf);
 
 int open(const char *path, uint32_t flags);
 int delete_file(const char *path);
-int read(int fd, char *buf, int buffer_size);
 void write(int fd, const char *msg);
-void close(uint32_t fd);
+int close(uint32_t fd);
 int mkdir(const char *path);
 int change_directory(const char *path, char *directory_name);
 int list_dirents(dirent_info_t *out_dirents, uint32_t max_dirents);
-int parse_flags_from_commands(char *command);
 void idle(void);
 int get_pid(void);
+int fwrite(int fd, const char *msg, bool wfr);
+int fread(int fd, char *buf, int buffer_size);
 
 #endif

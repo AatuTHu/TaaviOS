@@ -141,8 +141,12 @@ static inline int queue_req(request_table *new_request) {
         if (q->table[i] == NULL) {
             q->table[i] = new_request;
             spin_unlock_restore_all_intr(&ledger_lock, flags);
-            scheduler_set_task_state(TASK_BLOCKED); // caller blocked;
-            wake_clerk(new_request->clerk_pid);     // clerk awoken;
+
+            if (new_request->wfr == true) { // if wfr (wait for response) is true only then block otherwise continue running
+                scheduler_set_task_state(TASK_BLOCKED);
+            }
+
+            wake_clerk(new_request->clerk_pid); // clerk awoken;
             return STATUS_OK;
         }
     }
@@ -397,13 +401,13 @@ int ledger_queue_free_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t targ
  *
  * Return: STATUS_OK on success, STATUS_ERROR on failure.
  */
-int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const char *buf, uint32_t buffer_size, uint32_t flags) {
+int ledger_add_fs_req(uint32_t caller_pid, const fs_params_pack *params) {
 
     if (ledger_count_all_clerk_reqs(fs_clerk_pid) >= MAX_FS_REQ_ENTRIES) {
         goto case_error;
     }
 
-    if ((fd < 2 || fd > MAX_FD_ENTRIES) && (type == READ || type == WRITE)) {
+    if ((params->fd < 2 || params->fd > MAX_FD_ENTRIES) && (params->opcode == READ || params->opcode == WRITE)) {
         ERROR("[LEDGER][ADD_FS_REQUEST]: Invalid fd number. Aborting\n");
         goto case_error;
     }
@@ -417,32 +421,34 @@ int ledger_add_fs_req(uint32_t caller_pid, operations_t type, uint32_t fd, const
     memset(new_request, 0, sizeof(request_table));
     new_request->caller_pid   = caller_pid;
     new_request->clerk_pid    = fs_clerk_pid;
-    new_request->request_type = type;
-    new_request->flags        = flags;
+    new_request->request_type = params->opcode;
+    new_request->flags        = params->flags;
     new_request->status       = PENDING;
-    new_request->struct_key   = fd;
-    new_request->buffer_size  = buffer_size;
+    new_request->struct_key   = params->fd;
+    new_request->buffer_size  = params->buffer_size;
+    new_request->wfr          = params->wfr;
 
-    if (buf != NULL) {
-        new_request->buf = (char *)kmalloc(buffer_size + 1);
+    if (params->buf != NULL) {
+        new_request->buf = (char *)kmalloc(params->buffer_size + 1);
         if (new_request->buf == NULL) {
             ERROR("[LEDGER][ADD_FS_REQ]Could not allocate buffer for the message\n");
             kfree(new_request);
             scheduler_wake_task(caller_pid);
             return STATUS_ERROR;
         }
-        memcpy(new_request->buf, buf, buffer_size);
-        new_request->buffer_size      = buffer_size;
-        new_request->buf[buffer_size] = '\0';
+        memcpy(new_request->buf, params->buf, params->buffer_size);
+        new_request->buffer_size              = params->buffer_size;
+        new_request->buf[params->buffer_size] = '\0';
         DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST] buffer: %s\n", new_request->buf);
     }
 
-    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
-    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
-    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
-    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->struct_key);
-    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
-    // DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: caller pid: %d\n", new_request->caller_pid);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: clerk_pid: %d\n", new_request->clerk_pid);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: request_type: %d\n", new_request->request_type);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: fd: %d\n", new_request->struct_key);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: buffer length : %d\n", new_request->buffer_size);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: flags: %d\n", new_request->flags);
+    DEBUG_FS_TASK("[LEDGER][ADD_FS_REQUEST]: wfr: %d\n", new_request->wfr);
 
     return queue_req(new_request);
 
@@ -484,9 +490,7 @@ int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params) {
     new_request->height       = params->height;
     new_request->x            = params->x;
     new_request->y            = params->y;
-    new_request->scale        = params->scale;
-    new_request->fg_color     = params->fg_color;
-    new_request->bg_color     = params->bg_color;
+    new_request->wfr          = params->wfr;
 
     if (params->pixels != NULL) {
         size_t pixel_bytes  = params->width * params->height * sizeof(uint32_t);
