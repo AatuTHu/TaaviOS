@@ -1,13 +1,14 @@
 #include "op_sy.h"
 #include "shared.h"
 #include "sys_calls.h"
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 void main(void) {
 
-    // sys_ioctl(TEST, GUI, 0);
-    sys_ioctl(TEST, FS, 0);
+    sys_ioctl(TEST, GUI, false);
+    sys_ioctl(TEST, FS, false);
 
     if (exec("/sysbin/shell") != 0)
         return;

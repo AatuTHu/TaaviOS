@@ -40,13 +40,13 @@ static inline void collect_params(struct registers *r, uintptr_t *p1, uintptr_t 
 
 static int signal_clerks_to_release_memory(uint16_t caller_pid, uint16_t target_pid) {
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting fs_task release allocated memory\n");
-    ledger_queue_free_req(caller_pid, fs_clerk_pid, target_pid);
+    ledger_add_general_req(caller_pid, fs_clerk_pid, target_pid, FREE, false);
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting gui_task to release allocated memory\n");
-    ledger_queue_free_req(caller_pid, gui_clerk_pid, target_pid);
+    ledger_add_general_req(caller_pid, gui_clerk_pid, target_pid, FREE, false);
 
     DEBUG_SYSCALL("[SIG_RELEASE_MEMORY]: Requesting reaper to kill the task\n");
-    ledger_queue_free_req(caller_pid, reaper_clerk_pid, target_pid);
+    ledger_add_general_req(caller_pid, reaper_clerk_pid, target_pid, FREE, false);
 
     return STATUS_OK;
 }
@@ -271,24 +271,28 @@ static intptr_t sys_kill(struct registers *r) {
 }
 
 static intptr_t sys_ioctl(struct registers *r) {
-    uintptr_t opcode = 0, value = 0; // value for could be a sub opcode for ledger or a pid for kbd;
-    collect_params(r, &opcode, &value, NULL);
+    uintptr_t opcode = 0, p1 = 0, p2; // value for could be a sub opcode for ledger or a pid for kbd;
+    collect_params(r, &opcode, &p1, &p2);
 
     switch (opcode) {
     case SET_OPERATOR:
         return keyboard_set_operator_pid(this_core()->sched.current_pid);
     case CH_ACT_W:
-        return change_keyboard_focus(value);
+        return change_keyboard_focus(p1);
     case TEST: {
-        if (ledger_add_doc_req(this_core()->sched.current_pid, value) == STATUS_ERROR) {
+        if (ledger_add_general_req(this_core()->sched.current_pid, 0, 0, p1, p2) == STATUS_ERROR) {
             break;
         }
-        scheduler_set_task_state(TASK_BLOCKED);
+
+        if (p2 == false) {
+            return STATUS_OK;
+        }
+
         scheduler_yield(r);
         return ledger_collect(this_core()->sched.current_pid, doc_clerk_pid, NULL);
     }
     case READ:
-        return scan_kb_buffer(r, (char *)value);
+        return scan_kb_buffer(r, (char *)p1);
     default:
         break;
     }

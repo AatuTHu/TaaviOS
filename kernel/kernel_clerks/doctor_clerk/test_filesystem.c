@@ -114,8 +114,7 @@ int doc_test_filesystem(task_t *doc_clerk) {
         return STATUS_ERROR;
     }
 
-    ledger_queue_free_req(doc_clerk_pid, fs_clerk_pid, 0);
-
+    ledger_add_general_req(doc_clerk_pid, fs_clerk_pid, doc_clerk_pid, FREE, false);
     DEBUG_DOC("[DOC][TEST_FILE_SYSTEM]: Succeeded in deleting the doc directory\n");
     return STATUS_OK;
 }

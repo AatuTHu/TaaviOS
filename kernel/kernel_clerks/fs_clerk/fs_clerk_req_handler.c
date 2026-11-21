@@ -650,22 +650,25 @@ void fs_handle_request(request_table *req) {
         req->status = (delete(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
     case CLOSE:
-        close(req);
-        fs_task->priority = PRIORITY_NORMAL;
-        req->status       = TERMINATED;
-        return;
+        req->status = (close(req) == STATUS_OK) ? COMPLETE : FAILED;
+        break;
     case FREE:
-        free(req);
-        fs_task->priority = PRIORITY_NORMAL;
-        req->status       = TERMINATED;
-        return;
+        req->status = (free(req) == STATUS_OK) ? COMPLETE : FAILED;
+        break;
 
     default:
         ERROR("[FS_TASK][HANDLE_REQUEST]: invalid request type\n");
         req->status = FAILED;
         break;
     }
+
     fs_task->priority = PRIORITY_NORMAL;
+
+    if (req->wfr == false) {
+        req->status = TERMINATED;
+        return;
+    }
+
     scheduler_wake_task(req->caller_pid);
 }
 

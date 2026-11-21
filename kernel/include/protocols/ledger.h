@@ -40,7 +40,7 @@ void ledger_check_request(uint32_t clerk_pid);
 int ledger_collect(uint32_t caller_pid, uint32_t clerk_pid, char *out);
 int ledger_add_fs_req(uint32_t caller_pid, const fs_params_pack *params);
 int ledger_add_gui_req(uint32_t caller_pid, const gui_params_pack *params);
-int ledger_add_doc_req(uint32_t called_pid, uint32_t opcode);
+int ledger_add_general_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t target_pid, uint8_t opcode, bool wfr);
 
 request_table *ledger_fetch_next_req(uint32_t clerk_pid);
 void ledger_init();
@@ -48,5 +48,4 @@ int ledger_remove_request();
 int ledger_count_clerk_reqs(uint32_t clerk_pid);
 int ledger_count_active_reqs();
 int ledger_has_killable_reqs();
-int ledger_queue_free_req(uint32_t caller_pid, uint32_t clerk_pid, uint32_t target_pid);
 #endif

@@ -10,6 +10,7 @@
 #include "pmm.h"
 #include "sched.h"
 #include "shared.h"
+#include "task.h"
 #include "vmm.h"
 #include <stdint.h>
 
@@ -37,6 +38,15 @@ static void print_system_status() {
     DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: There are %d pysical pages free\n", mem);
     mem = pmm_get_used_pages();
     DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: There are %d pysical pages in use\n", mem);
+
+    DEBUG_DOC("[DOC][PRINT_SYSTEM_STATUS]: Tasks created: \n");
+
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_t *task = task_get(i);
+        if (task != NULL) {
+            DEBUG_DOC("- name: %s, status: %d\n", task->name, task->state);
+        }
+    }
 }
 
 static void print_ledger_status() {
@@ -102,35 +112,39 @@ int doc_test_core_sys() {
     return STATUS_OK;
 }
 
-static int doc_handle_req(request_table *req) {
+static void doc_handle_req(request_table *req) {
     task_t *doc_clerk = task_get(doc_clerk_pid);
 
     if (doc_clerk == NULL) {
         ERROR("[DOC][HANDLE_REQ]: Could not find doc clerk. Aborting\n");
-        return STATUS_ERROR;
+        return;
     }
 
     switch (req->request_type) {
     case GUI:
-        doc_test_gui(doc_clerk);
-        req->status         = COMPLETE;
-        doc_clerk->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
+        req->status = (doc_test_gui(doc_clerk) == STATUS_OK) ? COMPLETE : FAILED;
+
         break;
     case FS:
-        doc_test_filesystem(doc_clerk);
-        req->status         = COMPLETE;
-        doc_clerk->priority = PRIORITY_NORMAL;
-        scheduler_wake_task(req->caller_pid);
+        req->status = (doc_test_filesystem(doc_clerk) == STATUS_OK) ? COMPLETE : FAILED;
         break;
     default:
         ERROR("[DOC][HANDLE_REQUEST]: invalid request type\n");
         req->status = FAILED;
         scheduler_wake_task(req->caller_pid);
-        return STATUS_ERROR;
+        return;
     }
 
-    return STATUS_OK;
+    doc_clerk->priority = PRIORITY_NORMAL;
+
+    if (req->wfr == false) {
+        req->status = TERMINATED;
+        return;
+    }
+
+    scheduler_wake_task(req->caller_pid);
+
+    return;
 }
 
 void doc_clerk_loop() {

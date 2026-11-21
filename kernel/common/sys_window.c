@@ -1,4 +1,5 @@
 #include "config.h"
+#include "cpu.h"
 #include "fb.h"
 #include "klog.h"
 #include "kstring.h"
@@ -152,34 +153,33 @@ static int draw_sprite(const gui_params_pack *params, uint32_t caller_pid) {
  * Return: STATUS_OK || STATUS_ERROR.
  */
 intptr_t sys_window(struct registers *r) {
-    // DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
-    #if defined(__x86_64__)
+// DEBUG_SYSCALL("[SYSCALL][CONWI]\n");
+#if defined(__x86_64__)
     gui_params_pack *params = (gui_params_pack *)r->rbx;
-    #else 
+#else
     gui_params_pack *params = (gui_params_pack *)r->ebx;
-    #endif
-    task_t *current         = scheduler_get_current_task();
+#endif
 
-    if (current == NULL || params == NULL) {
+    if (params == NULL) {
         ERROR("[SYSCALL][SYS_CONWI]: invalid input params. Aborting\n");
         return STATUS_ERROR;
     }
 
     switch (params->opcode) {
     case WRITE_AT:
-        return draw_string(params, current->pid);
+        return draw_string(params, this_core()->sched.current_pid);
     case PAINT_WINDOW:
-        return paint_rectangle(params, current->pid);
+        return paint_rectangle(params, this_core()->sched.current_pid);
     case DRAW:
-        return draw_sprite(params, current->pid);
+        return draw_sprite(params, this_core()->sched.current_pid);
     case SCROLL_DOWN:
-        return scroll_window(params, current->pid);
+        return scroll_window(params, this_core()->sched.current_pid);
     }
 
-    if (ledger_add_gui_req(current->pid, params) == STATUS_ERROR) {
+    if (ledger_add_gui_req(this_core()->sched.current_pid, params) == STATUS_ERROR) {
         return STATUS_ERROR;
     }
     scheduler_set_task_state(TASK_BLOCKED);
     scheduler_yield(r);
-    return ledger_collect(current->pid, gui_clerk_pid, params->buf);
+    return ledger_collect(this_core()->sched.current_pid, gui_clerk_pid, params->buf);
 }

@@ -5,6 +5,7 @@
 #include "stand.h"
 #include "string.h"
 #include "sys_calls.h"
+#include <stdbool.h>
 #include <stdint.h>
 
 #define DIMENSIONS_BUFFER_LEN 22
@@ -115,6 +116,7 @@ int gfx_create_viewport(int x, int y, int w, int h, uint32_t fg_color, uint32_t 
     params.y        = y;
     params.fg_color = fg_color;
     params.bg_color = bg_color;
+    params.wfr      = true;
 
     return sys_conwi(&params);
 }
@@ -153,6 +155,7 @@ int gfx_resize_viewport(uint32_t region_id, int w, int h) {
     params.bg_color    = entry->bg_color;
     params.buf         = dimensions_buffer;
     params.buffer_size = DIMENSIONS_BUFFER_LEN;
+    params.wfr         = true;
 
     if (sys_conwi(&params) == STATUS_ERROR) {
         LOG("Resize failed\n");
@@ -290,6 +293,7 @@ int gfx_move_viewport(uint32_t region_id, int x, int y) {
     params.y          = y;
     params.fg_color   = entry->fg_color;
     params.bg_color   = entry->bg_color;
+    params.wfr        = true;
 
     return sys_conwi(&params);
 }

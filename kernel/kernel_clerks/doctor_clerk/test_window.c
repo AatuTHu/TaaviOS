@@ -61,7 +61,7 @@ static int __create_window(task_t *doc_clerk, int width, int height, int x, int 
 
 static int __delete_window(task_t *doc_clerk) {
     doc_clerk->state = TASK_BLOCKED;
-    if (ledger_queue_free_req(doc_clerk_pid, gui_clerk_pid, doc_clerk_pid) == STATUS_ERROR) {
+    if (ledger_add_general_req(doc_clerk_pid, gui_clerk_pid, doc_clerk_pid, FREE, false) == STATUS_ERROR) {
         ERROR("[DOC][DELETE_WINDOW]: queue failed\n");
         return STATUS_ERROR;
     }

@@ -272,15 +272,19 @@ static void gui_handle_request(request_table *req) {
         req->status = (gui_move_window(req) == STATUS_OK) ? COMPLETE : FAILED;
         break;
     case FREE:
-        gui_delete_window(req->target_pid);
-        gui_task->priority = PRIORITY_NORMAL;
-        req->status        = TERMINATED;
-        return;
+        req->status = (gui_delete_window(req->target_pid) == STATUS_OK) ? COMPLETE : FAILED;
+        break;
     default:
         req->status = FAILED;
         break;
     }
     gui_task->priority = PRIORITY_NORMAL;
+
+    if (req->wfr == false) {
+        req->status = TERMINATED;
+        return;
+    }
+
     scheduler_wake_task(req->caller_pid);
 }
 
