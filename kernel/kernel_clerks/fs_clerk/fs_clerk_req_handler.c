@@ -255,6 +255,11 @@ static int open(request_table *req) {
         return STATUS_ERROR;
     }
 
+    if (file_attr == FAT32_ATTR_DIRECTORY) {
+        ERROR("[FS_TASK][OPEN]: Cannot open a directory.\n");
+        return STATUS_ERROR;
+    }
+
     int fd = fs_alloc_fd(req->caller_pid, file_cluster, dir_cluster, file_size, req->flags, file_attr);
     if (fd == STATUS_ERROR) {
         ERROR("[FS_TASK][OPEN]: Invalid fd number. Terminating request\n");

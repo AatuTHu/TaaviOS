@@ -30,7 +30,7 @@ static int draw_string(const gui_params_pack *params, uint32_t caller_pid) {
         return STATUS_ERROR;
     }
 
-    blueprint_t *entry = program_windows[params->struct_key];
+    pixels_t *entry = program_windows[params->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
         DEBUG_SYSCALL("[SYS_WI][DRAW_STRING]: Pixel buffer was null, cant draw\n");
@@ -60,7 +60,7 @@ static int scroll_window(const gui_params_pack *params, uint32_t caller_pid) {
         return STATUS_ERROR;
     }
 
-    blueprint_t *entry = program_windows[params->struct_key];
+    pixels_t *entry = program_windows[params->struct_key];
 
     if (entry == NULL) {
         return STATUS_ERROR;
@@ -87,7 +87,7 @@ static int scroll_window(const gui_params_pack *params, uint32_t caller_pid) {
 
 static int paint_rectangle(const gui_params_pack *params, uint32_t caller_pid) {
 
-    blueprint_t *entry = program_windows[params->struct_key];
+    pixels_t *entry = program_windows[params->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
         return STATUS_ERROR;
@@ -115,7 +115,7 @@ static int paint_rectangle(const gui_params_pack *params, uint32_t caller_pid) {
 
 static int draw_sprite(const gui_params_pack *params, uint32_t caller_pid) {
 
-    blueprint_t *entry = program_windows[params->struct_key];
+    pixels_t *entry = program_windows[params->struct_key];
 
     if (entry == NULL || entry->pixels == NULL || params->pixels == NULL) {
         return STATUS_ERROR;

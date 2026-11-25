@@ -22,7 +22,7 @@
 static uint32_t bg_color       = 0;
 static int hail_mary_act_count = 0;
 
-static int copy_pixels_to_screen(blueprint_t *entry) {
+static int copy_pixels_to_screen(pixels_t *entry) {
     if (entry == NULL) {
         return STATUS_ERROR;
     }
@@ -70,7 +70,7 @@ static int gui_delete_window(uint32_t target_pid) {
     for (int i = 0; i < MAX_TASKS; i++) {
         if (program_windows[i] != NULL && program_windows[i]->owner_pid == target_pid) {
             DEBUG_GUI_TASK("[GUI_TASK][DELETE_WINDOW]: Target found at: %d\n", i);
-            blueprint_t *entry = program_windows[i];
+            pixels_t *entry = program_windows[i];
 
             if (entry->owner_pid != doc_clerk_pid && fb_clear(entry->pixels, entry->width, entry->height, bg_color) == STATUS_ERROR) {
                 ERROR("[GUI_TASK][DELETE_WINDOW]: Could not clear window, aborting\n");
@@ -140,7 +140,7 @@ static int gui_create_window_entry(request_table *req) {
         return STATUS_ERROR;
     }
 
-    blueprint_t *entry = (blueprint_t *)kmalloc(sizeof(blueprint_t));
+    pixels_t *entry = (pixels_t *)kmalloc(sizeof(pixels_t));
 
     if (entry == NULL) {
         ERROR("[GUI_TASK][CREATE_WINDOW]: Reserving memory for the window table failed. Aborting\n");
@@ -174,7 +174,7 @@ static int gui_create_window_entry(request_table *req) {
 
 static int gui_resize_window(request_table *req) {
 
-    blueprint_t *entry = program_windows[req->struct_key];
+    pixels_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
         return STATUS_ERROR;
@@ -226,7 +226,7 @@ static int gui_resize_window(request_table *req) {
 }
 
 static int gui_move_window(const request_table *req) {
-    blueprint_t *entry = program_windows[req->struct_key];
+    pixels_t *entry = program_windows[req->struct_key];
 
     if (entry == NULL || entry->pixels == NULL) {
         return STATUS_ERROR;

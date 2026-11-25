@@ -21,17 +21,17 @@ BOTH
 - [might not be needed?] Batch render operations. (Many requests on one sys call)
 - [x] refresh section and set cursor to original state
 - [x] render.h abstractions to stand so that it doesn't have to be included.
-- [might not be needed?] rework gui to handle multiple requests before blankie protocol.
+- [not needed?] rework gui to handle multiple requests before blankie protocol.
 - [ ] small self made assembler
 - [ ] system doctor clerk
 - [ ] calculate section based on x and y so that keys are not needed
 - [x] get_dents should expose more than just the name? Attributes, size for example
 - [ ] apps launcher?
 - [ ] scheduler super priority protocol?
-- [ ] Nothing stops from writing to directory. Directories should not be able to be opened/closed/written to?
+- [X] Nothing stops from writing to directory. Directories should not be able to be opened/closed/written to?
 - [x] FAT32 delete dir/file.
-- [ ] GUI_CLERK opcode to receive screen info like resolution, other windows width/height/x/y
-- [ ] GUI_CLERK change the blueprint_t to window_t
+- [ ] /GUI_CLERK/ <- No. Opcode <-NO. Fs_clerk opcode list with predefined code in buffer to receive screen info like resolution, other windows width/height/x/y
+- [X] GUI_CLERK change the blueprint_t to window_t. Changed to pixels_t
 - [98%?] Change all places where clerks are called 'task' to 'clerk'
 - [ ] Add comment blocks
 - [ ] Gui delete has unnecessary buffer clean
@@ -40,6 +40,7 @@ BOTH
 - [ ] DOC synchronise kernel directory if dirty to all tasks.
 - [X] Port as much as possible from 32bit so that both can use the same code
 - [X] Scheduler & task & syscall to common/ ?
+- [ ] Each core should have the same idle task, but each should create their own idle stack and frame.
 
 64BIT
 

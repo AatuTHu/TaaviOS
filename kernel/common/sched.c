@@ -266,6 +266,12 @@ int scheduler_remove_task(uint32_t target_pid) {
         return STATUS_ERROR;
     }
 
+    if (target->is_idle == 1) {
+        DEBUG_SCHED("[SCHEDULER][REMOVE]: Cannot delete idle task\n");
+        spin_unlock_restore_all_intr(&sched_lock, flags);
+        return STATUS_ERROR;
+    }
+
     if (target->on_core == 1) {
         DEBUG_SCHED("[SCHEDULER][REMOVE]: Cannot delete a task that is running on a core\n");
         spin_unlock_restore_all_intr(&sched_lock, flags);

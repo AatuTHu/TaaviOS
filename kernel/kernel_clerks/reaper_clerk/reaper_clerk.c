@@ -28,6 +28,7 @@ static void reaper_handle_request(request_table *req) {
         int status = scheduler_remove_task(req->target_pid);
 
         if (status == STATUS_TAL) {
+            req->status = PENDING;
             return;
         }
 

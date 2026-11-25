@@ -36,7 +36,7 @@ typedef struct task_t {
     uint8_t task_mode;
 } task_t;
 
-typedef struct blueprint {
+typedef struct pixels_t {
     uint32_t *pixels;
     uint16_t owner_pid;
     uint16_t width;
@@ -44,9 +44,9 @@ typedef struct blueprint {
     uint16_t screen_x;
     uint16_t screen_y;
     uint8_t dirty_flag;
-} blueprint_t;
+} pixels_t;
 
-extern blueprint_t *program_windows[MAX_TASKS];
+extern pixels_t *program_windows[MAX_TASKS];
 extern task_t *task_table[MAX_TASKS];
 task_t *task_create(int reserved_pid, uintptr_t entry, uintptr_t heap_start, const char *name,
                     page_directory_t *page_dir, uint8_t task_mode);

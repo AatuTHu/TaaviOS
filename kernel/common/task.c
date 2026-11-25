@@ -15,7 +15,7 @@ static spinlock_t task_lock = SPINLOCK_INIT("task");
  */
 
 task_t *task_table[MAX_TASKS];
-blueprint_t *program_windows[MAX_TASKS];
+pixels_t *program_windows[MAX_TASKS];
 
 static void task_fill_context(task_t *task, uintptr_t entry) {
 #if defined(__x86_64__)
