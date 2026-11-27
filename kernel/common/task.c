@@ -84,6 +84,9 @@ task_t *__task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, con
         return NULL;
     }
 
+    uintptr_t heap_addr = heap_start + PIXEL_BUFFER_SIZE_1080P;
+    uintptr_t pixaddr   = heap_addr - PIXEL_BUFFER_SIZE_1080P;
+
     memset(&task->context, 0, sizeof(struct registers));
 
     task->pid      = slot;
@@ -97,8 +100,9 @@ task_t *__task_create(int reserved_pid, uint64_t entry, uint64_t heap_start, con
     task->name[TASK_NAME_LENGTH - 1] = '\0';
     task->kernel_stack               = kernel_stack;
     task->priority                   = task_mode == USER_TASK ? PRIORITY_NORMAL : PRIORITY_LOW;
-    task->heap_start                 = heap_start;
-    task->heap_end                   = heap_start;
+    task->heap_start                 = heap_addr;
+    task->heap_end                   = task->heap_start;
+    task->pixaddr                    = pixaddr;
     task->context.eflags             = EFLAGS_DEFAULT;
     task->task_mode                  = task_mode; // can be usefull later? itwas t: Aatu - 21.6.2026
 

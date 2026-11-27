@@ -26,6 +26,7 @@ typedef struct task_t {
     char name[TASK_NAME_LENGTH];
     uint32_t pid;
     uintptr_t kernel_stack;
+    uintptr_t pixaddr;
     uintptr_t heap_start;
     uintptr_t heap_end;
     uintptr_t interrupt_frame;
